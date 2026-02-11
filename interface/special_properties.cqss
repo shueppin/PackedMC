@@ -1,0 +1,74 @@
+/*  ------------------------------------------------------------------------ */
+/* Custom QSS File for QtMaterial
+/* Default Variables: https://github.com/UN-GCPDS/qt-material?tab=readme-ov-file#environ-variables
+/* Stylesheet usage: https://github.com/UN-GCPDS/qt-material?tab=readme-ov-file#custom-stylesheets
+/*  ------------------------------------------------------------------------  */
+
+
+
+/* Select the whole row in the TableWidget */
+
+QTableView::item:selected {{
+    background-color: {QTMATERIAL_PRIMARYCOLOR};
+}}
+
+QTableView {{
+    border: 2px solid {QTMATERIAL_SECONDARYLIGHTCOLOR};
+}}
+
+
+
+/* Base color changes */
+
+.no_frame {{
+    border: {QTMATERIAL_SECONDARYDARKCOLOR}
+}}
+
+.no_bg {{
+    background: {QTMATERIAL_SECONDARYDARKCOLOR}
+}}
+
+
+
+/* Modify Text */
+
+.big_text {{
+    font-size: 35px
+}}
+
+.title {{
+    font-size: 18px;
+    color: {QTMATERIAL_PRIMARYCOLOR}
+}}
+
+
+
+/* Page selection buttons & frame */
+
+.selection_frame {{
+    border: none;
+    background-color: {QTMATERIAL_SECONDARYCOLOR};
+}}
+
+.selection {{
+    border: none;
+    background-color: {QTMATERIAL_SECONDARYCOLOR};
+}}
+
+.selection:disabled {{
+    border: none;
+}}
+
+.selection:focus {{
+    background-color: {QTMATERIAL_SECONDARYCOLOR};
+}}
+
+.selection:pressed:focus {{
+    background-color: {QTMATERIAL_SECONDARYCOLOR};
+    color: {QTMATERIAL_PRIMARYCOLOR}
+}}
+
+.selection:checked:focus {{
+    background-color: {QTMATERIAL_PRIMARYCOLOR};
+    color: {QTMATERIAL_SECONDARYCOLOR}
+}}
