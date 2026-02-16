@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QStackedWidget, QPushButton, QWidget
+from PyQt6.QtWidgets import QStackedWidget, QPushButton, QWidget, QSpinBox
 
 
 class MainWindowElements:
@@ -10,3 +10,8 @@ class MainWindowElements:
 
     # Instances Page Placeholder (replaced by dynamic widget)
     INSTANCES_PAGE_PLACEHOLDER: QWidget
+
+    # Settings Page
+    SCALE_SELECTION: QSpinBox
+    STYLES_SELECTION_LIST: QWidget
+    INVERT_SECONDARY_COLOR: QPushButton

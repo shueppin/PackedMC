@@ -7,7 +7,7 @@ from qt_material import apply_stylesheet, list_themes
 
 from .type_hinting import MainWindowElements
 from .dynamic_widgets import ScrollableGrid, FieldType
-from .utils import StoredDict, animate_transition, ScrollDirection
+from .utils import StoredDict, animate_transition, ScrollDirection, create_buttons_in_scroll_area
 
 
 ACTUAL_FILE_DIRECTORY = os.path.dirname(__file__)
@@ -46,7 +46,7 @@ class MainWindow(QMainWindow, MainWindowElements):
         self.PAGE_CONTAINER.removeWidget(self.INSTANCES_PAGE_PLACEHOLDER)  # remove placeholder
         self.PAGE_CONTAINER.insertWidget(index, self.INSTANCES_PAGE)  # insert new page at same position
 
-        # Example instance names
+        # Example instance
         instances = [
             "Survival World", "Creative World", "Modpack 1", "Modpack 2",
             "Adventure Map", "Test Instance", "Extra World 1", "Extra World 2",
@@ -62,13 +62,31 @@ class MainWindow(QMainWindow, MainWindowElements):
         self.SETTINGS_PAGE_BUTTON.pressed.connect(lambda: self._page_selection_button_on_press(self.SETTINGS_PAGE_BUTTON, 4))
         self.SETTINGS_PAGE_BUTTON.released.connect(lambda: self._page_selection_button_on_release(self.SETTINGS_PAGE_BUTTON))
 
-        # Show the initial page instantly
+        # Create the settings page
+        available_stylesheet_filenames = self.possible_stylesheet_file_names
+        all_style_names = []
+        for filename in available_stylesheet_filenames:
+            style_name = filename.replace('.xml', '').replace('500', '2').replace('_',
+                                                                                  ' ').title()  # Changes the name from light_green_500.xml to Light Green 2
+            all_style_names.append(style_name)
+
+        selected_style = self.data['style']['theme'].replace('.xml', '').replace('500', '2').replace('_', ' ').title()
+
+        create_buttons_in_scroll_area(self.STYLES_SELECTION_LIST, all_style_names, selected_style, self._stylesheet_selection)
+        self.INVERT_SECONDARY_COLOR.clicked.connect(self._style_invert_button_clicked)
+        self.SCALE_SELECTION.valueChanged.connect(self._style_scale_changed)
+
+        # Show the initial page instantly and refresh whole window again
         animate_transition(self, self.PAGE_CONTAINER, 0, animation_duration=0)
 
-        self.apply_stylesheet(self.data['style']['theme'], self.data['style']['invert_secondary'], self.data['style']['scale'])
+        self._apply_stylesheet(self.data['style']['theme'], self.data['style']['invert_secondary'], self.data['style']['scale'])
 
         self.INSTANCES_PAGE.rebuild_grid()
 
+
+    '''
+    Main Page
+    '''
     # Press function for the page selection button
     def _page_selection_button_on_press(self, clicked_button: QPushButton, new_page_index: int):
         old_index = self.PAGE_CONTAINER.currentIndex()
@@ -121,7 +139,28 @@ class MainWindow(QMainWindow, MainWindowElements):
         # Else:
         clicked_button.setChecked(False)
 
-    def apply_stylesheet(self, stylesheet_file_name: str, invert_secondary=False, density_scale=0):
+
+    '''
+    Settings Page
+    '''
+    def _stylesheet_selection(self, _button, style_name):
+        # We don't need to fix the button here because we always have more than one stylesheet
+
+        filename = style_name.replace('2', '500').replace(' ', '_').lower()  # Changes the name from light_green_500.xml to Light Green 2
+        filename += '.xml'
+
+        self._apply_stylesheet(filename, invert_secondary=self.data['style']['invert_secondary'], density_scale=self.data['style']['scale'])
+
+    def _style_invert_button_clicked(self, button_state: bool):
+        self._apply_stylesheet(self.data['style']['theme'], invert_secondary = button_state, density_scale = self.data['style']['scale'])
+
+    def _style_scale_changed(self, scale_value: int):
+        self._apply_stylesheet(self.data['style']['theme'], invert_secondary = self.data['style']['invert_secondary'], density_scale = scale_value-3)  # minus 2, so we can use values between 1 and 5 in the UI, with 3 being default
+
+    '''
+    General functions
+    '''
+    def _apply_stylesheet(self, stylesheet_file_name: str, invert_secondary=False, density_scale=0):
         """
         Add a custom stylesheet based on qt_material
         """
