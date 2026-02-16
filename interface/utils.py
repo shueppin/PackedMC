@@ -43,12 +43,12 @@ class StoredDict(dict):
 PyQt Animation
 '''
 
-class ScrollDirection(Enum):
+class AnimationScrollDirection(Enum):
     HORIZONTAL = 'Horizontal'
     VERTICAL = 'Vertical'
 
 
-def animate_transition(main_window: QMainWindow, stacked_widget: QStackedWidget, new_index: int, animation_duration=300, animation_direction: ScrollDirection=ScrollDirection.VERTICAL) -> bool:
+def animate_transition(main_window: QMainWindow, stacked_widget: QStackedWidget, new_index: int, animation_duration=300, animation_direction: AnimationScrollDirection=AnimationScrollDirection.VERTICAL) -> bool:
     """
     Function to animate the transition between pages of a stacked widget
 
@@ -76,7 +76,7 @@ def animate_transition(main_window: QMainWindow, stacked_widget: QStackedWidget,
         return False
 
     # Set the animation direction and distance
-    if animation_direction == ScrollDirection.HORIZONTAL:
+    if animation_direction == AnimationScrollDirection.HORIZONTAL:
         if current_index > new_index:
             offset = QPoint(stacked_widget.width(), 0)
         else:
@@ -132,8 +132,12 @@ def _animation_done(stacked_widget: QStackedWidget, new_index):
 Create Radiobuttons or Checkboxes in scroll area
 '''
 
+class ScrollAreaButtonType(Enum):
+    RADIOBUTTON = 'Radiobutton'
+    CHECKBOX = 'Checkbox'
 
-def create_buttons_in_scroll_area(scroll_area_content_widget: QWidget, button_name_list: list | tuple, button_selected_criteria: str | int | list | tuple, button_on_click_function: Callable, button_type='radiobutton'):
+
+def create_buttons_in_scroll_area(scroll_area_content_widget: QWidget, button_name_list: list | tuple, button_selected_criteria: str | int | list | tuple, button_on_click_function: Callable, button_type=ScrollAreaButtonType.RADIOBUTTON):
     """
     This function modifies the content of a scroll area and inserts buttons or a placeholder into it. It also binds the passed function to the click of the button
 
@@ -141,7 +145,7 @@ def create_buttons_in_scroll_area(scroll_area_content_widget: QWidget, button_na
     :param button_name_list: A list of names for the buttons
     :param button_selected_criteria: For radiobutton: The name of the selected radiobutton; For checkboxes: A list with the names of the selected buttons
     :param button_on_click_function: The function to get executed on button click and in the beginning when the button is selected
-    :param button_type: The type of button to create. Either "radiobutton" or "checkbox"
+    :param button_type: The type of button to create.
     """
     # This is the layout which contains the elements
     layout: QLayout = scroll_area_content_widget.layout()
@@ -160,7 +164,7 @@ def create_buttons_in_scroll_area(scroll_area_content_widget: QWidget, button_na
     # Create a button for every name in the list
     for button_name in button_name_list:
         # Create a radiobutton
-        if button_type == 'radiobutton':
+        if button_type == ScrollAreaButtonType.RADIOBUTTON:
             button = QRadioButton(button_name)
             button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
 
@@ -170,7 +174,7 @@ def create_buttons_in_scroll_area(scroll_area_content_widget: QWidget, button_na
                 button_on_click_function(button, button_name)  # Return the button itself, because if there is just one radiobutton you are able to deselect it. When it is returned you can fix this later.
 
         # Create a checkbox button
-        elif button_type == 'checkbox':
+        elif button_type == ScrollAreaButtonType.CHECKBOX:
             button = QCheckBox(button_name)
 
             # If the button is in the list of selected ones then check it and run the function
@@ -183,9 +187,9 @@ def create_buttons_in_scroll_area(scroll_area_content_widget: QWidget, button_na
 
         # Connect the function to the button click and for the radiobutton pass the button and the name (to be able to fix the state of it) and for the checkbox the state and the name.
         # It's important to pass them as arguments to lambda and not directly to the function, because otherwise it will just use the same variable for all.
-        if button_type == 'radiobutton':
+        if button_type == ScrollAreaButtonType.RADIOBUTTON:
             button.clicked.connect(lambda state, name=button_name, clicked_button=button: button_on_click_function(clicked_button, name))  # Attention: "clicked.connect()" passes the click state as a first argument.
-        elif button_type == 'checkbox':
+        elif button_type == ScrollAreaButtonType.CHECKBOX:
             button.clicked.connect(lambda state, name=button_name: button_on_click_function(state, name))  # Attention: "clicked.connect()" passes the click state as a first argument.
 
         # Add the button to the layout above the spacer

@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>800</width>
-    <height>600</height>
+    <width>1100</width>
+    <height>700</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -31,7 +31,7 @@
       </property>
       <property name="maximumSize">
        <size>
-        <width>300</width>
+        <width>200</width>
         <height>16777215</height>
        </size>
       </property>
@@ -134,6 +134,9 @@
     </item>
     <item>
      <widget class="QStackedWidget" name="PAGE_CONTAINER">
+      <property name="currentIndex">
+       <number>4</number>
+      </property>
       <widget class="QWidget" name="INSTANCES_PAGE_PLACEHOLDER">
        <widget class="QLabel" name="label">
         <property name="geometry">
@@ -334,7 +337,7 @@
          </item>
         </layout>
        </widget>
-       <widget class="QCheckBox" name="INVERT_SECONDARY_COLOR">
+       <widget class="QCheckBox" name="SWITCH_SECONDARY_COLOR">
         <property name="geometry">
          <rect>
           <x>270</x>
@@ -347,7 +350,7 @@
          <enum>Qt::NoFocus</enum>
         </property>
         <property name="text">
-         <string>Invert background 
+         <string>Switch background 
 colors</string>
         </property>
        </widget>
@@ -362,6 +365,18 @@ colors</string>
         </property>
         <property name="focusPolicy">
          <enum>Qt::NoFocus</enum>
+        </property>
+        <property name="inputMethodHints">
+         <set>Qt::ImhDigitsOnly</set>
+        </property>
+        <property name="readOnly">
+         <bool>false</bool>
+        </property>
+        <property name="buttonSymbols">
+         <enum>QAbstractSpinBox::UpDownArrows</enum>
+        </property>
+        <property name="keyboardTracking">
+         <bool>true</bool>
         </property>
         <property name="minimum">
          <number>1</number>

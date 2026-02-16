@@ -5,29 +5,26 @@
 /*  ------------------------------------------------------------------------  */
 
 
-/* Base color changes */
+/* Custom classes */
 
 .no_frame {{
-    border: {QTMATERIAL_SECONDARYDARKCOLOR}
+    border: {QTMATERIAL_SECONDARYDARKCOLOR};
 }}
 
 .no_bg {{
-    background: {QTMATERIAL_SECONDARYDARKCOLOR}
+    background: {QTMATERIAL_SECONDARYDARKCOLOR};
+}}
+
+.instance_label {{
+    font-size: {PACKEDMC_INSTANCE_LABEL_SIZE}px;
 }}
 
 
+/* Base modifications */
 
-/* Base text modifications */
-
-.big_text {{
-    font-size: 35px
+QSpinBox {{
+    selection-background-color: transparent;
 }}
-
-.title {{
-    font-size: 18px;
-    color: {QTMATERIAL_PRIMARYCOLOR}
-}}
-
 
 
 /* Page selection buttons & frame */
@@ -40,6 +37,7 @@
 .selection {{
     border: none;
     background-color: {QTMATERIAL_SECONDARYCOLOR};
+    font-size: {PACKEDMC_SELECTION_BUTTON_TEXT_SIZE}px;
 }}
 
 .selection:disabled {{

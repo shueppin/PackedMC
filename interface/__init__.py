@@ -7,13 +7,14 @@ from qt_material import apply_stylesheet, list_themes
 
 from .type_hinting import MainWindowElements
 from .dynamic_widgets import ScrollableGrid, FieldType
-from .utils import StoredDict, animate_transition, ScrollDirection, create_buttons_in_scroll_area
+from .utils import StoredDict, animate_transition, AnimationScrollDirection, create_buttons_in_scroll_area
 
 
 ACTUAL_FILE_DIRECTORY = os.path.dirname(__file__)
 
 INTERFACE_FILE_PATH = os.path.join(ACTUAL_FILE_DIRECTORY, 'interface.ui')
 CUSTOM_STYLESHEET_FILE_PATH = os.path.join(ACTUAL_FILE_DIRECTORY, 'special_properties.cqss')
+WINDOW_DEFAULT_SCALE = 3
 
 DEFAULT_DATA_FILE_PATH = os.path.join(ACTUAL_FILE_DIRECTORY, os.path.abspath('../data.json'))
 DEFAULT_DATA = {
@@ -52,7 +53,7 @@ class MainWindow(QMainWindow, MainWindowElements):
             "Adventure Map", "Test Instance", "Extra World 1", "Extra World 2",
             "Extra World 3", "Extra World 4", "Extra World 5",
         ]
-        self.INSTANCES_PAGE.actualize_values(instances)
+        self.INSTANCES_PAGE.set_values(instances)
 
         # Bind the page selection buttons
         self.INSTANCES_PAGE_BUTTON.pressed.connect(lambda: self._page_selection_button_on_press(self.INSTANCES_PAGE_BUTTON, 0))
@@ -73,13 +74,15 @@ class MainWindow(QMainWindow, MainWindowElements):
         selected_style = self.data['style']['theme'].replace('.xml', '').replace('500', '2').replace('_', ' ').title()
 
         create_buttons_in_scroll_area(self.STYLES_SELECTION_LIST, all_style_names, selected_style, self._stylesheet_selection)
-        self.INVERT_SECONDARY_COLOR.clicked.connect(self._style_invert_button_clicked)
+        self.SWITCH_SECONDARY_COLOR.setChecked(self.data['style']['invert_secondary'])
+        self.SWITCH_SECONDARY_COLOR.clicked.connect(self._style_invert_button_clicked)
+        self.SCALE_SELECTION.setValue(self.data['style']['scale']+WINDOW_DEFAULT_SCALE)
         self.SCALE_SELECTION.valueChanged.connect(self._style_scale_changed)
 
         # Show the initial page instantly and refresh whole window again
         animate_transition(self, self.PAGE_CONTAINER, 0, animation_duration=0)
 
-        self._apply_stylesheet(self.data['style']['theme'], self.data['style']['invert_secondary'], self.data['style']['scale'])
+        self._style_scale_changed(self.data['style']['scale'] + WINDOW_DEFAULT_SCALE)  # Use this to also resize the fields
 
         self.INSTANCES_PAGE.rebuild_grid()
 
@@ -103,15 +106,15 @@ class MainWindow(QMainWindow, MainWindowElements):
 
         # Set the animation direction. Different "types" are changed vertically (using selection button) but the edit windows are changed horizontally
         if old_index == 0 and new_page_index == 1:
-            animation_direction = ScrollDirection.HORIZONTAL
+            animation_direction = AnimationScrollDirection.HORIZONTAL
         elif old_index == 1 and new_page_index == 0:
-            animation_direction = ScrollDirection.HORIZONTAL
+            animation_direction = AnimationScrollDirection.HORIZONTAL
         elif old_index == 2 and new_page_index == 3:
-            animation_direction = ScrollDirection.HORIZONTAL
+            animation_direction = AnimationScrollDirection.HORIZONTAL
         elif old_index == 3 and new_page_index == 2:
-            animation_direction = ScrollDirection.HORIZONTAL
+            animation_direction = AnimationScrollDirection.HORIZONTAL
         else:
-            animation_direction = ScrollDirection.VERTICAL
+            animation_direction = AnimationScrollDirection.VERTICAL
 
         # Animate the page transition and check if an old transition is still animating. And if it is then stop any change of the selected button
         still_animating = animate_transition(self, self.PAGE_CONTAINER, new_page_index, animation_direction=animation_direction)
@@ -126,6 +129,10 @@ class MainWindow(QMainWindow, MainWindowElements):
         # Check the new button
         clicked_button.setChecked(True)
         clicked_button.selected = True
+
+        # Page specific functions
+        if new_page_index == 0:
+            self.INSTANCES_PAGE.rebuild_grid(force=True)
 
     # Release function for the selection button
     @staticmethod
@@ -146,7 +153,7 @@ class MainWindow(QMainWindow, MainWindowElements):
     def _stylesheet_selection(self, _button, style_name):
         # We don't need to fix the button here because we always have more than one stylesheet
 
-        filename = style_name.replace('2', '500').replace(' ', '_').lower()  # Changes the name from light_green_500.xml to Light Green 2
+        filename = style_name.replace('2', '500').replace(' ', '_').lower()  # Changes the name from "Light Green 2" to "light_green_500.xml"
         filename += '.xml'
 
         self._apply_stylesheet(filename, invert_secondary=self.data['style']['invert_secondary'], density_scale=self.data['style']['scale'])
@@ -155,7 +162,11 @@ class MainWindow(QMainWindow, MainWindowElements):
         self._apply_stylesheet(self.data['style']['theme'], invert_secondary = button_state, density_scale = self.data['style']['scale'])
 
     def _style_scale_changed(self, scale_value: int):
-        self._apply_stylesheet(self.data['style']['theme'], invert_secondary = self.data['style']['invert_secondary'], density_scale = scale_value-3)  # minus 2, so we can use values between 1 and 5 in the UI, with 3 being default
+        self._apply_stylesheet(self.data['style']['theme'], invert_secondary = self.data['style']['invert_secondary'], density_scale = scale_value-WINDOW_DEFAULT_SCALE)  # minus default scale, so we can use values between 1 and 5 in the UI
+
+        # Change grid size
+        self.INSTANCES_PAGE.set_size(100+50*scale_value, 60+20*scale_value)
+        self.INSTANCES_PAGE.set_spacing(vertical_spacing=10*scale_value)
 
     '''
     General functions
@@ -173,9 +184,13 @@ class MainWindow(QMainWindow, MainWindowElements):
             # Button colors (use in designer with custom property called "class")
             'warning': '#dc3545',
 
-            # Density Scale
+            # Density Scale (for qt_material)
             'density_scale': density_scale,
         }
+
+        # Set environment variables for text
+        os.environ['PACKEDMC_INSTANCE_LABEL_SIZE'] = str(20 + 4 * density_scale)
+        os.environ['PACKEDMC_SELECTION_BUTTON_TEXT_SIZE'] = str(20 + 2 * density_scale)
 
         # Apply the wanted stylesheet using custom special properties
         apply_stylesheet(self.application, theme=stylesheet_file_name, css_file=CUSTOM_STYLESHEET_FILE_PATH, extra=extra, invert_secondary=invert_secondary, style='windows11')

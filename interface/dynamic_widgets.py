@@ -21,7 +21,7 @@ class InstanceField(QFrame):
 
         name_label = QLabel(instance_name)
         name_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        #name_label.setStyleSheet("font-weight: bold; font-size: 14px;")
+        name_label.setProperty('class', 'instance_label')
         layout.addWidget(name_label)
 
         button_layout = QHBoxLayout()
@@ -62,14 +62,30 @@ class ScrollableGrid(QWidget):
 
         # Initial layout
         self.grid_layout = QGridLayout()
-        self.grid_layout.setHorizontalSpacing(10)
-        self.grid_layout.setVerticalSpacing(30)
+        self.set_spacing()
         self.grid_layout.setContentsMargins(10, 10, 10, 10)
         self.content_widget.setLayout(self.grid_layout)
         self.rebuild_grid()
 
-    def actualize_values(self, values: list[str]):
+    def set_spacing(self, horizontal_spacing=10, vertical_spacing=30):
+        self.grid_layout.setHorizontalSpacing(horizontal_spacing)
+        self.grid_layout.setVerticalSpacing(vertical_spacing)
+
+    def set_size(self, width=200, height=100):
+        self.card_width = width
+        self.card_height = height
+        self.set_values(self.values)  # Refresh the values, to recreate the fields
+
+    def set_values(self, values: list[str]):
         """ Refresh the table using new values. Either they are instance names or mod icon file paths. """
+        # Remove all the fields
+        for field in self.fields:
+            self.grid_layout.removeWidget(field)
+            field.deleteLater()  # Properly destroy the widget
+
+        self.fields.clear()
+
+        # Add the new values
         self.values = values
 
         if self.field_type == FieldType.INSTANCES:
@@ -80,11 +96,11 @@ class ScrollableGrid(QWidget):
         self.rebuild_grid()
 
 
-    def rebuild_grid(self):
+    def rebuild_grid(self, force=False):
         width = self.scroll_area.viewport().width() - 10
         columns = max(1, width // (self.card_width + 10))
 
-        if columns == self.current_columns:  # If nothing changes then return
+        if columns == self.current_columns and not force:  # If nothing changes then return
             return
         self.current_columns = columns
 

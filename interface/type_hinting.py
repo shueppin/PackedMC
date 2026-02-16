@@ -12,6 +12,6 @@ class MainWindowElements:
     INSTANCES_PAGE_PLACEHOLDER: QWidget
 
     # Settings Page
-    SCALE_SELECTION: QSpinBox
     STYLES_SELECTION_LIST: QWidget
-    INVERT_SECONDARY_COLOR: QPushButton
+    SCALE_SELECTION: QSpinBox
+    SWITCH_SECONDARY_COLOR: QPushButton
