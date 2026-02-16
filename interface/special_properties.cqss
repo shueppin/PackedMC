@@ -5,19 +5,6 @@
 /*  ------------------------------------------------------------------------  */
 
 
-
-/* Select the whole row in the TableWidget */
-
-QTableView::item:selected {{
-    background-color: {QTMATERIAL_PRIMARYCOLOR};
-}}
-
-QTableView {{
-    border: 2px solid {QTMATERIAL_SECONDARYLIGHTCOLOR};
-}}
-
-
-
 /* Base color changes */
 
 .no_frame {{
@@ -30,7 +17,7 @@ QTableView {{
 
 
 
-/* Modify Text */
+/* Base text modifications */
 
 .big_text {{
     font-size: 35px
@@ -59,16 +46,25 @@ QTableView {{
     border: none;
 }}
 
-.selection:focus {{
-    background-color: {QTMATERIAL_SECONDARYCOLOR};
-}}
 
-.selection:pressed:focus {{
-    background-color: {QTMATERIAL_SECONDARYCOLOR};
-    color: {QTMATERIAL_PRIMARYCOLOR}
-}}
 
-.selection:checked:focus {{
+/* Select the whole row in the TableWidget */
+
+QTableView::item:selected {{
     background-color: {QTMATERIAL_PRIMARYCOLOR};
-    color: {QTMATERIAL_SECONDARYCOLOR}
 }}
+
+QTableView {{
+    border: 2px solid {QTMATERIAL_SECONDARYLIGHTCOLOR};
+}}
+
+
+
+/* Page specific settings */
+
+.play_button {{
+    background: {QTMATERIAL_PRIMARYLIGHTCOLOR};
+    color: {QTMATERIAL_SECONDARYCOLOR};
+    border-color: {QTMATERIAL_PRIMARYLIGHTCOLOR};
+}}
+

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>MainWindow</class>
- <widget class="QMainWindow" name="MainWindow">
+ <class>PackedMC</class>
+ <widget class="QMainWindow" name="PackedMC">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -68,8 +68,17 @@
            <verstretch>0</verstretch>
           </sizepolicy>
          </property>
+         <property name="focusPolicy">
+          <enum>Qt::NoFocus</enum>
+         </property>
          <property name="text">
           <string>Instances</string>
+         </property>
+         <property name="checkable">
+          <bool>true</bool>
+         </property>
+         <property name="checked">
+          <bool>true</bool>
          </property>
          <property name="class" stdset="0">
           <string>selection</string>
@@ -84,8 +93,14 @@
            <verstretch>0</verstretch>
           </sizepolicy>
          </property>
+         <property name="focusPolicy">
+          <enum>Qt::NoFocus</enum>
+         </property>
          <property name="text">
           <string>Mods</string>
+         </property>
+         <property name="checkable">
+          <bool>true</bool>
          </property>
          <property name="class" stdset="0">
           <string>selection</string>
@@ -100,8 +115,14 @@
            <verstretch>0</verstretch>
           </sizepolicy>
          </property>
+         <property name="focusPolicy">
+          <enum>Qt::NoFocus</enum>
+         </property>
          <property name="text">
           <string>Settings</string>
+         </property>
+         <property name="checkable">
+          <bool>true</bool>
          </property>
          <property name="class" stdset="0">
           <string>selection</string>
@@ -128,7 +149,66 @@
         </property>
        </widget>
       </widget>
-      <widget class="QWidget" name="page_2"/>
+      <widget class="QWidget" name="INSTANCE_EDIT_PAGE">
+       <widget class="QLabel" name="label_2">
+        <property name="geometry">
+         <rect>
+          <x>160</x>
+          <y>280</y>
+          <width>251</width>
+          <height>101</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Instance Edit</string>
+        </property>
+       </widget>
+      </widget>
+      <widget class="QWidget" name="MODS_PAGE_PLACEHOLDER">
+       <widget class="QLabel" name="label_3">
+        <property name="geometry">
+         <rect>
+          <x>220</x>
+          <y>200</y>
+          <width>251</width>
+          <height>101</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Mods</string>
+        </property>
+       </widget>
+      </widget>
+      <widget class="QWidget" name="MOD_EDIT_PAGE">
+       <widget class="QLabel" name="label_4">
+        <property name="geometry">
+         <rect>
+          <x>120</x>
+          <y>190</y>
+          <width>251</width>
+          <height>101</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Mod edit</string>
+        </property>
+       </widget>
+      </widget>
+      <widget class="QWidget" name="SETTINGS_PAGE">
+       <widget class="QLabel" name="label_5">
+        <property name="geometry">
+         <rect>
+          <x>150</x>
+          <y>180</y>
+          <width>251</width>
+          <height>101</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Settings</string>
+        </property>
+       </widget>
+      </widget>
      </widget>
     </item>
    </layout>

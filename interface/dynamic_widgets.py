@@ -21,17 +21,20 @@ class InstanceField(QFrame):
 
         name_label = QLabel(instance_name)
         name_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        name_label.setStyleSheet("font-weight: bold; font-size: 14px;")
+        #name_label.setStyleSheet("font-weight: bold; font-size: 14px;")
         layout.addWidget(name_label)
 
         button_layout = QHBoxLayout()
         play_button = QPushButton("Play")
+        play_button.setProperty('class', 'play_button')
+        play_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         settings_button = QPushButton("Settings")
+        settings_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         button_layout.addWidget(play_button)
         button_layout.addWidget(settings_button)
 
-        layout.addLayout(button_layout)
         layout.addStretch()
+        layout.addLayout(button_layout)
         self.setLayout(layout)
 
 
@@ -59,7 +62,8 @@ class ScrollableGrid(QWidget):
 
         # Initial layout
         self.grid_layout = QGridLayout()
-        self.grid_layout.setSpacing(10)
+        self.grid_layout.setHorizontalSpacing(10)
+        self.grid_layout.setVerticalSpacing(30)
         self.grid_layout.setContentsMargins(10, 10, 10, 10)
         self.content_widget.setLayout(self.grid_layout)
         self.rebuild_grid()
@@ -73,12 +77,14 @@ class ScrollableGrid(QWidget):
                 field = InstanceField(name, width=self.card_width, height=self.card_height)
                 self.fields.append(field)
 
+        self.rebuild_grid()
+
 
     def rebuild_grid(self):
         width = self.scroll_area.viewport().width() - 10
         columns = max(1, width // (self.card_width + 10))
 
-        if columns == self.current_columns:
+        if columns == self.current_columns:  # If nothing changes then return
             return
         self.current_columns = columns
 
