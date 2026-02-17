@@ -1,4 +1,5 @@
 from enum import Enum
+from typing import Callable
 
 from PyQt6.QtWidgets import QWidget, QGridLayout, QScrollArea, QVBoxLayout, QLabel, QPushButton, QHBoxLayout, QFrame
 from PyQt6.QtCore import Qt
@@ -9,8 +10,22 @@ class FieldType(Enum):
     MODS = "Mods"
 
 
-class InstanceField(QFrame):
-    def __init__(self, instance_name: str, width=200, height=100):
+class InstanceFieldFunctions:
+    def __init__(self, play_function: Callable[[str], None], edit_function: Callable[[str], None], create_new_function: Callable[[], None]):
+        """ Object to keep track of the functions to execute. Every function gets the instance name as the first argument. """
+        self.play_function = play_function
+        self.edit_function = edit_function
+        self.create_new_instance_function = create_new_function
+
+
+class ModFieldFunctions:
+    def __init__(self, edit_function: Callable[[str], None], create_new_function: Callable[[str], None]):
+        self.edit_function = edit_function
+        self.create_new_function = create_new_function
+
+
+class _InstanceField(QFrame):
+    def __init__(self, instance_name: str, instance_field_functions: InstanceFieldFunctions, width=200, height=100):
         super().__init__()
         self.setFrameShape(QFrame.Shape.StyledPanel)
         self.setLineWidth(2)
@@ -28,19 +43,57 @@ class InstanceField(QFrame):
         play_button = QPushButton("Play")
         play_button.setProperty('class', 'play_button')
         play_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        settings_button = QPushButton("Settings")
-        settings_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        play_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        play_button.clicked.connect(lambda: instance_field_functions.play_function(instance_name))
+        edit_button = QPushButton("Edit")
+        edit_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        edit_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        edit_button.clicked.connect(lambda: instance_field_functions.edit_function(instance_name))
         button_layout.addWidget(play_button)
-        button_layout.addWidget(settings_button)
+        button_layout.addWidget(edit_button)
 
         layout.addStretch()
         layout.addLayout(button_layout)
         self.setLayout(layout)
 
 
+class _CreateInstanceField(QFrame):
+    def __init__(self, on_press_function: Callable[[], None], width=200, height=100):
+        super().__init__()
+        self.on_press_function = on_press_function
+
+        self.setFrameShape(QFrame.Shape.StyledPanel)
+        self.setLineWidth(2)
+        self.setFixedSize(width, height)
+        self.setProperty('class', 'clickable_frame create_instance_frame')
+
+        # Enable hover + cursor
+        self.setAttribute(Qt.WidgetAttribute.WA_Hover, True)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+
+        layout = QVBoxLayout()
+        layout.setContentsMargins(5, 5, 5, 5)
+
+        label = QLabel("Create new instance")
+        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        label.setProperty('class', 'create_instance_label')
+        layout.addStretch()
+        layout.addWidget(label)
+        layout.addStretch()
+
+        self.setLayout(layout)
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.on_press_function()
+        super().mousePressEvent(event)
+
+# TODO: Add Mod Field
+
+
 class ScrollableGrid(QWidget):
-    def __init__(self, field_type: FieldType, card_width=200, card_height=100):
-        """ Create a scrollable grid which changes number of columns oon resize. Either it contains instances or mods (field_type). """
+    def __init__(self, field_type: FieldType, onclick_functions: InstanceFieldFunctions|ModFieldFunctions, card_width=200, card_height=100):
+        """ Create a scrollable grid which changes number of columns on resize. Either it contains instances or mods (field_type). """
         super().__init__()
         self.field_type = field_type
         self.card_width = card_width
@@ -48,6 +101,7 @@ class ScrollableGrid(QWidget):
         self.fields = []
         self.values = []
         self.current_columns = 0
+        self.onclick_functions = onclick_functions
 
         # Scroll area
         self.scroll_area = QScrollArea()
@@ -90,8 +144,12 @@ class ScrollableGrid(QWidget):
 
         if self.field_type == FieldType.INSTANCES:
             for name in self.values:
-                field = InstanceField(name, width=self.card_width, height=self.card_height)
+                field = _InstanceField(name, self.onclick_functions, width=self.card_width, height=self.card_height)
                 self.fields.append(field)
+            create_new_instance_field = _CreateInstanceField(self.onclick_functions.create_new_instance_function, self.card_width, self.card_height)
+            self.fields.append(create_new_instance_field)
+
+        # TODO: Create Mod Fields
 
         self.rebuild_grid()
 

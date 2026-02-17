@@ -3,10 +3,10 @@ import os
 
 from PyQt6 import uic
 from PyQt6.QtWidgets import QMainWindow, QPushButton
-from qt_material import apply_stylesheet, list_themes
+from qt_material import apply_stylesheet, list_themes, get_theme, opacity
 
 from .type_hinting import MainWindowElements
-from .dynamic_widgets import ScrollableGrid, FieldType
+from .dynamic_widgets import ScrollableGrid, InstanceFieldFunctions, FieldType
 from .utils import StoredDict, animate_transition, AnimationScrollDirection, create_buttons_in_scroll_area
 
 
@@ -41,11 +41,13 @@ class MainWindow(QMainWindow, MainWindowElements):
         self.possible_stylesheet_file_names = list_themes()
 
         # Create the new grid page and insert it where the placeholder was
-        self.INSTANCES_PAGE = ScrollableGrid(FieldType.INSTANCES)
+        instance_field_functions = InstanceFieldFunctions(self._play_instance, self._show_edit_page, self._create_instance)
+        self.INSTANCES_PAGE = ScrollableGrid(FieldType.INSTANCES, instance_field_functions)
 
         index = self.PAGE_CONTAINER.indexOf(self.INSTANCES_PAGE_PLACEHOLDER)
         self.PAGE_CONTAINER.removeWidget(self.INSTANCES_PAGE_PLACEHOLDER)  # remove placeholder
         self.PAGE_CONTAINER.insertWidget(index, self.INSTANCES_PAGE)  # insert new page at same position
+        self.INSTANCES_PAGE_PLACEHOLDER.deleteLater()  # Cleanup
 
         # Example instance
         instances = [
@@ -148,6 +150,28 @@ class MainWindow(QMainWindow, MainWindowElements):
 
 
     '''
+    Instance page
+    '''
+    def _play_instance(self, instance_name: str):
+        # TODO: Launch the official Launcher
+        print('Play instance', instance_name)
+
+    def _create_instance(self):
+        # TODO: Implement
+        print("Create new instance")
+
+    def _show_edit_page(self, instance_name: str):
+        # Animate the page transition and check if an old transition is still animating. And if it is then stop any change of the selected button
+        still_animating = animate_transition(self, self.PAGE_CONTAINER, 1, animation_direction=AnimationScrollDirection.HORIZONTAL)
+
+        if still_animating:
+            return
+
+        print(instance_name)
+
+        # TODO: Set values for instance edit page
+
+    '''
     Settings Page
     '''
     def _stylesheet_selection(self, _button, style_name):
@@ -192,6 +216,13 @@ class MainWindow(QMainWindow, MainWindowElements):
         os.environ['PACKEDMC_INSTANCE_LABEL_SIZE'] = str(20 + 4 * density_scale)
         os.environ['PACKEDMC_SELECTION_BUTTON_TEXT_SIZE'] = str(20 + 2 * density_scale)
 
+        # Set environment variable for hover color, using opacity to get the format "rgba(...)", accepted by PyQT
+        theme = get_theme(stylesheet_file_name, invert_secondary=invert_secondary)
+        os.environ['PACKEDMC_FRAME_HOVER_COLOR'] = opacity(theme['secondaryLightColor'], 0.5)
+        os.environ['PACKEDMC_BUTTON_HOVER_COLOR'] = opacity(theme['primaryColor'], 0.1)
+        os.environ['PACKEDMC_BUTTON_PRESSED_COLOR'] = opacity(theme['primaryColor'], 0.6)
+        os.environ['PACKEDMC_PLAY_HOVER_COLOR'] = opacity(theme['primaryLightColor'], 0.9)
+
         # Apply the wanted stylesheet using custom special properties
         apply_stylesheet(self.application, theme=stylesheet_file_name, css_file=CUSTOM_STYLESHEET_FILE_PATH, extra=extra, invert_secondary=invert_secondary, style='windows11')
 
@@ -201,3 +232,6 @@ class MainWindow(QMainWindow, MainWindowElements):
         self.data['style']['scale'] = density_scale
 
         self.data.save()
+
+
+        os.environ['QTMATERIAL_PRIMARYCOLOR'] = "#000000"

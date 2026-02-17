@@ -19,11 +19,39 @@
     font-size: {PACKEDMC_INSTANCE_LABEL_SIZE}px;
 }}
 
+.colored_text {{
+    color: {QTMATERIAL_PRIMARYCOLOR};
+}}
+
+.clickable_frame:hover {{
+    background-color: {PACKEDMC_FRAME_HOVER_COLOR};
+}}
+
 
 /* Base modifications */
 
 QSpinBox {{
     selection-background-color: transparent;
+}}
+
+QPushButton:hover {{
+    background-color: {PACKEDMC_BUTTON_HOVER_COLOR};
+}}
+
+QPushButton:pressed:hover {{
+    background-color: {PACKEDMC_BUTTON_PRESSED_COLOR};
+}}
+
+QPushButton:pressed {{
+    background-color: {PACKEDMC_BUTTON_PRESSED_COLOR};
+}}
+
+QComboBox:hover {{
+    background-color: {PACKEDMC_BUTTON_HOVER_COLOR};
+}}
+
+QComboBox:on {{
+    background-color: {QTMATERIAL_PRIMARYCOLOR};
 }}
 
 
@@ -38,6 +66,14 @@ QSpinBox {{
     border: none;
     background-color: {QTMATERIAL_SECONDARYCOLOR};
     font-size: {PACKEDMC_SELECTION_BUTTON_TEXT_SIZE}px;
+}}
+
+.selection:checked {{
+    color: {QTMATERIAL_SECONDARYCOLOR};
+}}
+
+.selection:checked:hover {{
+    background-color: {QTMATERIAL_PRIMARYCOLOR};
 }}
 
 .selection:disabled {{
@@ -60,9 +96,31 @@ QTableView {{
 
 /* Page specific settings */
 
-.play_button {{
-    background: {QTMATERIAL_PRIMARYLIGHTCOLOR};
-    color: {QTMATERIAL_SECONDARYCOLOR};
-    border-color: {QTMATERIAL_PRIMARYLIGHTCOLOR};
+.create_instance_label {{
+    font-size: {PACKEDMC_INSTANCE_LABEL_SIZE}px;
+    color: {QTMATERIAL_PRIMARYCOLOR};
 }}
+
+.create_instance_frame {{
+    border-color: {QTMATERIAL_PRIMARYCOLOR};
+}}
+
+.play_button {{
+    background-color: {QTMATERIAL_PRIMARYCOLOR};
+    color: {QTMATERIAL_SECONDARYCOLOR};
+}}
+
+.play_button:hover {{
+    background-color: {PACKEDMC_PLAY_HOVER_COLOR};
+    border-color: {PACKEDMC_PLAY_HOVER_COLOR};
+}}
+
+.play_button:pressed:hover {{
+    background-color: {QTMATERIAL_PRIMARYLIGHTCOLOR};
+}}
+
+.play_button:pressed {{
+    background-color: {QTMATERIAL_PRIMARYLIGHTCOLOR};
+}}
+
 
