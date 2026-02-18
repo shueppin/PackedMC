@@ -27,6 +27,11 @@
     background-color: {PACKEDMC_FRAME_HOVER_COLOR};
 }}
 
+.create_new_element_button {{
+    font-size: {PACKEDMC_INSTANCE_LABEL_SIZE}px;
+    color: {QTMATERIAL_PRIMARYCOLOR};
+}}
+
 
 /* Base modifications */
 
@@ -52,6 +57,10 @@ QComboBox:hover {{
 
 QComboBox:on {{
     background-color: {QTMATERIAL_PRIMARYCOLOR};
+}}
+
+QCheckBox::indicator:hover {{
+    background-color: {PACKEDMC_BUTTON_HOVER_COLOR};
 }}
 
 
@@ -95,11 +104,6 @@ QTableView {{
 
 
 /* Page specific settings */
-
-.create_instance_label {{
-    font-size: {PACKEDMC_INSTANCE_LABEL_SIZE}px;
-    color: {QTMATERIAL_PRIMARYCOLOR};
-}}
 
 .create_instance_frame {{
     border-color: {QTMATERIAL_PRIMARYCOLOR};

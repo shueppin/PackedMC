@@ -1,8 +1,9 @@
 import logging
 import os
+from platform import platform
 
 from PyQt6 import uic
-from PyQt6.QtWidgets import QMainWindow, QPushButton
+from PyQt6.QtWidgets import QMainWindow, QPushButton, QFileDialog
 from qt_material import apply_stylesheet, list_themes, get_theme, opacity
 
 from .type_hinting import MainWindowElements
@@ -16,15 +17,25 @@ INTERFACE_FILE_PATH = os.path.join(ACTUAL_FILE_DIRECTORY, 'interface.ui')
 CUSTOM_STYLESHEET_FILE_PATH = os.path.join(ACTUAL_FILE_DIRECTORY, 'special_properties.cqss')
 WINDOW_DEFAULT_SCALE = 3
 
-DEFAULT_DATA_FILE_PATH = os.path.join(ACTUAL_FILE_DIRECTORY, os.path.abspath('../data.json'))
+DEFAULT_DATA_FILE_PATH = os.path.join(ACTUAL_FILE_DIRECTORY, r'..\data.json')
 DEFAULT_DATA = {
     # For the style of the App
     'style': {
         'theme': 'dark_lightgreen.xml',
         'invert_secondary': False,
         'scale': 0
-    }
+    },
+    'instances': {}
 }
+
+if 'windows' in platform().lower():
+    ROAMING_DIRECTORY = os.getenv('Appdata')
+    STANDARD_MINECRAFT_DIRECTORY = os.path.join(ROAMING_DIRECTORY, r'\.minecraft')
+
+else:
+    STANDARD_MINECRAFT_DIRECTORY = 'UNKNOWN'
+
+DEFAULT_INSTANCE_NAME = 'Latest Release'
 
 
 logger = logging.getLogger('interface')
@@ -39,23 +50,16 @@ class MainWindow(QMainWindow, MainWindowElements):
         self.data = StoredDict(DEFAULT_DATA_FILE_PATH, DEFAULT_DATA)  # Initialize using Default Data as base
         self.application = application
         self.possible_stylesheet_file_names = list_themes()
+        self.selected_instance_name = ""
 
         # Create the new grid page and insert it where the placeholder was
-        instance_field_functions = InstanceFieldFunctions(self._play_instance, self._show_edit_page, self._create_instance)
+        instance_field_functions = InstanceFieldFunctions(self._play_instance, self._edit_instance, self._create_instance)
         self.INSTANCES_PAGE = ScrollableGrid(FieldType.INSTANCES, instance_field_functions)
 
         index = self.PAGE_CONTAINER.indexOf(self.INSTANCES_PAGE_PLACEHOLDER)
         self.PAGE_CONTAINER.removeWidget(self.INSTANCES_PAGE_PLACEHOLDER)  # remove placeholder
         self.PAGE_CONTAINER.insertWidget(index, self.INSTANCES_PAGE)  # insert new page at same position
         self.INSTANCES_PAGE_PLACEHOLDER.deleteLater()  # Cleanup
-
-        # Example instance
-        instances = [
-            "Survival World", "Creative World", "Modpack 1", "Modpack 2",
-            "Adventure Map", "Test Instance", "Extra World 1", "Extra World 2",
-            "Extra World 3", "Extra World 4", "Extra World 5",
-        ]
-        self.INSTANCES_PAGE.set_values(instances)
 
         # Bind the page selection buttons
         self.INSTANCES_PAGE_BUTTON.pressed.connect(lambda: self._page_selection_button_on_press(self.INSTANCES_PAGE_BUTTON, 0))
@@ -64,6 +68,15 @@ class MainWindow(QMainWindow, MainWindowElements):
         self.MODS_PAGE_BUTTON.released.connect(lambda: self._page_selection_button_on_release(self.MODS_PAGE_BUTTON))
         self.SETTINGS_PAGE_BUTTON.pressed.connect(lambda: self._page_selection_button_on_press(self.SETTINGS_PAGE_BUTTON, 4))
         self.SETTINGS_PAGE_BUTTON.released.connect(lambda: self._page_selection_button_on_release(self.SETTINGS_PAGE_BUTTON))
+
+        # Create the instance edit page
+        self.BACK_BUTTON.clicked.connect(lambda: self._show_page(0, animation_direction=AnimationScrollDirection.HORIZONTAL))
+        self.BROWSE_MINECRAFT_PATH_BUTTON.clicked.connect(self._set_minecraft_path)
+        # TODO: Connect other buttons
+
+        # If there are no instance, create the standard one
+        if not self.data['instances']:
+            self._create_instance(DEFAULT_INSTANCE_NAME)
 
         # Create the settings page
         available_stylesheet_filenames = self.possible_stylesheet_file_names
@@ -82,7 +95,7 @@ class MainWindow(QMainWindow, MainWindowElements):
         self.SCALE_SELECTION.valueChanged.connect(self._style_scale_changed)
 
         # Show the initial page instantly and refresh whole window again
-        animate_transition(self, self.PAGE_CONTAINER, 0, animation_duration=0)
+        self._show_page(0, show_instantly=True)
 
         self._style_scale_changed(self.data['style']['scale'] + WINDOW_DEFAULT_SCALE)  # Use this to also resize the fields
 
@@ -118,11 +131,10 @@ class MainWindow(QMainWindow, MainWindowElements):
         else:
             animation_direction = AnimationScrollDirection.VERTICAL
 
-        # Animate the page transition and check if an old transition is still animating. And if it is then stop any change of the selected button
-        still_animating = animate_transition(self, self.PAGE_CONTAINER, new_page_index, animation_direction=animation_direction)
-
-        if still_animating:
-            return
+        # Check whether the page container is still animating, and if so exit the function
+        if hasattr(self.PAGE_CONTAINER, 'is_animating'):
+            if self.PAGE_CONTAINER.is_animating:
+                return
 
         # Uncheck the old button
         old_button.setChecked(False)
@@ -132,9 +144,8 @@ class MainWindow(QMainWindow, MainWindowElements):
         clicked_button.setChecked(True)
         clicked_button.selected = True
 
-        # Page specific functions
-        if new_page_index == 0:
-            self.INSTANCES_PAGE.rebuild_grid(force=True)
+        self._show_page(new_page_index, animation_direction)
+
 
     # Release function for the selection button
     @staticmethod
@@ -149,27 +160,89 @@ class MainWindow(QMainWindow, MainWindowElements):
         clicked_button.setChecked(False)
 
 
+    def _show_page(self, page_index: int, animation_direction: AnimationScrollDirection = AnimationScrollDirection.VERTICAL, show_instantly = False):
+        # We don't care whether the page is still animating, because it doesn't matter if we execute the page function anyway.
+        if show_instantly:
+            animate_transition(self, self.PAGE_CONTAINER, page_index, animation_direction=animation_direction, animation_duration=0)
+        else:
+            animate_transition(self, self.PAGE_CONTAINER, page_index, animation_direction=animation_direction)
+
+        # Page specific functions
+        if page_index == 0:
+            self.INSTANCES_PAGE.set_values(self.data['instances'].keys())
+            #self.INSTANCES_PAGE.rebuild_grid(force=True)
+
     '''
-    Instance page
+    Instance page & Instance Edit page
     '''
+
     def _play_instance(self, instance_name: str):
         # TODO: Launch the official Launcher
         print('Play instance', instance_name)
 
-    def _create_instance(self):
-        # TODO: Implement
-        print("Create new instance")
+    def _create_instance(self, instance_name = 'New instance'):
+        # Define the instance name
+        original_instance_name = instance_name
+        i = 1
+        # If an instance with this name already exists then append a number to the end of the instance name
+        while instance_name in self.data['instances'].keys():
+            instance_name = original_instance_name + ' ' + str(i)
+            i += 1
 
-    def _show_edit_page(self, instance_name: str):
-        # Animate the page transition and check if an old transition is still animating. And if it is then stop any change of the selected button
-        still_animating = animate_transition(self, self.PAGE_CONTAINER, 1, animation_direction=AnimationScrollDirection.HORIZONTAL)
+        print('Create new instance', instance_name)
 
-        if still_animating:
-            return
+        # Set the data
+        self.data['instances'][instance_name] = {
+            'type': 'Release',
+            'version': 'latest',
+            'default': instance_name == DEFAULT_INSTANCE_NAME,  # Either set it as default or not
+            'minecraft_directory': STANDARD_MINECRAFT_DIRECTORY,
+            'usable_mods': False,
+            'total_mods': False,
+            'standard_options_file': False,
+            'advanced_arguments': {}
+        }
+
+        self.data.save()
+
+        self._edit_instance(instance_name)  # Show it in edit mode
+
+    def _edit_instance(self, instance_name: str, skip_animation = False):
+        if not skip_animation:
+            self._show_page(1, animation_direction=AnimationScrollDirection.HORIZONTAL)
 
         print(instance_name)
 
-        # TODO: Set values for instance edit page
+    '''
+        # Set the values for the edit page
+        self.selected_instance_name = instance_name
+        instance_data = self.data['instances'][instance_name]
+
+        # Modify the name without triggering the changed_instance_data function (which triggers on text change)
+        self.INSTANCE_NAME.blockSignals(True)
+        self.INSTANCE_NAME.setText(instance_name)
+        self.INSTANCE_NAME.blockSignals(False)
+
+        self.MINECRAFT_DIRECTORY_PATH.setText(instance_data['minecraft_directory'])
+        self.INSTANCE_TYPE_SELECTION.setCurrentText(instance_data['type'])
+        # TODO: Set the Version ComboBox using combobox.clear() and combobox.addItems([]) based on the type and select the correct one (add also "latest")
+
+        # TODO: Set the mods
+        '''
+
+
+    def _set_minecraft_path(self):
+        actual_path = self.data['instances'][self.selected_instance_name]['minecraft_directory']
+
+        new_path = QFileDialog.getExistingDirectory(self, 'Select Minecraft Directory', actual_path)
+
+        # TODO: Allow the user only to use userdata paths
+
+        self.data['instances'][self.selected_instance_name]['minecraft_directory'] = new_path
+
+        self._edit_instance(self.selected_instance_name, True)  # Refresh the values
+        # TODO: Maybe instead of "skip_animation=True" we can set the values here
+
 
     '''
     Settings Page
@@ -191,6 +264,7 @@ class MainWindow(QMainWindow, MainWindowElements):
         # Change grid size
         self.INSTANCES_PAGE.set_size(100+50*scale_value, 60+20*scale_value)
         self.INSTANCES_PAGE.set_spacing(vertical_spacing=10*scale_value)
+
 
     '''
     General functions
@@ -232,6 +306,5 @@ class MainWindow(QMainWindow, MainWindowElements):
         self.data['style']['scale'] = density_scale
 
         self.data.save()
-
 
         os.environ['QTMATERIAL_PRIMARYCOLOR'] = "#000000"

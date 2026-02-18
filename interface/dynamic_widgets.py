@@ -2,12 +2,13 @@ from enum import Enum
 from typing import Callable
 
 from PyQt6.QtWidgets import QWidget, QGridLayout, QScrollArea, QVBoxLayout, QLabel, QPushButton, QHBoxLayout, QFrame
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QEvent
 
 
 class FieldType(Enum):
     INSTANCES = "Instances"
-    MODS = "Mods"
+    MODS_EDIT = "Mods Edit"  # For the mods page
+    MODS_DISPLAY = "Mods Display"  # For the instances page, to just display
 
 
 class InstanceFieldFunctions:
@@ -19,16 +20,29 @@ class InstanceFieldFunctions:
 
 
 class ModFieldFunctions:
-    def __init__(self, edit_function: Callable[[str], None], create_new_function: Callable[[str], None]):
+    def __init__(self, edit_function: Callable[[str], None], create_new_function: Callable[[str], None], display_function: Callable[[str], None]):
         self.edit_function = edit_function
         self.create_new_function = create_new_function
+        self.display_function = display_function
+
+
+class _CreateNewElementButton(QPushButton):
+    def __init__(self, creation_function: Callable[[], None], displayed_text: str, width=200, height=100):
+        super().__init__()
+
+        self.setFixedSize(width, height)
+
+        self.setText(displayed_text)
+        self.setProperty('class', 'create_new_element_button')
+
+        self.clicked.connect(lambda: creation_function())
 
 
 class _InstanceField(QFrame):
     def __init__(self, instance_name: str, instance_field_functions: InstanceFieldFunctions, width=200, height=100):
         super().__init__()
-        self.setFrameShape(QFrame.Shape.StyledPanel)
-        self.setLineWidth(2)
+        #self.setFrameShape(QFrame.Shape.StyledPanel)
+        #self.setLineWidth(2)
         self.setFixedSize(width, height)
 
         layout = QVBoxLayout()
@@ -57,15 +71,17 @@ class _InstanceField(QFrame):
         self.setLayout(layout)
 
 
-class _CreateInstanceField(QFrame):
-    def __init__(self, on_press_function: Callable[[], None], width=200, height=100):
+class _ModField(QFrame):
+    # TODO: Modify to show an image under the label. Set the on_click_function to either mod_edit (when on mods page) or mod_select (when in instance edit)
+    def __init__(self, mod_name: str, on_press_function: Callable[[str | None], None], width=200, height=100):
         super().__init__()
+        self.mod_name = mod_name
         self.on_press_function = on_press_function
 
         self.setFrameShape(QFrame.Shape.StyledPanel)
         self.setLineWidth(2)
         self.setFixedSize(width, height)
-        self.setProperty('class', 'clickable_frame create_instance_frame')
+        self.setProperty('class', 'clickable_frame')
 
         # Enable hover + cursor
         self.setAttribute(Qt.WidgetAttribute.WA_Hover, True)
@@ -74,9 +90,8 @@ class _CreateInstanceField(QFrame):
         layout = QVBoxLayout()
         layout.setContentsMargins(5, 5, 5, 5)
 
-        label = QLabel("Create new instance")
+        label = QLabel(mod_name)
         label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        label.setProperty('class', 'create_instance_label')
         layout.addStretch()
         layout.addWidget(label)
         layout.addStretch()
@@ -85,14 +100,14 @@ class _CreateInstanceField(QFrame):
 
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
-            self.on_press_function()
+            self.on_press_function(self.mod_name)
         super().mousePressEvent(event)
 
 # TODO: Add Mod Field
 
 
 class ScrollableGrid(QWidget):
-    def __init__(self, field_type: FieldType, onclick_functions: InstanceFieldFunctions|ModFieldFunctions, card_width=200, card_height=100):
+    def __init__(self, field_type: FieldType, available_functions: InstanceFieldFunctions | ModFieldFunctions, card_width=200, card_height=100):
         """ Create a scrollable grid which changes number of columns on resize. Either it contains instances or mods (field_type). """
         super().__init__()
         self.field_type = field_type
@@ -101,7 +116,7 @@ class ScrollableGrid(QWidget):
         self.fields = []
         self.values = []
         self.current_columns = 0
-        self.onclick_functions = onclick_functions
+        self.available_functions = available_functions
 
         # Scroll area
         self.scroll_area = QScrollArea()
@@ -144,15 +159,14 @@ class ScrollableGrid(QWidget):
 
         if self.field_type == FieldType.INSTANCES:
             for name in self.values:
-                field = _InstanceField(name, self.onclick_functions, width=self.card_width, height=self.card_height)
+                field = _InstanceField(name, self.available_functions, width=self.card_width, height=self.card_height)
                 self.fields.append(field)
-            create_new_instance_field = _CreateInstanceField(self.onclick_functions.create_new_instance_function, self.card_width, self.card_height)
-            self.fields.append(create_new_instance_field)
+            create_new_instance_button = _CreateNewElementButton(self.available_functions.create_new_instance_function, 'Create new\ninstance', self.card_width, self.card_height)
+            self.fields.append(create_new_instance_button)
 
-        # TODO: Create Mod Fields
+        # TODO: Create Mod Fields (either for display mode or in edit mode)
 
-        self.rebuild_grid()
-
+        self.rebuild_grid(force=True)
 
     def rebuild_grid(self, force=False):
         width = self.scroll_area.viewport().width() - 10

@@ -32,8 +32,6 @@ class StoredDict(dict):
         try:
             with open(self.filepath, "r") as f:
                 loaded_data = json.load(f)
-                # Clear existing items and update with loaded data
-                self.clear()
                 self.update(loaded_data)
         except (IOError, json.JSONDecodeError) as e:
             print(f"Error loading dictionary: {e}")
