@@ -135,13 +135,13 @@ class ScrollAreaButtonType(Enum):
     CHECKBOX = 'Checkbox'
 
 
-def create_buttons_in_scroll_area(scroll_area_content_widget: QWidget, button_name_list: list | tuple, button_selected_criteria: str | int | list | tuple, button_on_click_function: Callable, button_type=ScrollAreaButtonType.RADIOBUTTON):
+def create_buttons_in_scroll_area(scroll_area_content_widget: QWidget, button_name_list: list | tuple, selected_buttons: str | int | list | tuple, button_on_click_function: Callable, button_type=ScrollAreaButtonType.RADIOBUTTON):
     """
     This function modifies the content of a scroll area and inserts buttons or a placeholder into it. It also binds the passed function to the click of the button
 
     :param scroll_area_content_widget: The widget inside the scroll area which contains the content of the scroll area
     :param button_name_list: A list of names for the buttons
-    :param button_selected_criteria: For radiobutton: The name of the selected radiobutton; For checkboxes: A list with the names of the selected buttons
+    :param selected_buttons: For radiobutton: The name of the selected radiobutton; For checkboxes: A list with the names of the selected buttons
     :param button_on_click_function: The function to get executed on button click and in the beginning when the button is selected
     :param button_type: The type of button to create.
     """
@@ -167,7 +167,7 @@ def create_buttons_in_scroll_area(scroll_area_content_widget: QWidget, button_na
             button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
 
             # If the button is the selected one then check it and run the function
-            if button_name == button_selected_criteria:
+            if button_name == selected_buttons:
                 button.setChecked(True)
                 button_on_click_function(button, button_name)  # Return the button itself, because if there is just one radiobutton you are able to deselect it. When it is returned you can fix this later.
 
@@ -176,7 +176,7 @@ def create_buttons_in_scroll_area(scroll_area_content_widget: QWidget, button_na
             button = QCheckBox(button_name)
 
             # If the button is in the list of selected ones then check it and run the function
-            if button_name in button_selected_criteria:
+            if button_name in selected_buttons:
                 button.setChecked(True)
                 button_on_click_function(True, button_name)  # True resembles the state of the button
 

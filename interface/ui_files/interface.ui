@@ -202,6 +202,9 @@
             <bold>true</bold>
            </font>
           </property>
+          <property name="focusPolicy">
+           <enum>Qt::StrongFocus</enum>
+          </property>
           <property name="alignment">
            <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
           </property>
@@ -430,7 +433,7 @@
            <enum>Qt::NoFocus</enum>
           </property>
           <property name="text">
-           <string>Use standard options.txt file (not recommended with mods)</string>
+           <string>Use standard &quot;options.txt&quot; file (NOT recommended when using mods)</string>
           </property>
          </widget>
         </item>
@@ -562,8 +565,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>200</width>
-              <height>214</height>
+              <width>98</width>
+              <height>70</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_7">

@@ -12,11 +12,12 @@ class FieldType(Enum):
 
 
 class InstanceFieldFunctions:
-    def __init__(self, play_function: Callable[[str], None], edit_function: Callable[[str], None], create_new_function: Callable[[], None]):
+    def __init__(self, play_function: Callable[[str], None], edit_function: Callable[[str], None], create_new_function: Callable[[], None], import_profiles_function: Callable[[], None]):
         """ Object to keep track of the functions to execute. Every function gets the instance name as the first argument. """
         self.play_function = play_function
         self.edit_function = edit_function
         self.create_new_instance_function = create_new_function
+        self.import_profiles_function = import_profiles_function
 
 
 class ModFieldFunctions:
@@ -34,6 +35,7 @@ class _CreateNewElementButton(QPushButton):
 
         self.setText(displayed_text)
         self.setProperty('class', 'create_new_element_button')
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
 
         self.clicked.connect(lambda: creation_function())
 
@@ -162,6 +164,8 @@ class ScrollableGrid(QWidget):
                 field = _InstanceField(name, self.available_functions, width=self.card_width, height=self.card_height)
                 self.fields.append(field)
             create_new_instance_button = _CreateNewElementButton(self.available_functions.create_new_instance_function, 'Create new\ninstance', self.card_width, self.card_height)
+            self.fields.append(create_new_instance_button)
+            create_new_instance_button = _CreateNewElementButton(self.available_functions.import_profiles_function,'Import profiles\nfrom Launcher', self.card_width, self.card_height)
             self.fields.append(create_new_instance_button)
 
         # TODO: Create Mod Fields (either for display mode or in edit mode)
