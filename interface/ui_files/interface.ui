@@ -147,7 +147,7 @@
     <item>
      <widget class="QStackedWidget" name="PAGE_CONTAINER">
       <property name="currentIndex">
-       <number>1</number>
+       <number>2</number>
       </property>
       <widget class="QWidget" name="INSTANCES_PAGE_PLACEHOLDER">
        <widget class="QLabel" name="label">
@@ -165,32 +165,9 @@
        </widget>
       </widget>
       <widget class="QWidget" name="INSTANCE_EDIT_PAGE">
-       <layout class="QGridLayout" name="gridLayout" rowstretch="4,3,3,3,30" columnstretch="2,2,1,2,2,6,2" rowminimumheight="0,0,0,0,0">
-        <item row="4" column="0" colspan="6">
-         <widget class="QFrame" name="INSTANCE_MODS_PLACEHOLDER">
-          <property name="frameShape">
-           <enum>QFrame::StyledPanel</enum>
-          </property>
-          <property name="frameShadow">
-           <enum>QFrame::Raised</enum>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="2">
-         <spacer name="horizontalSpacer_2">
-          <property name="orientation">
-           <enum>Qt::Horizontal</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>40</width>
-            <height>20</height>
-           </size>
-          </property>
-         </spacer>
-        </item>
-        <item row="0" column="1" colspan="5">
-         <widget class="QLineEdit" name="INSTANCE_NAME">
+       <layout class="QGridLayout" name="gridLayout" rowstretch="1,1,1,1,1,8" columnstretch="2,2,1,2,2,6,2" rowminimumheight="0,0,0,0,0,0">
+        <item row="2" column="3" colspan="4">
+         <widget class="QLineEdit" name="MINECRAFT_DIRECTORY_PATH">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
             <horstretch>0</horstretch>
@@ -199,100 +176,29 @@
           </property>
           <property name="font">
            <font>
-            <bold>true</bold>
+            <italic>false</italic>
+            <strikeout>false</strikeout>
+            <kerning>true</kerning>
            </font>
           </property>
           <property name="focusPolicy">
-           <enum>Qt::StrongFocus</enum>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-          </property>
-          <property name="placeholderText">
-           <string>Instance Name</string>
-          </property>
-          <property name="clearButtonEnabled">
-           <bool>false</bool>
-          </property>
-          <property name="class" stdset="0">
-           <string>instance_label colored_text</string>
-          </property>
-         </widget>
-        </item>
-        <item row="2" column="1">
-         <widget class="QComboBox" name="INSTANCE_VERSION_SELECTION">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="cursor">
-           <cursorShape>PointingHandCursor</cursorShape>
-          </property>
-          <property name="focusPolicy">
-           <enum>Qt::NoFocus</enum>
-          </property>
-          <property name="sizeAdjustPolicy">
-           <enum>QComboBox::AdjustToContents</enum>
-          </property>
-          <item>
-           <property name="text">
-            <string>Latest</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>1.xx.xx</string>
-           </property>
-          </item>
-         </widget>
-        </item>
-        <item row="0" column="0">
-         <widget class="QPushButton" name="BACK_BUTTON">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Preferred" vsizetype="Ignored">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="cursor">
-           <cursorShape>PointingHandCursor</cursorShape>
-          </property>
-          <property name="focusPolicy">
            <enum>Qt::NoFocus</enum>
           </property>
           <property name="text">
-           <string>Back</string>
+           <string>%path%</string>
+          </property>
+          <property name="readOnly">
+           <bool>true</bool>
           </property>
          </widget>
         </item>
-        <item row="1" column="0">
-         <widget class="QLabel" name="label_2">
+        <item row="2" column="0">
+         <widget class="QLabel" name="label_7">
           <property name="text">
-           <string>Type</string>
+           <string>Version</string>
           </property>
           <property name="alignment">
            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-          </property>
-         </widget>
-        </item>
-        <item row="3" column="0" colspan="2">
-         <widget class="QPushButton" name="ADVANCED_SETTINGS_BUTTON">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="cursor">
-           <cursorShape>PointingHandCursor</cursorShape>
-          </property>
-          <property name="focusPolicy">
-           <enum>Qt::NoFocus</enum>
-          </property>
-          <property name="text">
-           <string>Advanced Settings</string>
           </property>
          </widget>
         </item>
@@ -306,32 +212,26 @@
           </property>
          </widget>
         </item>
-        <item row="1" column="4">
-         <widget class="QPushButton" name="BROWSE_MINECRAFT_PATH_BUTTON">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="cursor">
-           <cursorShape>PointingHandCursor</cursorShape>
-          </property>
-          <property name="focusPolicy">
-           <enum>Qt::NoFocus</enum>
-          </property>
+        <item row="1" column="0">
+         <widget class="QLabel" name="label_2">
           <property name="text">
-           <string>Browse</string>
-          </property>
-         </widget>
-        </item>
-        <item row="2" column="0">
-         <widget class="QLabel" name="label_7">
-          <property name="text">
-           <string>Version</string>
+           <string>Type</string>
           </property>
           <property name="alignment">
            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item row="5" column="0" colspan="7">
+         <widget class="QFrame" name="INSTANCE_MODS_DISPLAY_CONTAINER">
+          <property name="frameShape">
+           <enum>QFrame::StyledPanel</enum>
+          </property>
+          <property name="frameShadow">
+           <enum>QFrame::Raised</enum>
+          </property>
+          <property name="class" stdset="0">
+           <string/>
           </property>
          </widget>
         </item>
@@ -379,8 +279,8 @@
           </item>
          </widget>
         </item>
-        <item row="0" column="6">
-         <widget class="QPushButton" name="DELETE_INSTANCE_BUTTON">
+        <item row="3" column="0" colspan="2">
+         <widget class="QPushButton" name="ADVANCED_SETTINGS_BUTTON">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
             <horstretch>0</horstretch>
@@ -394,7 +294,7 @@
            <enum>Qt::NoFocus</enum>
           </property>
           <property name="text">
-           <string>Delete</string>
+           <string>Advanced Settings</string>
           </property>
          </widget>
         </item>
@@ -414,8 +314,59 @@
           </property>
          </spacer>
         </item>
-        <item row="2" column="3" colspan="4">
-         <widget class="QLineEdit" name="MINECRAFT_DIRECTORY_PATH">
+        <item row="1" column="2">
+         <spacer name="horizontalSpacer_2">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item row="0" column="0">
+         <widget class="QPushButton" name="BACK_BUTTON">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Preferred" vsizetype="Ignored">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="cursor">
+           <cursorShape>PointingHandCursor</cursorShape>
+          </property>
+          <property name="focusPolicy">
+           <enum>Qt::NoFocus</enum>
+          </property>
+          <property name="text">
+           <string>Back</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="4">
+         <widget class="QPushButton" name="BROWSE_MINECRAFT_PATH_BUTTON">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="cursor">
+           <cursorShape>PointingHandCursor</cursorShape>
+          </property>
+          <property name="focusPolicy">
+           <enum>Qt::NoFocus</enum>
+          </property>
+          <property name="text">
+           <string>Browse</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1" colspan="5">
+         <widget class="QLineEdit" name="INSTANCE_NAME">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
             <horstretch>0</horstretch>
@@ -424,19 +375,42 @@
           </property>
           <property name="font">
            <font>
-            <italic>false</italic>
-            <strikeout>false</strikeout>
-            <kerning>true</kerning>
+            <bold>true</bold>
            </font>
+          </property>
+          <property name="focusPolicy">
+           <enum>Qt::StrongFocus</enum>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+          </property>
+          <property name="placeholderText">
+           <string>Instance Name</string>
+          </property>
+          <property name="clearButtonEnabled">
+           <bool>false</bool>
+          </property>
+          <property name="class" stdset="0">
+           <string>bigger_text colored_text</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="6">
+         <widget class="QPushButton" name="DELETE_INSTANCE_BUTTON">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="cursor">
+           <cursorShape>PointingHandCursor</cursorShape>
           </property>
           <property name="focusPolicy">
            <enum>Qt::NoFocus</enum>
           </property>
           <property name="text">
-           <string>%path%</string>
-          </property>
-          <property name="readOnly">
-           <bool>true</bool>
+           <string>Delete</string>
           </property>
          </widget>
         </item>
@@ -456,6 +430,48 @@
           </property>
           <property name="text">
            <string>Use standard &quot;options.txt&quot; file (NOT recommended when using mods)</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="1">
+         <widget class="QComboBox" name="INSTANCE_VERSION_SELECTION">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="cursor">
+           <cursorShape>PointingHandCursor</cursorShape>
+          </property>
+          <property name="focusPolicy">
+           <enum>Qt::NoFocus</enum>
+          </property>
+          <property name="sizeAdjustPolicy">
+           <enum>QComboBox::AdjustToContents</enum>
+          </property>
+          <item>
+           <property name="text">
+            <string>Latest</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>1.xx.xx</string>
+           </property>
+          </item>
+         </widget>
+        </item>
+        <item row="4" column="0" colspan="7">
+         <widget class="QLabel" name="label_9">
+          <property name="text">
+           <string>Selected Mods</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignBottom|Qt::AlignHCenter</set>
+          </property>
+          <property name="class" stdset="0">
+           <string>bigger_text colored_text</string>
           </property>
          </widget>
         </item>
@@ -587,8 +603,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>98</width>
-              <height>70</height>
+              <width>200</width>
+              <height>214</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_7">
@@ -693,6 +709,32 @@ colors</string>
         </property>
         <property name="text">
          <string>Scale</string>
+        </property>
+       </widget>
+       <widget class="QCheckBox" name="checkBox">
+        <property name="geometry">
+         <rect>
+          <x>270</x>
+          <y>220</y>
+          <width>401</width>
+          <height>31</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Continue updating mods in the background after closing PackedMC</string>
+        </property>
+       </widget>
+       <widget class="QCheckBox" name="checkBox_2">
+        <property name="geometry">
+         <rect>
+          <x>260</x>
+          <y>270</y>
+          <width>351</width>
+          <height>31</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Automatically close PackedMC after pressing &quot;Play&quot;</string>
         </property>
        </widget>
       </widget>

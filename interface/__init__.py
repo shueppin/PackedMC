@@ -4,15 +4,16 @@ from platform import platform
 import json
 
 from PyQt6 import uic
-from PyQt6.QtWidgets import QMainWindow, QPushButton, QFileDialog, QMessageBox, QCheckBox
+from PyQt6.QtWidgets import QMainWindow, QPushButton, QFileDialog, QMessageBox, QCheckBox, QVBoxLayout
 from qt_material import apply_stylesheet, list_themes, get_theme, opacity
 
 from .type_hinting import MainWindowElements
-from .dynamic_widgets import ScrollableGrid, InstanceFieldFunctions, FieldType
+from .dynamic_widgets import FieldType, ScrollableGrid, InstanceFieldFunctions, ModFieldFunctions
 from .utils import StoredDict, animate_transition, AnimationScrollDirection, create_buttons_in_scroll_area, ScrollAreaButtonType
 from .popups import ImportProfilesPopup
 
 from minecraft_api.minecraft import ALL_RELEASE_VERSIONS, ALL_SNAPSHOT_VERSIONS, get_installed_versions
+
 
 ACTUAL_FILE_DIRECTORY = os.path.dirname(__file__)
 
@@ -28,7 +29,8 @@ DEFAULT_DATA = {
         'invert_secondary': False,
         'scale': 0
     },
-    'instances': {}
+    'instances': {},
+    'mods': {}
 }
 
 if 'windows' in platform().lower():
@@ -41,21 +43,24 @@ else:
 DEFAULT_INSTANCE_NAME = 'Latest Release'
 
 
-logger = logging.getLogger('interface')
-
-
 class MainWindow(QMainWindow, MainWindowElements):
     def __init__(self, application):
         super().__init__()
         uic.loadUi(INTERFACE_FILE_PATH, self)  # Load UI
 
-        # Load non-UI variables
+        # Non-UI elements
         self.data = StoredDict(DEFAULT_DATA_FILE_PATH, DEFAULT_DATA)  # Initialize using Default Data as base
         self.application = application
         self.possible_stylesheet_file_names = list_themes()
         self.selected_instance_name = ""
         self.all_imported_launcher_profiles = {}
         self.imported_launcher_profiles_file_data = {}
+
+        instance_field_functions = InstanceFieldFunctions(self.play_instance, self.edit_instance, self.create_instance, self.import_profiles_from_launcher)
+        mod_field_functions = ModFieldFunctions(self.edit_mod, self.create_mod, self.display_mods)
+
+        self.import_profiles_popup = ImportProfilesPopup(self)
+        self.import_profiles_popup.IMPORT_BUTTON.clicked.connect(self._import_selected_profiles)
 
         # Bind the page selection buttons
         self.INSTANCES_PAGE_BUTTON.pressed.connect(lambda: self._page_selection_button_on_press(self.INSTANCES_PAGE_BUTTON, 0))
@@ -65,17 +70,19 @@ class MainWindow(QMainWindow, MainWindowElements):
         self.SETTINGS_PAGE_BUTTON.pressed.connect(lambda: self._page_selection_button_on_press(self.SETTINGS_PAGE_BUTTON, 4))
         self.SETTINGS_PAGE_BUTTON.released.connect(lambda: self._page_selection_button_on_release(self.SETTINGS_PAGE_BUTTON))
 
-        # Create the instance selection page (and the import profiles popup)
-        self.import_profiles_popup = ImportProfilesPopup(self)
-        self.import_profiles_popup.IMPORT_BUTTON.clicked.connect(self._import_selected_profiles)
-        # Create the new grid page
-        instance_field_functions = InstanceFieldFunctions(self.play_instance, self.edit_instance, self.create_instance, self.import_profiles_from_launcher)
+        # Create the scrollable grid for the instance selection and insert it where the placeholder was
         self.INSTANCES_PAGE = ScrollableGrid(FieldType.INSTANCES, instance_field_functions)
-        # Insert it where the placeholder was
         index = self.PAGE_CONTAINER.indexOf(self.INSTANCES_PAGE_PLACEHOLDER)
         self.PAGE_CONTAINER.removeWidget(self.INSTANCES_PAGE_PLACEHOLDER)  # remove placeholder
         self.PAGE_CONTAINER.insertWidget(index, self.INSTANCES_PAGE)  # insert new page at same position
         self.INSTANCES_PAGE_PLACEHOLDER.deleteLater()  # Cleanup
+
+        # Create the scrollable grid for the mod selection and insert it where the placeholder was
+        self.MODS_PAGE = ScrollableGrid(FieldType.MODS_EDITABLE, mod_field_functions)
+        index = self.PAGE_CONTAINER.indexOf(self.MODS_PAGE_PLACEHOLDER)
+        self.PAGE_CONTAINER.removeWidget(self.MODS_PAGE_PLACEHOLDER)  # remove placeholder
+        self.PAGE_CONTAINER.insertWidget(index, self.MODS_PAGE)  # insert new page at same position
+        self.MODS_PAGE_PLACEHOLDER.deleteLater()  # Cleanup
 
         # Create the instance edit page
         self.BACK_BUTTON.clicked.connect(lambda: self.show_page(0,animation_direction=AnimationScrollDirection.HORIZONTAL))
@@ -85,7 +92,15 @@ class MainWindow(QMainWindow, MainWindowElements):
         self.INSTANCE_TYPE_SELECTION.currentIndexChanged.connect(self._changed_instance_type)
         self.INSTANCE_VERSION_SELECTION.currentIndexChanged.connect(self._changed_instance_version)
         self.USE_STANDARD_OPTIONS.clicked.connect(self._changed_instance_use_standard_options)
-        # TODO: Connect other buttons
+        # TODO: Connect advanced options button
+
+        # Add a layout to the Instances Mod Container and add the scrollable grid to it
+        layout = QVBoxLayout(self.INSTANCE_MODS_DISPLAY_CONTAINER)
+        layout.setContentsMargins(0, 0, 0, 0)  # Remove padding around edges
+        layout.setSpacing(0)  # Remove spacing between items
+        self.INSTANCE_MODS_DISPLAY = ScrollableGrid(FieldType.MODS_DISPLAYED, mod_field_functions)
+        layout.addWidget(self.INSTANCE_MODS_DISPLAY)
+        self.INSTANCE_MODS_DISPLAY_CONTAINER.setLayout(layout)
 
         # If there are no instance, create the default one
         if not self.data['instances']:
@@ -95,14 +110,12 @@ class MainWindow(QMainWindow, MainWindowElements):
         available_stylesheet_filenames = self.possible_stylesheet_file_names
         all_style_names = []
         for filename in available_stylesheet_filenames:
-            style_name = filename.replace('.xml', '').replace('500', '2').replace('_',
-                                                                                  ' ').title()  # Changes the name from light_green_500.xml to Light Green 2
+            style_name = filename.replace('.xml', '').replace('500', '2').replace('_', ' ').title()  # Changes the name from light_green_500.xml to Light Green 2
             all_style_names.append(style_name)
 
         selected_style = self.data['style']['theme'].replace('.xml', '').replace('500', '2').replace('_', ' ').title()
 
-        create_buttons_in_scroll_area(self.STYLES_SELECTION_LIST, all_style_names, selected_style,
-                                      self._stylesheet_selection)
+        create_buttons_in_scroll_area(self.STYLES_SELECTION_LIST, all_style_names, selected_style,self._stylesheet_selection)
         self.SWITCH_SECONDARY_COLOR.setChecked(self.data['style']['invert_secondary'])
         self.SWITCH_SECONDARY_COLOR.clicked.connect(self._style_invert_button_clicked)
         self.SCALE_SELECTION.setValue(self.data['style']['scale']+WINDOW_DEFAULT_SCALE)
@@ -184,6 +197,14 @@ class MainWindow(QMainWindow, MainWindowElements):
         # Page specific functions
         if page_index == 0:
             self.INSTANCES_PAGE.set_values(sorted(self.data['instances'].keys()))
+        elif page_index == 2:
+            mod_page_values = []
+            for mod_name in sorted(self.data['mods'].keys()):
+                mod_page_values.append((
+                    mod_name,
+                    os.path.join(ACTUAL_FILE_DIRECTORY, '../icon.png'),  # TODO: Replace the placeholder with the icon function
+                ))
+            self.MODS_PAGE.set_values(mod_page_values)
 
     '''
     Instance page & Instance Edit page
@@ -193,7 +214,7 @@ class MainWindow(QMainWindow, MainWindowElements):
 
         launcher_profiles_path, _ = QFileDialog.getOpenFileName(self, 'Select profiles file for the launcher', standard_launcher_profiles_path, "JSON Files (*.json);;All Files (*)")
 
-        logger.info(f'Importing profiles from {launcher_profiles_path}')
+        logging.info(f'Importing profiles from {launcher_profiles_path}')
 
         try:
             with open(launcher_profiles_path) as file:
@@ -214,7 +235,7 @@ class MainWindow(QMainWindow, MainWindowElements):
                             self.all_imported_launcher_profiles[display] = profile_id
 
                     except KeyError:
-                        logger.warning(f'Skipping profile {profile_id} due to faulty profile data')
+                        logging.warning(f'Skipping profile {profile_id} due to faulty profile data')
                         continue
 
             # If there was no error opening the file, create the checkboxes and display the popup
@@ -222,9 +243,9 @@ class MainWindow(QMainWindow, MainWindowElements):
             self.import_profiles_popup.show_popup()
 
         except FileNotFoundError:
-            logger.error("Profiles file not found.")
+            logging.error("Profiles file not found.")
         except json.JSONDecodeError or KeyError:
-            logger.error("There has been an error decoding the profiles JSON.")
+            logging.error("There has been an error decoding the profiles JSON.")
 
     def _import_selected_profiles(self):
         # Go through all the selected profiles and create the data for them
@@ -245,7 +266,7 @@ class MainWindow(QMainWindow, MainWindowElements):
             else:
                 original_instance_name = display_name.strip()
 
-            instance_name = self._make_instance_name_unique(original_instance_name)
+            instance_name = self._make_name_unique(original_instance_name, self.data['instances'].keys())
 
             # Find out what type of instance it is
             if profile_data['lastVersionId'].startswith('latest'):
@@ -300,7 +321,7 @@ class MainWindow(QMainWindow, MainWindowElements):
                         else:
                             advanced_arguments['java.jvmargs'] = [argument]
 
-            self.create_instance(instance_name, edit_afterwards=False ,instance_type=instance_type, instance_version=instance_version, minecraft_directory=minecraft_directory, advanced_arguments=advanced_arguments)
+            self.create_instance(instance_name, edit_afterwards=False, instance_type=instance_type, instance_version=instance_version, minecraft_directory=minecraft_directory, advanced_arguments=advanced_arguments)
 
         # After all profiles were added refresh the list and close the dialog
         self.show_page(0, show_instantly=True)
@@ -311,7 +332,7 @@ class MainWindow(QMainWindow, MainWindowElements):
         print('Play instance', instance_name)
 
     def create_instance(self, instance_name = 'New instance', is_default = False, edit_afterwards = True, instance_type = 'Release', instance_version = 'latest', minecraft_directory = STANDARD_MINECRAFT_DIRECTORY, advanced_arguments: dict = None):
-        instance_name = self._make_instance_name_unique(instance_name)
+        instance_name = self._make_name_unique(instance_name, self.data['instances'].keys())
         if advanced_arguments is None:
             advanced_arguments = {}
 
@@ -321,21 +342,17 @@ class MainWindow(QMainWindow, MainWindowElements):
             'version': instance_version,
             'is_default': is_default,
             'minecraft_directory': minecraft_directory,
-            'usable_mods': False,
-            'total_mods': False,
             'standard_options_file': is_default,  # Use standard options file for default, otherwise don't
-            'advanced_arguments': advanced_arguments
+            'advanced_arguments': advanced_arguments,
+            'mods': []
         }
-
         self.data.save()
 
         if edit_afterwards:
             self.edit_instance(instance_name)  # Show it in edit mode
 
     def edit_instance(self, instance_name: str, only_refresh_values=False):
-        """
-        This function is executed to show the edit page and configure the values for the given instance.
-        """
+        """ This function is executed to show the edit page and configure the values for the given instance. """
         if not only_refresh_values:
             self.show_page(1, animation_direction=AnimationScrollDirection.HORIZONTAL)
 
@@ -379,10 +396,6 @@ class MainWindow(QMainWindow, MainWindowElements):
 
         self.MINECRAFT_DIRECTORY_PATH.setText(instance_data['minecraft_directory'])
 
-        # TODO: Set the advanced options
-
-        # TODO: Set the mods
-
         # Enable or disable buttons, if we are using the default instance
         if instance_data['is_default']:
             self.DELETE_INSTANCE_BUTTON.setText('Reset')
@@ -395,16 +408,16 @@ class MainWindow(QMainWindow, MainWindowElements):
             self.INSTANCE_VERSION_SELECTION.setEnabled(True)
             self.USE_STANDARD_OPTIONS.setEnabled(True)
 
-    def _make_instance_name_unique(self, instance_name: str):
-        # Define the instance name
-        original_instance_name = instance_name
-        i = 2
-        # If an instance with this name already exists then append a number to the end of the instance name
-        while instance_name in self.data['instances'].keys():
-            instance_name = original_instance_name + ' ' + str(i)
-            i += 1
-
-        return instance_name
+        # Display the mods in their correct state
+        mod_display_data = []
+        for mod_name in sorted(self.data['mods'].keys()):
+            # Add to the mods the name, the icon path and whether it is selected or not
+            mod_display_data.append((
+                mod_name,
+                os.path.join(ACTUAL_FILE_DIRECTORY, '../icon.png'),  # TODO: Replace the placeholder with the icon function
+                mod_name in instance_data['mods']
+            ))
+        self.INSTANCE_MODS_DISPLAY.set_values(mod_display_data)
 
     def _changed_instance_name(self):
         # Get the old and the new instance name
@@ -415,7 +428,7 @@ class MainWindow(QMainWindow, MainWindowElements):
         if new_instance_name == '':
             new_instance_name = 'Instance Name'
 
-        new_instance_name = self._make_instance_name_unique(new_instance_name)
+        new_instance_name = self._make_name_unique(new_instance_name, self.data['instances'].keys())
 
         self.data['instances'][new_instance_name] = self.data['instances'].pop(old_instance_name)
         self.selected_instance_name = new_instance_name
@@ -477,6 +490,32 @@ class MainWindow(QMainWindow, MainWindowElements):
         self.data['instances'][self.selected_instance_name]['standard_options_file'] = new_state
         self.data.save()
 
+    def display_mods(self, mod_name: str, is_selected: bool):
+        print('Displaying mod', mod_name, is_selected)
+
+
+    '''
+    Mods Page
+    '''
+    def create_mod(self, mod_name = 'New Mod', edit_afterwards=True):
+        mod_name = self._make_name_unique(mod_name, self.data['mods'].keys())
+
+        # Set the data
+        self.data['mods'][mod_name] = {
+            'url': '',
+            'description': '',
+            'icon': '',
+            'mod_loaders': [],
+            'supported_versions': [],
+        }
+        self.data.save()
+
+        if edit_afterwards:
+            self.edit_mod(mod_name)  # Show it in edit mode
+
+    def edit_mod(self, mod_name: str):
+        print('Editing mod', mod_name)
+
 
     '''
     Settings Page
@@ -500,6 +539,11 @@ class MainWindow(QMainWindow, MainWindowElements):
         self.INSTANCES_PAGE.set_size(100+50*scale_value, 60+20*scale_value)
         self.INSTANCES_PAGE.set_spacing(vertical_spacing=10*scale_value)
 
+        self.INSTANCE_MODS_DISPLAY.set_size(70 + 50 * scale_value, 60 + 20 * scale_value)
+        self.INSTANCE_MODS_DISPLAY.set_spacing(vertical_spacing=10 * scale_value)
+
+        self.MODS_PAGE.set_size(70 + 50 * scale_value, 60 + 20 * scale_value)
+        self.MODS_PAGE.set_spacing(vertical_spacing=10 * scale_value)
 
     '''
     General functions
@@ -510,7 +554,7 @@ class MainWindow(QMainWindow, MainWindowElements):
         """
 
         if stylesheet_file_name not in self.possible_stylesheet_file_names:
-            logger.error(f'Stylesheet called "{stylesheet_file_name}" does not exist. Possible themes are: {self.possible_stylesheet_file_names}')
+            logging.error(f'Stylesheet called "{stylesheet_file_name}" does not exist. Possible themes are: {self.possible_stylesheet_file_names}')
             return
 
         extra = {
@@ -522,7 +566,7 @@ class MainWindow(QMainWindow, MainWindowElements):
         }
 
         # Set environment variables for text
-        os.environ['PACKEDMC_INSTANCE_LABEL_SIZE'] = str(20 + 4 * density_scale)
+        os.environ['PACKEDMC_BIGGER_TEXT_SIZE'] = str(18 + 4 * density_scale)
         os.environ['PACKEDMC_SELECTION_BUTTON_TEXT_SIZE'] = str(20 + 2 * density_scale)
 
         # Set environment variable for hover color, using opacity to get the format "rgba(...)", accepted by PyQT
@@ -543,3 +587,15 @@ class MainWindow(QMainWindow, MainWindowElements):
         self.data.save()
 
         os.environ['QTMATERIAL_PRIMARYCOLOR'] = "#000000"
+
+    @staticmethod
+    def _make_name_unique(name: str, already_existing_elements: list[str]):
+        # Define the instance name
+        original_name = name
+        i = 2
+        # If an instance with this name already exists then append a number to the end of the instance name
+        while name in already_existing_elements:
+            name = original_name + ' ' + str(i)
+            i += 1
+
+        return name

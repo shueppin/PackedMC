@@ -14,7 +14,7 @@ class MainWindowElements:
     # Instance edit page
     BACK_BUTTON: QPushButton
     BROWSE_MINECRAFT_PATH_BUTTON: QPushButton
-    INSTANCE_MODS_PLACEHOLDER: QFrame
+    INSTANCE_MODS_DISPLAY_CONTAINER: QFrame
     INSTANCE_NAME: QLineEdit
     DELETE_INSTANCE_BUTTON: QPushButton
     INSTANCE_TYPE_SELECTION: QComboBox
@@ -22,6 +22,9 @@ class MainWindowElements:
     INSTANCE_VERSION_SELECTION: QComboBox
     ADVANCED_SETTINGS_BUTTON: QPushButton
     USE_STANDARD_OPTIONS: QCheckBox
+
+    # Instances Page Placeholder (replaced by dynamic widget)
+    MODS_PAGE_PLACEHOLDER: QWidget
 
     # Settings Page
     STYLES_SELECTION_LIST: QWidget
