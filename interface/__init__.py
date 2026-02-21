@@ -12,8 +12,7 @@ from .dynamic_widgets import ScrollableGrid, InstanceFieldFunctions, FieldType
 from .utils import StoredDict, animate_transition, AnimationScrollDirection, create_buttons_in_scroll_area, ScrollAreaButtonType
 from .popups import ImportProfilesPopup
 
-from minecraft_api.minecraft import ALL_RELEASE_VERSIONS, ALL_SNAPSHOT_VERSIONS
-
+from minecraft_api.minecraft import ALL_RELEASE_VERSIONS, ALL_SNAPSHOT_VERSIONS, get_installed_versions
 
 ACTUAL_FILE_DIRECTORY = os.path.dirname(__file__)
 
@@ -83,6 +82,9 @@ class MainWindow(QMainWindow, MainWindowElements):
         self.BROWSE_MINECRAFT_PATH_BUTTON.clicked.connect(self._set_minecraft_path)
         self.INSTANCE_NAME.textChanged.connect(self._changed_instance_name)
         self.DELETE_INSTANCE_BUTTON.clicked.connect(self._delete_instance)
+        self.INSTANCE_TYPE_SELECTION.currentIndexChanged.connect(self._changed_instance_type)
+        self.INSTANCE_VERSION_SELECTION.currentIndexChanged.connect(self._changed_instance_version)
+        self.USE_STANDARD_OPTIONS.clicked.connect(self._changed_instance_use_standard_options)
         # TODO: Connect other buttons
 
         # If there are no instance, create the default one
@@ -271,16 +273,20 @@ class MainWindow(QMainWindow, MainWindowElements):
             else:
                 instance_version = profile_data['lastVersionId']
 
+            # Get the game directory and advanced java arguments
+            if 'gameDir' in profile_data:
+                minecraft_directory = profile_data['gameDir']
+            else:
+                minecraft_directory = STANDARD_MINECRAFT_DIRECTORY
+
             advanced_arguments = {}
 
             # Get the java path
-            try:
+            if 'javaDir' in profile_data:
                 advanced_arguments['java.path'] = profile_data['javaDir']
-            except KeyError:
-                pass
 
             # Go through all the java arguments and put them in a picomc format
-            try:
+            if 'javaArgs' in profile_data:
                 java_arguments = profile_data['javaArgs'].split(' ')
 
                 for argument in java_arguments:
@@ -289,14 +295,12 @@ class MainWindow(QMainWindow, MainWindowElements):
                     elif argument.startswith('-Xmx'):
                         advanced_arguments['java.memory.max'] = argument.replace('-Xmx', '')
                     else:
-                        try:
+                        if 'java.jvmargs' in advanced_arguments:
                             advanced_arguments['java.jvmargs'].append(argument)
-                        except KeyError:
+                        else:
                             advanced_arguments['java.jvmargs'] = [argument]
-            except KeyError:
-                pass
 
-            self.create_instance(instance_name, edit_afterwards=False ,instance_type=instance_type, instance_version=instance_version, advanced_arguments=advanced_arguments)
+            self.create_instance(instance_name, edit_afterwards=False ,instance_type=instance_type, instance_version=instance_version, minecraft_directory=minecraft_directory, advanced_arguments=advanced_arguments)
 
         # After all profiles were added refresh the list and close the dialog
         self.show_page(0, show_instantly=True)
@@ -306,7 +310,7 @@ class MainWindow(QMainWindow, MainWindowElements):
         # TODO: Launch the official Launcher
         print('Play instance', instance_name)
 
-    def create_instance(self, instance_name = 'New instance', is_default = False, edit_afterwards = True, instance_type = 'Release', instance_version = 'latest', advanced_arguments: dict = None):
+    def create_instance(self, instance_name = 'New instance', is_default = False, edit_afterwards = True, instance_type = 'Release', instance_version = 'latest', minecraft_directory = STANDARD_MINECRAFT_DIRECTORY, advanced_arguments: dict = None):
         instance_name = self._make_instance_name_unique(instance_name)
         if advanced_arguments is None:
             advanced_arguments = {}
@@ -316,10 +320,10 @@ class MainWindow(QMainWindow, MainWindowElements):
             'type': instance_type,
             'version': instance_version,
             'is_default': is_default,
-            'minecraft_directory': STANDARD_MINECRAFT_DIRECTORY,
+            'minecraft_directory': minecraft_directory,
             'usable_mods': False,
             'total_mods': False,
-            'standard_options_file': is_default,  # Use standard file for default
+            'standard_options_file': is_default,  # Use standard options file for default, otherwise don't
             'advanced_arguments': advanced_arguments
         }
 
@@ -328,39 +332,67 @@ class MainWindow(QMainWindow, MainWindowElements):
         if edit_afterwards:
             self.edit_instance(instance_name)  # Show it in edit mode
 
-    def edit_instance(self, instance_name: str):
-        self.show_page(1, animation_direction=AnimationScrollDirection.HORIZONTAL)
+    def edit_instance(self, instance_name: str, only_refresh_values=False):
+        """
+        This function is executed to show the edit page and configure the values for the given instance.
+        """
+        if not only_refresh_values:
+            self.show_page(1, animation_direction=AnimationScrollDirection.HORIZONTAL)
 
         # Set the values for the edit page
         self.selected_instance_name = instance_name
         instance_data = self.data['instances'][instance_name]
 
-        # Modify the name without triggering the changed_instance_data function (which triggers on text change)
+        # Set the name without triggering the changed_instance_data function (which triggers on text change)
         self.INSTANCE_NAME.blockSignals(True)
         self.INSTANCE_NAME.setText(instance_name)
         self.INSTANCE_NAME.setFocus()  # Prevent highlighting
         self.INSTANCE_NAME.blockSignals(False)
 
-        self.MINECRAFT_DIRECTORY_PATH.setText(instance_data['minecraft_directory'])
+        # Set the type
+        self.INSTANCE_TYPE_SELECTION.blockSignals(True)
         self.INSTANCE_TYPE_SELECTION.setCurrentText(instance_data['type'])
-        # TODO: Set the Version ComboBox using combobox.clear() and combobox.addItems([]) based on the type and select the correct one (add also "latest")
+        self.INSTANCE_TYPE_SELECTION.blockSignals(False)
+
+        # Set the versions corresponding to the type
+        all_versions = ['latest']
+        if instance_data['type'] == 'Release' or instance_data['type'] == 'Fabric' or instance_data['type'] == 'Forge':
+            all_versions.extend(ALL_RELEASE_VERSIONS)
+        elif instance_data['type'] == 'Snapshot':
+            all_versions.extend(ALL_SNAPSHOT_VERSIONS)
+        elif instance_data['type'] == 'Other':
+            all_versions = get_installed_versions(instance_data['minecraft_directory'])
+
+        self.INSTANCE_VERSION_SELECTION.blockSignals(True)
+        self.INSTANCE_VERSION_SELECTION.clear()
+        self.INSTANCE_VERSION_SELECTION.addItems(all_versions)
+        if instance_data['version'] in all_versions:
+            self.INSTANCE_VERSION_SELECTION.setCurrentText(instance_data['version'])
+        else:
+            self.INSTANCE_VERSION_SELECTION.setCurrentText('latest')
+        self.INSTANCE_VERSION_SELECTION.blockSignals(False)
+
+        # Set the standard options button and the minecraft path
+        self.USE_STANDARD_OPTIONS.blockSignals(True)
+        self.USE_STANDARD_OPTIONS.setChecked(instance_data['standard_options_file'])
+        self.USE_STANDARD_OPTIONS.blockSignals(False)
+
+        self.MINECRAFT_DIRECTORY_PATH.setText(instance_data['minecraft_directory'])
+
+        # TODO: Set the advanced options
 
         # TODO: Set the mods
 
-        if instance_data['standard_options_file']:
-            self.USE_STANDARD_OPTIONS.setChecked(True)
-        else:
-            self.USE_STANDARD_OPTIONS.setChecked(False)
-
+        # Enable or disable buttons, if we are using the default instance
         if instance_data['is_default']:
             self.DELETE_INSTANCE_BUTTON.setText('Reset')
             self.INSTANCE_TYPE_SELECTION.setEnabled(False)
-            self.VERSION_SELECTION.setEnabled(False)
+            self.INSTANCE_VERSION_SELECTION.setEnabled(False)
             self.USE_STANDARD_OPTIONS.setEnabled(False)
         else:
             self.DELETE_INSTANCE_BUTTON.setText('Delete')
             self.INSTANCE_TYPE_SELECTION.setEnabled(True)
-            self.VERSION_SELECTION.setEnabled(True)
+            self.INSTANCE_VERSION_SELECTION.setEnabled(True)
             self.USE_STANDARD_OPTIONS.setEnabled(True)
 
     def _make_instance_name_unique(self, instance_name: str):
@@ -428,6 +460,22 @@ class MainWindow(QMainWindow, MainWindowElements):
 
             # Go to the instances page
             self.show_page(0, animation_direction=AnimationScrollDirection.HORIZONTAL)
+
+    def _changed_instance_type(self, _new_index: int):
+        type_name = self.INSTANCE_TYPE_SELECTION.currentText()
+        self.data['instances'][self.selected_instance_name]['type'] = type_name
+        self.data.save()
+
+        self.edit_instance(self.selected_instance_name, only_refresh_values=True)
+
+    def _changed_instance_version(self, _new_index: int):
+        version = self.INSTANCE_VERSION_SELECTION.currentText()
+        self.data['instances'][self.selected_instance_name]['version'] = version
+        self.data.save()
+
+    def _changed_instance_use_standard_options(self, new_state: bool):
+        self.data['instances'][self.selected_instance_name]['standard_options_file'] = new_state
+        self.data.save()
 
 
     '''

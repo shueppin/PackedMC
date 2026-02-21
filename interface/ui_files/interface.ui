@@ -220,9 +220,9 @@
          </widget>
         </item>
         <item row="2" column="1">
-         <widget class="QComboBox" name="VERSION_SELECTION">
+         <widget class="QComboBox" name="INSTANCE_VERSION_SELECTION">
           <property name="sizePolicy">
-           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+           <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
             <horstretch>0</horstretch>
             <verstretch>0</verstretch>
            </sizepolicy>
@@ -232,6 +232,9 @@
           </property>
           <property name="focusPolicy">
            <enum>Qt::NoFocus</enum>
+          </property>
+          <property name="sizeAdjustPolicy">
+           <enum>QComboBox::AdjustToContents</enum>
           </property>
           <item>
            <property name="text">
@@ -281,6 +284,9 @@
             <horstretch>0</horstretch>
             <verstretch>0</verstretch>
            </sizepolicy>
+          </property>
+          <property name="cursor">
+           <cursorShape>PointingHandCursor</cursorShape>
           </property>
           <property name="focusPolicy">
            <enum>Qt::NoFocus</enum>
@@ -332,7 +338,7 @@
         <item row="1" column="1">
          <widget class="QComboBox" name="INSTANCE_TYPE_SELECTION">
           <property name="sizePolicy">
-           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+           <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
             <horstretch>0</horstretch>
             <verstretch>0</verstretch>
            </sizepolicy>
@@ -343,6 +349,9 @@
           <property name="focusPolicy">
            <enum>Qt::NoFocus</enum>
           </property>
+          <property name="sizeAdjustPolicy">
+           <enum>QComboBox::AdjustToContents</enum>
+          </property>
           <item>
            <property name="text">
             <string>Release</string>
@@ -350,12 +359,12 @@
           </item>
           <item>
            <property name="text">
-            <string>Fabric</string>
+            <string>Snapshot</string>
            </property>
           </item>
           <item>
            <property name="text">
-            <string>Snapshot</string>
+            <string>Fabric</string>
            </property>
           </item>
           <item>
@@ -377,6 +386,9 @@
             <horstretch>0</horstretch>
             <verstretch>0</verstretch>
            </sizepolicy>
+          </property>
+          <property name="cursor">
+           <cursorShape>PointingHandCursor</cursorShape>
           </property>
           <property name="focusPolicy">
            <enum>Qt::NoFocus</enum>
@@ -410,6 +422,13 @@
             <verstretch>0</verstretch>
            </sizepolicy>
           </property>
+          <property name="font">
+           <font>
+            <italic>false</italic>
+            <strikeout>false</strikeout>
+            <kerning>true</kerning>
+           </font>
+          </property>
           <property name="focusPolicy">
            <enum>Qt::NoFocus</enum>
           </property>
@@ -428,6 +447,9 @@
             <horstretch>0</horstretch>
             <verstretch>0</verstretch>
            </sizepolicy>
+          </property>
+          <property name="cursor">
+           <cursorShape>PointingHandCursor</cursorShape>
           </property>
           <property name="focusPolicy">
            <enum>Qt::NoFocus</enum>
