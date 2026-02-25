@@ -1,3 +1,4 @@
+markdown~=3.10.2
 requests~=2.32.5
 PyQt6~=6.10.2
 qt-material~=2.17

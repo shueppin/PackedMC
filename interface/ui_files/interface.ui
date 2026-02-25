@@ -147,7 +147,7 @@
     <item>
      <widget class="QStackedWidget" name="PAGE_CONTAINER">
       <property name="currentIndex">
-       <number>2</number>
+       <number>3</number>
       </property>
       <widget class="QWidget" name="INSTANCES_PAGE_PLACEHOLDER">
        <widget class="QLabel" name="label">
@@ -328,7 +328,7 @@
          </spacer>
         </item>
         <item row="0" column="0">
-         <widget class="QPushButton" name="BACK_BUTTON">
+         <widget class="QPushButton" name="INSTANCES_BACK_BUTTON">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Preferred" vsizetype="Ignored">
             <horstretch>0</horstretch>
@@ -488,24 +488,194 @@
          </rect>
         </property>
         <property name="text">
-         <string>Mods</string>
+         <string>Placeholder for Dynamic Instances page</string>
         </property>
        </widget>
       </widget>
       <widget class="QWidget" name="MOD_EDIT_PAGE">
-       <widget class="QLabel" name="label_4">
-        <property name="geometry">
-         <rect>
-          <x>120</x>
-          <y>190</y>
-          <width>251</width>
-          <height>101</height>
-         </rect>
-        </property>
-        <property name="text">
-         <string>Mod edit</string>
-        </property>
-       </widget>
+       <layout class="QGridLayout" name="gridLayout_2" rowstretch="1,1,1,3,1,6" columnstretch="2,8,1,4,2">
+        <item row="0" column="4">
+         <widget class="QPushButton" name="DELETE_MOD_BUTTON">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="cursor">
+           <cursorShape>PointingHandCursor</cursorShape>
+          </property>
+          <property name="focusPolicy">
+           <enum>Qt::NoFocus</enum>
+          </property>
+          <property name="text">
+           <string>Delete</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="0">
+         <widget class="QPushButton" name="MODS_BACK_BUTTON">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Preferred" vsizetype="Ignored">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="cursor">
+           <cursorShape>PointingHandCursor</cursorShape>
+          </property>
+          <property name="focusPolicy">
+           <enum>Qt::NoFocus</enum>
+          </property>
+          <property name="text">
+           <string>Back</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1" colspan="3">
+         <widget class="QLineEdit" name="MOD_NAME">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="font">
+           <font>
+            <bold>true</bold>
+           </font>
+          </property>
+          <property name="focusPolicy">
+           <enum>Qt::StrongFocus</enum>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+          </property>
+          <property name="placeholderText">
+           <string>Mod Name</string>
+          </property>
+          <property name="clearButtonEnabled">
+           <bool>false</bool>
+          </property>
+          <property name="class" stdset="0">
+           <string>bigger_text colored_text</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="1" colspan="4">
+         <widget class="QLineEdit" name="MOD_URL">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="font">
+           <font>
+            <bold>false</bold>
+           </font>
+          </property>
+          <property name="focusPolicy">
+           <enum>Qt::StrongFocus</enum>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+          </property>
+          <property name="placeholderText">
+           <string>Modrinth or CurseForge URL</string>
+          </property>
+          <property name="clearButtonEnabled">
+           <bool>false</bool>
+          </property>
+          <property name="class" stdset="0">
+           <string/>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="3" colspan="2">
+         <widget class="QTextBrowser" name="MOD_LOADER">
+          <property name="class" stdset="0">
+           <string>light_frame no_bg</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QLabel" name="label_4">
+          <property name="text">
+           <string>Mod URL</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item row="5" column="3" colspan="2">
+         <widget class="QTextBrowser" name="MOD_VERSIONS">
+          <property name="class" stdset="0">
+           <string>light_frame no_bg</string>
+          </property>
+         </widget>
+        </item>
+        <item row="4" column="3" colspan="2">
+         <widget class="QLabel" name="label_11">
+          <property name="text">
+           <string>Supported Versions</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignBottom|Qt::AlignHCenter</set>
+          </property>
+          <property name="class" stdset="0">
+           <string>bigger_text colored_text</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="0" colspan="2">
+         <widget class="QLabel" name="label_10">
+          <property name="text">
+           <string>Mod Description</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignBottom|Qt::AlignHCenter</set>
+          </property>
+          <property name="class" stdset="0">
+           <string>bigger_text colored_text</string>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="0" rowspan="3" colspan="2">
+         <widget class="QTextBrowser" name="MOD_DESCRIPTION">
+          <property name="class" stdset="0">
+           <string>light_frame no_bg standard_text</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="3" colspan="2">
+         <widget class="QLabel" name="label_12">
+          <property name="text">
+           <string>Supported Mod Loader</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignBottom|Qt::AlignHCenter</set>
+          </property>
+          <property name="class" stdset="0">
+           <string>bigger_text colored_text</string>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="2">
+         <spacer name="horizontalSpacer_3">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
       </widget>
       <widget class="QWidget" name="SETTINGS_PAGE">
        <widget class="QFrame" name="frame_2">

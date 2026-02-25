@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QStackedWidget, QPushButton, QWidget, QSpinBox, QLineEdit, QComboBox, QFrame, QCheckBox
+from PyQt6.QtWidgets import QStackedWidget, QPushButton, QWidget, QSpinBox, QLineEdit, QComboBox, QFrame, QCheckBox, QTextBrowser, QListWidget, QTableWidget
 
 
 class MainWindowElements:
@@ -12,7 +12,7 @@ class MainWindowElements:
     INSTANCES_PAGE_PLACEHOLDER: QWidget
 
     # Instance edit page
-    BACK_BUTTON: QPushButton
+    INSTANCES_BACK_BUTTON: QPushButton
     BROWSE_MINECRAFT_PATH_BUTTON: QPushButton
     INSTANCE_MODS_DISPLAY_CONTAINER: QFrame
     INSTANCE_NAME: QLineEdit
@@ -23,8 +23,17 @@ class MainWindowElements:
     ADVANCED_SETTINGS_BUTTON: QPushButton
     USE_STANDARD_OPTIONS: QCheckBox
 
-    # Instances Page Placeholder (replaced by dynamic widget)
+    # Mods Page Placeholder (replaced by dynamic widget)
     MODS_PAGE_PLACEHOLDER: QWidget
+
+    # Mod edit page
+    MOD_NAME: QLineEdit
+    MODS_BACK_BUTTON: QPushButton
+    MOD_URL: QLineEdit
+    MOD_DESCRIPTION: QTextBrowser
+    DELETE_MOD_BUTTON: QPushButton
+    MOD_VERSIONS: QTextBrowser
+    MOD_LOADER: QTextBrowser
 
     # Settings Page
     STYLES_SELECTION_LIST: QWidget
