@@ -84,7 +84,6 @@ class _ModField(QFrame):
         self.is_selected = is_selected
 
         self.setFixedSize(width, height)
-        self._set_correct_properties()
 
         # Enable hover + cursor
         self.setAttribute(Qt.WidgetAttribute.WA_Hover, True)
@@ -116,14 +115,17 @@ class _ModField(QFrame):
 
         self.setLayout(layout)
 
+        self._set_correct_properties()
+
     def _set_correct_properties(self):
         # Set the properties and reapply the style
         if self.is_selected:
             self.setProperty('class', 'clickable_frame_selected')
         else:
             self.setProperty('class', 'clickable_frame_unselected')
-        self.setStyle(self.style())
-        # TODO: Change the hover color when selected. Maybe use a full set of new colors.
+        self.style().unpolish(self)
+        self.style().polish(self)
+        self.update()
 
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:

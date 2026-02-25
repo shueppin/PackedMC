@@ -13,6 +13,7 @@ from .utils import StoredDict, animate_transition, AnimationScrollDirection, cre
 from .popups import ImportProfilesPopup
 
 from minecraft_api.minecraft import ALL_RELEASE_VERSIONS, ALL_SNAPSHOT_VERSIONS, get_installed_versions
+from minecraft_api.mod import get_mod_data
 
 
 ACTUAL_FILE_DIRECTORY = os.path.dirname(__file__)
@@ -52,9 +53,10 @@ class MainWindow(QMainWindow, MainWindowElements):
         self.data = StoredDict(DEFAULT_DATA_FILE_PATH, DEFAULT_DATA)  # Initialize using Default Data as base
         self.application = application
         self.possible_stylesheet_file_names = list_themes()
-        self.selected_instance_name = ""
+        self.selected_instance_name = ''
         self.all_imported_launcher_profiles = {}
         self.imported_launcher_profiles_file_data = {}
+        self.selected_mod_name = ''
 
         instance_field_functions = InstanceFieldFunctions(self.play_instance, self.edit_instance, self.create_instance, self.import_profiles_from_launcher)
         mod_field_functions = ModFieldFunctions(self.edit_mod, self.create_mod, self.display_mods)
@@ -85,7 +87,7 @@ class MainWindow(QMainWindow, MainWindowElements):
         self.MODS_PAGE_PLACEHOLDER.deleteLater()  # Cleanup
 
         # Create the instance edit page
-        self.BACK_BUTTON.clicked.connect(lambda: self.show_page(0,animation_direction=AnimationScrollDirection.HORIZONTAL))
+        self.INSTANCES_BACK_BUTTON.clicked.connect(lambda: self.show_page(0, animation_direction=AnimationScrollDirection.HORIZONTAL))
         self.BROWSE_MINECRAFT_PATH_BUTTON.clicked.connect(self._set_minecraft_path)
         self.INSTANCE_NAME.textChanged.connect(self._changed_instance_name)
         self.DELETE_INSTANCE_BUTTON.clicked.connect(self._delete_instance)
@@ -101,6 +103,10 @@ class MainWindow(QMainWindow, MainWindowElements):
         self.INSTANCE_MODS_DISPLAY = ScrollableGrid(FieldType.MODS_DISPLAYED, mod_field_functions)
         layout.addWidget(self.INSTANCE_MODS_DISPLAY)
         self.INSTANCE_MODS_DISPLAY_CONTAINER.setLayout(layout)
+
+        # Create the mod edit page
+        self.MODS_BACK_BUTTON.clicked.connect(lambda: self.show_page(2, animation_direction=AnimationScrollDirection.HORIZONTAL))
+        self.MOD_NAME.textChanged.connect(self._changed_mod_name)
 
         # If there are no instance, create the default one
         if not self.data['instances']:
@@ -196,10 +202,10 @@ class MainWindow(QMainWindow, MainWindowElements):
 
         # Page specific functions
         if page_index == 0:
-            self.INSTANCES_PAGE.set_values(sorted(self.data['instances'].keys()))
+            self.INSTANCES_PAGE.set_values(sorted(self.data['instances'].keys(), key=lambda x: x.lower()))
         elif page_index == 2:
             mod_page_values = []
-            for mod_name in sorted(self.data['mods'].keys()):
+            for mod_name in sorted(self.data['mods'].keys(), key=lambda x: x.lower()):
                 mod_page_values.append((
                     mod_name,
                     os.path.join(ACTUAL_FILE_DIRECTORY, '../icon.png'),  # TODO: Replace the placeholder with the icon function
@@ -428,9 +434,12 @@ class MainWindow(QMainWindow, MainWindowElements):
         if new_instance_name == '':
             new_instance_name = 'Instance Name'
 
+        # First get the data and only then make the name unique, to avoid mistakes when the name already exists, because of itself
+        instance_data = self.data['instances'].pop(old_instance_name)
+
         new_instance_name = self._make_name_unique(new_instance_name, self.data['instances'].keys())
 
-        self.data['instances'][new_instance_name] = self.data['instances'].pop(old_instance_name)
+        self.data['instances'][new_instance_name] = instance_data
         self.selected_instance_name = new_instance_name
 
         self.data.save()
@@ -513,8 +522,42 @@ class MainWindow(QMainWindow, MainWindowElements):
         if edit_afterwards:
             self.edit_mod(mod_name)  # Show it in edit mode
 
-    def edit_mod(self, mod_name: str):
-        print('Editing mod', mod_name)
+    def edit_mod(self, mod_name: str, only_refresh_values=False):
+        """ This function is executed to show the edit page and configure the values for the given instance. """
+        if not only_refresh_values:
+            self.show_page(3, animation_direction=AnimationScrollDirection.HORIZONTAL)
+
+        # Set the values for the edit page
+        self.selected_mod_name = mod_name
+        mod_data = self.data['mods'][mod_name]
+
+        # Set the name without triggering the changed_instance_data function (which triggers on text change)
+        self.MOD_NAME.blockSignals(True)
+        self.MOD_NAME.setText(mod_name)
+        self.MOD_NAME.setFocus()  # Prevent highlighting
+        self.MOD_NAME.blockSignals(False)
+
+        self.MOD_DESCRIPTION.setHtml(get_mod_data('https://modrinth.com/mod/fabric-api'))
+
+    def _changed_mod_name(self):
+        # Get the old and the new mod name
+        old_mod_name = self.selected_mod_name
+        new_mod_name = self.MOD_NAME.text().strip()
+
+        # If the clean new name is empty then it means it was cleared, which is allowed since the user can rewrite the whole name.
+        if new_mod_name == '':
+            new_mod_name = 'Mod Name'
+
+        # First get the data and only then make the name unique, to avoid mistakes when the name already exists, because of itself
+        mod_data = self.data['mods'].pop(old_mod_name)
+
+        new_mod_name = self._make_name_unique(new_mod_name, self.data['mods'].keys())
+
+        self.data['mods'][new_mod_name] = mod_data
+        self.selected_mod_name = new_mod_name
+
+        self.data.save()
+
 
 
     '''
@@ -576,6 +619,7 @@ class MainWindow(QMainWindow, MainWindowElements):
         os.environ['PACKEDMC_BUTTON_PRESSED_COLOR'] = opacity(theme['primaryColor'], 0.6)
         os.environ['PACKEDMC_PLAY_HOVER_COLOR'] = opacity(theme['primaryLightColor'], 0.9)
 
+
         # Apply the wanted stylesheet using custom special properties
         apply_stylesheet(self.application, theme=stylesheet_file_name, css_file=CUSTOM_STYLESHEET_FILE_PATH, extra=extra, invert_secondary=invert_secondary, style='windows11')
 
@@ -586,7 +630,7 @@ class MainWindow(QMainWindow, MainWindowElements):
 
         self.data.save()
 
-        os.environ['QTMATERIAL_PRIMARYCOLOR'] = "#000000"
+        #os.environ['QTMATERIAL_PRIMARYCOLOR'] = "#000000"
 
     @staticmethod
     def _make_name_unique(name: str, already_existing_elements: list[str]):

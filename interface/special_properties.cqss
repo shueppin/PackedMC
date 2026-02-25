@@ -5,10 +5,25 @@
 /*  ------------------------------------------------------------------------  */
 
 
+/* Fixes typo in line 902 of "material.qss.template" */
+QScrollBar:vertical {{
+    background: transparent;
+}}
+
+
+
 /* Custom classes */
 
 .no_frame {{
-    border: {QTMATERIAL_SECONDARYDARKCOLOR};
+    border-color: {QTMATERIAL_SECONDARYDARKCOLOR};
+}}
+
+.light_frame {{
+    border-color: {QTMATERIAL_SECONDARYLIGHTCOLOR};
+}}
+
+.standard_text {{
+    color: {QTMATERIAL_SECONDARYTEXTCOLOR};
 }}
 
 .no_bg {{
@@ -33,12 +48,9 @@
 }}
 
 .clickable_frame_selected {{
-    background-color: {PACKEDMC_BUTTON_PRESSED_COLOR};
+    background-color: {QTMATERIAL_SECONDARYLIGHTCOLOR};
 }}
 
-.clickable_frame_selected:hover {{
-    background-color: {PACKEDMC_BUTTON_HOVER_COLOR};
-}}
 
 
 /* Base modifications */
@@ -130,5 +142,4 @@ QTableView {{
 .play_button:pressed {{
     background-color: {QTMATERIAL_PRIMARYLIGHTCOLOR};
 }}
-
 

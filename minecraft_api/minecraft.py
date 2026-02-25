@@ -19,8 +19,11 @@ ALL_SNAPSHOT_VERSIONS = []
 def _reload_data():
     global LATEST_RELEASE, LATEST_SNAPSHOT, ALL_RELEASE_VERSIONS, ALL_SNAPSHOT_VERSIONS
 
-    response = requests.get(_MINECRAFT_VERSIONS_URL, timeout=10)
-    json_data = response.json()
+    try:
+        response = requests.get(_MINECRAFT_VERSIONS_URL, timeout=10)
+        json_data = response.json()
+    except requests.exceptions.ConnectionError:
+        return
 
     # Set the values from the JSON
     LATEST_RELEASE = json_data['latest']['release']
