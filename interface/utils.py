@@ -1,3 +1,4 @@
+import logging
 from enum import Enum
 import os
 import json
@@ -6,6 +7,39 @@ from typing import Callable
 from PyQt6.QtCore import QPropertyAnimation, QParallelAnimationGroup, QPoint, QEasingCurve, Qt
 from PyQt6.QtWidgets import QMainWindow, QWidget, QRadioButton, QCheckBox, QStackedWidget, QLayout
 
+
+class _CompactListEncoder(json.JSONEncoder):
+    def iterencode(self, obj, _one_shot=False):
+        # Use custom separators for lists only
+        return self._iterencode(obj, 0)
+
+    def _iterencode(self, obj, level):
+        indent = self.indent
+        newline = "\n"
+        space = " "
+
+        if isinstance(obj, dict):
+            if not obj:
+                yield "{}"
+                return
+
+            yield "{"
+            items = list(obj.items())
+            for i, (key, value) in enumerate(items):
+                yield newline + space * (indent * (level + 1))
+                yield json.dumps(key)
+                yield ": "
+                yield from self._iterencode(value, level + 1)
+                if i < len(items) - 1:
+                    yield ","
+            yield newline + space * (indent * level) + "}"
+
+        elif isinstance(obj, list):
+            # ALWAYS compact lists
+            yield json.dumps(obj, separators=(", ", ":"), ensure_ascii=self.ensure_ascii)
+
+        else:
+            yield json.dumps(obj, ensure_ascii=self.ensure_ascii)
 
 class StoredDict(dict):
     def __init__(self, filepath: str, *args, **kwargs):
@@ -24,9 +58,14 @@ class StoredDict(dict):
     def save(self):
         try:
             with open(self.filepath, "w") as f:
-                json.dump(dict(self), f, indent=4)
+                json.dump(
+                    dict(self),
+                    f,
+                    cls=_CompactListEncoder,
+                    indent=4
+                )
         except IOError as e:
-            print(f"Error saving dictionary: {e}")
+            logging.error(f"Error saving dictionary: {e}")
 
     def load(self):
         try:
@@ -34,7 +73,7 @@ class StoredDict(dict):
                 loaded_data = json.load(f)
                 self.update(loaded_data)
         except (IOError, json.JSONDecodeError) as e:
-            print(f"Error loading dictionary: {e}")
+            logging.error(f"Error loading dictionary: {e}")
 
 
 '''
@@ -95,7 +134,6 @@ def animate_transition(main_window: QMainWindow, stacked_widget: QStackedWidget,
     new_page.setGeometry(stacked_widget.geometry())
     new_page.move(new_page.pos() - offset)
     new_page.show()
-    # new_page.raise_()
 
     # Define both animations
     animation_current_page = QPropertyAnimation(current_page, b"pos")

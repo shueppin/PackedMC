@@ -5,11 +5,13 @@ import os
 import json
 import markdown
 
+from .minecraft import ALL_RELEASE_VERSIONS
+
 
 ACTUAL_FILE_DIRECTORY = os.path.dirname(__file__)
 
-CURSEFORGE_BASE_URL = 'https://www.curseforge.com/'
-CURSEFORGE_API_BASE_URL = 'https://api.cfwidget.com/'  # This is not the official API but instead an alternative which doesn't need an API key
+CURSEFORGE_BASE_URL = 'https://www.curseforge.com/minecraft/mc-mods/'
+CURSEFORGE_API_BASE_URL = 'https://api.cfwidget.com/minecraft/mc-mods/'  # This is not the official API but instead an alternative which doesn't need an API key
 CURSEFORGE_FILE_DOWNLOAD_BASE_URL = 'https://edge.forgecdn.net/files/'
 
 MODRINTH_BASE_URL = 'https://modrinth.com/mod/'
@@ -78,16 +80,18 @@ def get_download_url(mod_url: str, game_version: str, mod_loader: str) -> Tuple[
 
 
 def _get_curseforge_download_url(curseforge_url: str, game_version: str, mod_loader: str) -> Tuple[str, str]:
-    url_for_version_data = CURSEFORGE_API_BASE_URL + curseforge_url[len(CURSEFORGE_BASE_URL):] + '?version=' + game_version + '&loader=' + mod_loader  # Remove the base curseforge url and add the api part and a version and a loader search
-
-    response = requests.get(url_for_version_data)
+    try:
+        url_for_version_data = CURSEFORGE_API_BASE_URL + curseforge_url[len(CURSEFORGE_BASE_URL):] + '?version=' + game_version + '&loader=' + mod_loader  # Remove the base curseforge url and add the api part and a version and a loader search
+        response = requests.get(url_for_version_data)
+    except requests.exceptions.ConnectionError:
+        return '', ''
 
     if response.status_code != 200:
         if response.status_code == 202:
             raise TryAgainLater
 
         else:
-            raise ModNotExisting('curseforge', curseforge_url)
+            raise ModNotExisting('Curseforge', curseforge_url)
 
     version_data = response.json()
 
@@ -112,12 +116,14 @@ def _get_modrinth_download_url(modrinth_url: str, game_version: str, mod_loader:
     if not mod_loader:
         raise EmptyArguments('mod_loader', 'modrinth')
 
-    url_for_all_versions_data = MODRINTH_API_BASE_URL + modrinth_url[len(MODRINTH_BASE_URL):] + '/version'  # Remove the base modrinth url and add the api part
-
-    response = requests.get(url_for_all_versions_data, headers=PROJECT_OWN_HEADERS)
+    try:
+        url_for_all_versions_data = MODRINTH_API_BASE_URL + modrinth_url[len(MODRINTH_BASE_URL):] + '/version'  # Remove the base modrinth url and add the api part
+        response = requests.get(url_for_all_versions_data, headers=PROJECT_OWN_HEADERS)
+    except requests.exceptions.ConnectionError:
+        return '', ''
 
     if response.status_code != 200:
-        raise ModNotExisting('modrinth', modrinth_url)
+        raise ModNotExisting('Modrinth', modrinth_url)
 
     if 'x-ratelimit-remaining' in response.headers:
         if int(response.headers['X-Ratelimit-Remaining']) < 1:
@@ -135,9 +141,10 @@ def _get_modrinth_download_url(modrinth_url: str, game_version: str, mod_loader:
     raise NoFileAvailable(modrinth_url, mod_loader, game_version)
 
 
-def get_mod_data(mod_url: str) -> str:
+def get_mod_data(mod_url: str) -> Tuple[str, list[str], list[str]]:
     """
-    Returns the mod data as HTML from the API and caches it.
+    Get the actual mod data from the API and cache it.
+    Then return the description as HTML, the compatible mod loaders and the supported game versions (starting with the newest).
     """
     if CURSEFORGE_BASE_URL in mod_url:
         mod_name = mod_url[len(CURSEFORGE_BASE_URL):]
@@ -159,27 +166,72 @@ def get_mod_data(mod_url: str) -> str:
 
     # If it still does not exist, then just return nothing
     if not os.path.exists(file_path):
-        return ''
+        return '', [], []
 
     # Return the data from the file
     with open(file_path, 'r') as f:
         mod_data = json.load(f)
-        return mod_data['description']
+        return mod_data['description'], mod_data['loaders'], mod_data['supported_versions']
 
 
 def get_mod_icon_path(mod_url: str) -> str:
     if CURSEFORGE_BASE_URL in mod_url:
         mod_name = mod_url[len(CURSEFORGE_BASE_URL):]
-        return os.path.join(ACTUAL_FILE_DIRECTORY, 'cache', 'modrinth_mods', mod_name + '.png')
+        return os.path.join(ACTUAL_FILE_DIRECTORY, 'cache', 'curseforge_mods', mod_name + '.png')
     elif MODRINTH_BASE_URL in mod_url:
         mod_name = mod_url[len(MODRINTH_BASE_URL):]
-        return os.path.join(ACTUAL_FILE_DIRECTORY, 'cache', 'curseforge_mods', mod_name + '.png')
+        return os.path.join(ACTUAL_FILE_DIRECTORY, 'cache', 'modrinth_mods', mod_name + '.png')
     else:
         raise InvalidModBaseUrl(mod_url)
 
 
-def _update_curseforge_mod(mod_url: str) -> str:
-    pass
+def _update_curseforge_mod(mod_name: str):
+    try:
+        url_for_mod_data = CURSEFORGE_API_BASE_URL + mod_name
+        response = requests.get(url_for_mod_data, headers=PROJECT_OWN_HEADERS, timeout=10)
+    except requests.exceptions.ConnectionError:
+        return
+
+    if response.status_code != 200:
+        raise ModNotExisting('Curseforge', mod_name)
+
+    mod_data = response.json()
+
+    # Get the supported versions and the loaders
+    loaders_and_versions = set()
+    for file_data in mod_data['files']:
+        loaders_and_versions.update(file_data['versions'])
+
+    supported_versions = []
+    for game_version in ALL_RELEASE_VERSIONS:  # Use the Release Versions
+        if game_version in loaders_and_versions:
+            supported_versions.append(game_version)
+            loaders_and_versions.remove(game_version)
+
+    # Add the leftover versions which don't contain "snapshot" as loader
+    loaders = []
+    for version in loaders_and_versions:
+        if 'snapshot' not in version.lower():
+            loaders.append(version)
+
+    # Update the data
+    data_file_path = os.path.join(ACTUAL_FILE_DIRECTORY, 'cache', 'curseforge_mods', mod_name + '.json')
+    html_description = mod_data['description']
+    with open(data_file_path, 'w') as f:
+        json_data = {
+            'description': html_description,
+            'loaders': sorted(loaders),
+            'supported_versions': supported_versions
+        }
+        json.dump(json_data, f)
+
+    # Download the icon
+    icon_url = mod_data['thumbnail']
+    icon_file_path = os.path.join(ACTUAL_FILE_DIRECTORY, 'cache', 'curseforge_mods', mod_name + '.png')
+
+    response = requests.get(icon_url)
+    with open(icon_file_path, 'wb') as file:
+        file.write(response.content)
 
 
 def _update_modrinth_mod(mod_name: str):
@@ -190,7 +242,7 @@ def _update_modrinth_mod(mod_name: str):
         return
 
     if response.status_code != 200:
-        raise ModNotExisting('modrinth', mod_name)
+        raise ModNotExisting('Modrinth', mod_name)
 
     if 'x-ratelimit-remaining' in response.headers:
         if int(response.headers['x-ratelimit-remaining'])<1:
@@ -198,11 +250,24 @@ def _update_modrinth_mod(mod_name: str):
 
     mod_data = response.json()
 
+    # Get the releases
+    supported_versions = []
+    for version in reversed(mod_data['game_versions']):
+        if version in ALL_RELEASE_VERSIONS:
+            supported_versions.append(version)
+
+    # Get the loaders
+    loaders = [loader.capitalize() for loader in mod_data['loaders']]
+
     # Update the data
     data_file_path = os.path.join(ACTUAL_FILE_DIRECTORY, 'cache', 'modrinth_mods', mod_name + '.json')
     html_description = markdown.markdown(mod_data['body'])
     with open(data_file_path, 'w') as f:
-        json_data = {'description': html_description}
+        json_data = {
+            'description': html_description,
+            'loaders': sorted(loaders),
+            'supported_versions': supported_versions
+        }
         json.dump(json_data, f)
 
     # Download the icon

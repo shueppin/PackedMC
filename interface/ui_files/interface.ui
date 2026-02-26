@@ -585,7 +585,7 @@
            <string>Modrinth or CurseForge URL</string>
           </property>
           <property name="clearButtonEnabled">
-           <bool>false</bool>
+           <bool>true</bool>
           </property>
           <property name="class" stdset="0">
            <string/>
@@ -644,6 +644,9 @@
         </item>
         <item row="3" column="0" rowspan="3" colspan="2">
          <widget class="QTextBrowser" name="MOD_DESCRIPTION">
+          <property name="openExternalLinks">
+           <bool>true</bool>
+          </property>
           <property name="class" stdset="0">
            <string>light_frame no_bg standard_text</string>
           </property>

@@ -2,8 +2,10 @@ import logging
 import os
 from platform import platform
 import json
+import validators
 
 from PyQt6 import uic
+from PyQt6.QtCore import QTimer
 from PyQt6.QtWidgets import QMainWindow, QPushButton, QFileDialog, QMessageBox, QCheckBox, QVBoxLayout
 from qt_material import apply_stylesheet, list_themes, get_theme, opacity
 
@@ -13,7 +15,7 @@ from .utils import StoredDict, animate_transition, AnimationScrollDirection, cre
 from .popups import ImportProfilesPopup
 
 from minecraft_api.minecraft import ALL_RELEASE_VERSIONS, ALL_SNAPSHOT_VERSIONS, get_installed_versions
-from minecraft_api.mod import get_mod_data
+from minecraft_api.mod import get_mod_data, get_mod_icon_path, InvalidModBaseUrl, ModNotExisting
 
 
 ACTUAL_FILE_DIRECTORY = os.path.dirname(__file__)
@@ -58,11 +60,16 @@ class MainWindow(QMainWindow, MainWindowElements):
         self.imported_launcher_profiles_file_data = {}
         self.selected_mod_name = ''
 
+        # Set general, but more complex variables
         instance_field_functions = InstanceFieldFunctions(self.play_instance, self.edit_instance, self.create_instance, self.import_profiles_from_launcher)
-        mod_field_functions = ModFieldFunctions(self.edit_mod, self.create_mod, self.display_mods)
+        mod_field_functions = ModFieldFunctions(self.edit_mod, self.create_mod, self.clicked_displayed_mod)
 
         self.import_profiles_popup = ImportProfilesPopup(self)
         self.import_profiles_popup.IMPORT_BUTTON.clicked.connect(self._import_selected_profiles)
+
+        self.mod_url_timer = QTimer(self)  # Use a timer that is restarted on every text input, but the real function is only executed after the time has run out.
+        self.mod_url_timer.setSingleShot(True)
+        self.mod_url_timer.timeout.connect(self._changed_mod_url)
 
         # Bind the page selection buttons
         self.INSTANCES_PAGE_BUTTON.pressed.connect(lambda: self._page_selection_button_on_press(self.INSTANCES_PAGE_BUTTON, 0))
@@ -107,10 +114,12 @@ class MainWindow(QMainWindow, MainWindowElements):
         # Create the mod edit page
         self.MODS_BACK_BUTTON.clicked.connect(lambda: self.show_page(2, animation_direction=AnimationScrollDirection.HORIZONTAL))
         self.MOD_NAME.textChanged.connect(self._changed_mod_name)
+        self.MOD_URL.textChanged.connect(lambda: self.mod_url_timer.start(500))
+        self.DELETE_MOD_BUTTON.clicked.connect(self._delete_mod)
 
         # If there are no instance, create the default one
         if not self.data['instances']:
-            self.create_instance(DEFAULT_INSTANCE_NAME, is_default=True)
+            self.create_instance(DEFAULT_INSTANCE_NAME, is_default=True, edit_afterwards=False)
 
         # Create the settings page
         available_stylesheet_filenames = self.possible_stylesheet_file_names
@@ -179,7 +188,6 @@ class MainWindow(QMainWindow, MainWindowElements):
 
         self.show_page(new_page_index, animation_direction)
 
-
     # Release function for the selection button
     @staticmethod
     def _page_selection_button_on_release(clicked_button: QPushButton):
@@ -191,7 +199,6 @@ class MainWindow(QMainWindow, MainWindowElements):
 
         # Else:
         clicked_button.setChecked(False)
-
 
     def show_page(self, page_index: int, animation_direction: AnimationScrollDirection = AnimationScrollDirection.VERTICAL, show_instantly = False):
         # We don't care whether the page is still animating, because it doesn't matter if we execute the page function anyway.
@@ -206,11 +213,19 @@ class MainWindow(QMainWindow, MainWindowElements):
         elif page_index == 2:
             mod_page_values = []
             for mod_name in sorted(self.data['mods'].keys(), key=lambda x: x.lower()):
-                mod_page_values.append((
-                    mod_name,
-                    os.path.join(ACTUAL_FILE_DIRECTORY, '../icon.png'),  # TODO: Replace the placeholder with the icon function
-                ))
+                icon_file_path = ''
+                try:
+                    icon_file_path = get_mod_icon_path(self.data['mods'][mod_name]['url'])
+                except ModNotExisting:
+                    pass
+                except InvalidModBaseUrl:
+                    pass
+                except Exception as e:
+                    logging.error('Uncaught exception when listing mod', exc_info=e)
+                mod_page_values.append( (mod_name, icon_file_path) )  # It is important to add these as a tuple
+
             self.MODS_PAGE.set_values(mod_page_values)
+
 
     '''
     Instance page & Instance Edit page
@@ -417,12 +432,23 @@ class MainWindow(QMainWindow, MainWindowElements):
         # Display the mods in their correct state
         mod_display_data = []
         for mod_name in sorted(self.data['mods'].keys()):
-            # Add to the mods the name, the icon path and whether it is selected or not
-            mod_display_data.append((
-                mod_name,
-                os.path.join(ACTUAL_FILE_DIRECTORY, '../icon.png'),  # TODO: Replace the placeholder with the icon function
-                mod_name in instance_data['mods']
-            ))
+            if instance_data['type'] in self.data['mods'][mod_name]['loaders']:
+                icon_file_path = ''
+                try:
+                    icon_file_path = get_mod_icon_path(self.data['mods'][mod_name]['url'])
+                except ModNotExisting:
+                    pass
+                except InvalidModBaseUrl:
+                    pass
+                except Exception as e:
+                    logging.error('Uncaught exception when displaying mod', exc_info=e)
+
+                # Add to the mods the name, the icon path and whether it is selected or not
+                mod_display_data.append((
+                    mod_name,
+                    icon_file_path,
+                    mod_name in instance_data['mods']
+                ))
         self.INSTANCE_MODS_DISPLAY.set_values(mod_display_data)
 
     def _changed_instance_name(self):
@@ -484,11 +510,33 @@ class MainWindow(QMainWindow, MainWindowElements):
             self.show_page(0, animation_direction=AnimationScrollDirection.HORIZONTAL)
 
     def _changed_instance_type(self, _new_index: int):
-        type_name = self.INSTANCE_TYPE_SELECTION.currentText()
-        self.data['instances'][self.selected_instance_name]['type'] = type_name
-        self.data.save()
+        # Ask the user to confirm the type change
+        old_type = self.data['instances'][self.selected_instance_name]['type']
+        new_type = self.INSTANCE_TYPE_SELECTION.currentText()
 
-        self.edit_instance(self.selected_instance_name, only_refresh_values=True)
+        additional_message = ""
+        if old_type == 'Fabric' or old_type == 'Forge':
+            if new_type == 'Fabric' or new_type == 'Forge':
+                additional_message = 'Incompatible mods will be deselected.'
+            else:
+                additional_message = 'All mods will be deselected.'
+
+        reply = QMessageBox.question(self, 'Confirm Instance Type change', f'Do you really want to change the type of this instance from {old_type} to {new_type}? \n{additional_message} \n\n(Enter = Yes, Escape = No)')
+
+        if reply == 16384:  # Yes
+            self.data['instances'][self.selected_instance_name]['type'] = new_type
+            # Remove all mods incompatible with the selected type
+            for mod_name in self.data['instances'][self.selected_instance_name]['mods'].copy():  # Use a copy of the list
+                if new_type not in self.data['mods'][mod_name]['loaders']:
+                    self.data['instances'][self.selected_instance_name]['mods'].remove(mod_name)
+            self.data.save()
+
+            self.edit_instance(self.selected_instance_name, only_refresh_values=True)
+        else:
+            # Reset the type
+            self.INSTANCE_TYPE_SELECTION.blockSignals(True)
+            self.INSTANCE_TYPE_SELECTION.setCurrentText()
+            self.INSTANCE_TYPE_SELECTION.blockSignals(False)
 
     def _changed_instance_version(self, _new_index: int):
         version = self.INSTANCE_VERSION_SELECTION.currentText()
@@ -499,8 +547,12 @@ class MainWindow(QMainWindow, MainWindowElements):
         self.data['instances'][self.selected_instance_name]['standard_options_file'] = new_state
         self.data.save()
 
-    def display_mods(self, mod_name: str, is_selected: bool):
-        print('Displaying mod', mod_name, is_selected)
+    def clicked_displayed_mod(self, mod_name: str, is_selected: bool):
+        if is_selected:
+            self.data['instances'][self.selected_instance_name]['mods'].append(mod_name)
+        else:
+            self.data['instances'][self.selected_instance_name]['mods'].remove(mod_name)
+        self.data.save()
 
 
     '''
@@ -512,9 +564,7 @@ class MainWindow(QMainWindow, MainWindowElements):
         # Set the data
         self.data['mods'][mod_name] = {
             'url': '',
-            'description': '',
-            'icon': '',
-            'mod_loaders': [],
+            'loaders': [],
             'supported_versions': [],
         }
         self.data.save()
@@ -522,7 +572,7 @@ class MainWindow(QMainWindow, MainWindowElements):
         if edit_afterwards:
             self.edit_mod(mod_name)  # Show it in edit mode
 
-    def edit_mod(self, mod_name: str, only_refresh_values=False):
+    def edit_mod(self, mod_name: str, only_refresh_values=False, focus_on_url=False):
         """ This function is executed to show the edit page and configure the values for the given instance. """
         if not only_refresh_values:
             self.show_page(3, animation_direction=AnimationScrollDirection.HORIZONTAL)
@@ -537,7 +587,29 @@ class MainWindow(QMainWindow, MainWindowElements):
         self.MOD_NAME.setFocus()  # Prevent highlighting
         self.MOD_NAME.blockSignals(False)
 
-        self.MOD_DESCRIPTION.setHtml(get_mod_data('https://modrinth.com/mod/fabric-api'))
+        self.MOD_URL.blockSignals(True)
+        self.MOD_URL.setText(mod_data['url'])
+        if focus_on_url:
+            self.MOD_URL.setFocus()
+        self.MOD_URL.blockSignals(False)
+
+        # Set the fields depending on the URL and also refresh the stored data
+        description, loaders, supported_versions = '', [], []
+        try:
+            description, loaders, supported_versions = get_mod_data(mod_data['url'])
+            self.data['mods'][self.selected_mod_name]['loaders'] = loaders
+            self.data['mods'][self.selected_mod_name]['supported_versions'] = supported_versions
+            self.data.save()
+        except ModNotExisting:
+            pass
+        except InvalidModBaseUrl:
+            pass
+        except Exception as e:
+            logging.error('Uncaught exception when changing editing mod', exc_info=e)
+
+        self.MOD_DESCRIPTION.setHtml(description)
+        self.MOD_LOADER.setText('\n'.join(loaders))
+        self.MOD_VERSIONS.setText('\n'.join(supported_versions))
 
     def _changed_mod_name(self):
         # Get the old and the new mod name
@@ -558,6 +630,39 @@ class MainWindow(QMainWindow, MainWindowElements):
 
         self.data.save()
 
+    def _changed_mod_url(self):
+        # This function is only executed after a timer has run out, so after there were no keystrokes in 0.5 seconds.
+
+        new_url = self.MOD_URL.text().strip()
+        self.data['mods'][self.selected_mod_name]['url'] = new_url
+        self.data.save()
+        if validators.url(new_url):
+            try:
+                _, loaders, supported_versions = get_mod_data(new_url)
+                self.data['mods'][self.selected_mod_name]['loaders'] = loaders
+                self.data['mods'][self.selected_mod_name]['supported_versions'] = supported_versions
+                self.data.save()
+            except ModNotExisting:
+                pass
+            except InvalidModBaseUrl:
+                pass
+            except Exception as e:
+                logging.error('Uncaught exception when changing mod URL', exc_info=e)
+        else:
+            pass
+        self.edit_mod(self.selected_mod_name, focus_on_url=True)
+        # TODO: Maybe change color of input field when it is an invalid URL
+
+    def _delete_mod(self):
+        # Ask to delete it
+        reply = QMessageBox.question(self, 'Confirm deletion', f'Do you really want to delete the mod "{self.selected_mod_name}"? \n\n(Enter = Yes, Escape = No)')
+
+        if reply == 16384:  # Yes
+            del self.data['mods'][self.selected_mod_name]
+            self.data.save()
+
+            # Go to the mods page
+            self.show_page(2, animation_direction=AnimationScrollDirection.HORIZONTAL)
 
 
     '''
@@ -565,7 +670,6 @@ class MainWindow(QMainWindow, MainWindowElements):
     '''
     def _stylesheet_selection(self, _button, style_name):
         # We don't need to fix the button here because we always have more than one stylesheet
-
         filename = style_name.replace('2', '500').replace(' ', '_').lower()  # Changes the name from "Light Green 2" to "light_green_500.xml"
         filename += '.xml'
 
@@ -587,6 +691,7 @@ class MainWindow(QMainWindow, MainWindowElements):
 
         self.MODS_PAGE.set_size(70 + 50 * scale_value, 60 + 20 * scale_value)
         self.MODS_PAGE.set_spacing(vertical_spacing=10 * scale_value)
+
 
     '''
     General functions
@@ -627,10 +732,7 @@ class MainWindow(QMainWindow, MainWindowElements):
         self.data['style']['theme'] = stylesheet_file_name
         self.data['style']['invert_secondary'] = invert_secondary
         self.data['style']['scale'] = density_scale
-
         self.data.save()
-
-        #os.environ['QTMATERIAL_PRIMARYCOLOR'] = "#000000"
 
     @staticmethod
     def _make_name_unique(name: str, already_existing_elements: list[str]):
