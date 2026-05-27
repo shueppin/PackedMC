@@ -8,6 +8,9 @@ from PyQt6.QtCore import QPropertyAnimation, QParallelAnimationGroup, QPoint, QE
 from PyQt6.QtWidgets import QMainWindow, QWidget, QRadioButton, QCheckBox, QStackedWidget, QLayout
 
 
+logger = logging.getLogger(__name__)
+
+
 class _CompactListEncoder(json.JSONEncoder):
     def iterencode(self, obj, _one_shot=False):
         # Use custom separators for lists only
@@ -65,7 +68,7 @@ class StoredDict(dict):
                     indent=4
                 )
         except IOError as e:
-            logging.error(f"Error saving dictionary: {e}")
+            logger.error(f"Error saving dictionary: {e}")
 
     def load(self):
         try:
@@ -73,7 +76,7 @@ class StoredDict(dict):
                 loaded_data = json.load(f)
                 self.update(loaded_data)
         except (IOError, json.JSONDecodeError) as e:
-            logging.error(f"Error loading dictionary: {e}")
+            logger.error(f"Error loading dictionary: {e}")
 
 
 '''

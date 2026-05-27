@@ -8,6 +8,9 @@ from PyQt6.QtGui import QPixmap
 from PyQt6.QtCore import Qt
 
 
+logger = logging.getLogger(__name__)
+
+
 class FieldType(Enum):
     INSTANCES = "Instances"
     MODS_EDITABLE = "Mods Editable"  # For the mods page
@@ -103,7 +106,7 @@ class _ModField(QFrame):
                 icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
                 layout.addWidget(icon_label)
             else:
-                logging.warning("Could not find mod icon at: " + mod_icon_path)
+                logger.warning("Could not find mod icon at: " + mod_icon_path)
 
         # Name
         label = QLabel(mod_name)
@@ -154,12 +157,12 @@ class ScrollableGrid(QWidget):
         # Check if the functions match the field type
         if field_type == FieldType.INSTANCES:
             if not isinstance(available_functions, InstanceFieldFunctions):
-                logging.error(f'Field type "{field_type.name}" expected InstanceFieldFunctions, not {type(available_functions)}')
+                logger.error(f'Field type "{field_type.name}" expected InstanceFieldFunctions, not {type(available_functions)}')
         elif field_type == FieldType.MODS_DISPLAYED or field_type == FieldType.MODS_EDITABLE:
             if not isinstance(available_functions, ModFieldFunctions):
-                logging.error(f'Field type "{field_type.name}" expected InstanceFieldFunctions, not {type(available_functions)}')
+                logger.error(f'Field type "{field_type.name}" expected InstanceFieldFunctions, not {type(available_functions)}')
         else:
-            logging.error(f'Field type "{field_type}" is not supported.')
+            logger.error(f'Field type "{field_type}" is not supported.')
 
         # Scroll area
         self.scroll_area = QScrollArea()
@@ -221,7 +224,7 @@ class ScrollableGrid(QWidget):
                     field = _ModField(name, mod_icon_path, self.available_functions, only_displayed=True, is_selected=is_selected, width=self.card_width, height=self.card_height)
                     self.fields.append(field)
                 except ValueError:
-                    logging.warning(f'{FieldType.MODS_DISPLAYED.name} expects values like "(name, icon_path, is_selected)", but got {values[i]} instead')
+                    logger.warning(f'{FieldType.MODS_DISPLAYED.name} expects values like "(name, icon_path, is_selected)", but got {values[i]} instead')
 
         elif self.field_type == FieldType.MODS_EDITABLE:
             for i in range(len(values)):
@@ -230,7 +233,7 @@ class ScrollableGrid(QWidget):
                     field = _ModField(name, mod_icon_path, self.available_functions, width=self.card_width, height=self.card_height)
                     self.fields.append(field)
                 except ValueError:
-                    logging.warning(f'{FieldType.MODS_EDITABLE.name} expects values like "(name, icon_path)", but got {values[i]} instead')
+                    logger.warning(f'{FieldType.MODS_EDITABLE.name} expects values like "(name, icon_path)", but got {values[i]} instead')
             create_new_mod_button = _CreateNewElementButton(self.available_functions.create_new_function,'Create new\nmod', self.card_width, self.card_height)
             self.fields.append(create_new_mod_button)
 

@@ -19,6 +19,10 @@ from .popups import ImportProfilesPopup
 
 from minecraft_api.minecraft import ALL_RELEASE_VERSIONS, ALL_SNAPSHOT_VERSIONS, get_installed_versions
 from minecraft_api.mod import get_mod_data, get_mod_icon_path, InvalidModBaseUrl, ModNotExisting
+from minecraft_api.fabric import install_version
+
+
+logger = logging.getLogger(__name__)
 
 
 ACTUAL_FILE_DIRECTORY = os.path.dirname(__file__)
@@ -28,7 +32,7 @@ CUSTOM_STYLESHEET_FILE_PATH = os.path.join(ACTUAL_FILE_DIRECTORY, 'special_prope
 WINDOW_DEFAULT_SCALE = 3
 
 DEFAULT_DATA_FILE_PATH = os.path.join(ACTUAL_FILE_DIRECTORY, r'../data.json')
-PACKEDMC_MINECRAFT_DATA_DIRECTORY = os.path.join(ACTUAL_FILE_DIRECTORY, '../minecraft_data')
+PACKEDMC_MINECRAFT_DATA_DIRECTORY = os.path.abspath(os.path.join(ACTUAL_FILE_DIRECTORY, '../minecraft_data'))
 DEFAULT_DATA = {
     # For the style of the App
     'style': {
@@ -45,13 +49,12 @@ if 'windows' in platform().lower():
     ROAMING_DIRECTORY = os.getenv('Appdata')
     MINECRAFT_DIRECTORY = os.path.join(ROAMING_DIRECTORY, '.minecraft')
     MINECRAFT_LAUNCHER_PROFILES_PATH = os.path.join(MINECRAFT_DIRECTORY, 'launcher_profiles.json')
-    MINECRAFT_OPTIONS_FILE_PATH = os.path.join(MINECRAFT_DIRECTORY, 'options.txt')
     MINECRAFT_LAUNCHER_EXECUTABLE = r"C:\Program Files\WindowsApps\Microsoft.4297127D64EC6_2.6.2.0_x64__8wekyb3d8bbwe\Minecraft.exe"  # TODO: Find the correct path via bruteforce. Sometimes the version number (here 2.6.2.0) changes
 else:
     MINECRAFT_DIRECTORY = 'UNKNOWN'
 
 DEFAULT_INSTANCE_NAME = 'Latest Release'
-MINECRAFT_LAUNCHER_PACKEDMC_ID = 'packedmc'
+MINECRAFT_LAUNCHER_PACKEDMC_PROFILE_ID = 'packedmc'
 
 
 class MainWindow(QMainWindow, MainWindowElements):
@@ -77,7 +80,7 @@ class MainWindow(QMainWindow, MainWindowElements):
 
         self.mod_url_timer = QTimer(self)  # Use a timer that is restarted on every text input, but the real function is only executed after the time has run out.
         self.mod_url_timer.setSingleShot(True)
-        self.mod_url_timer.timeout.connect(self._changed_mod_url)
+        self.mod_url_timer.timeout.connect(self._changed_mod_url)  # noqa
 
         # Bind the page selection buttons
         self.INSTANCES_PAGE_BUTTON.pressed.connect(lambda: self._page_selection_button_on_press(self.INSTANCES_PAGE_BUTTON, 0))
@@ -232,7 +235,7 @@ class MainWindow(QMainWindow, MainWindowElements):
                 except InvalidModBaseUrl:
                     pass
                 except Exception as e:
-                    logging.error('Uncaught exception when listing mod', exc_info=e)
+                    logger.error('Uncaught exception when listing mod', exc_info=e)
                 mod_page_values.append( (mod_name, icon_file_path) )  # It is important to add these as a tuple
 
             self.MODS_PAGE.set_values(mod_page_values)
@@ -244,7 +247,7 @@ class MainWindow(QMainWindow, MainWindowElements):
     def import_profiles_from_launcher(self):
         launcher_profiles_path, _ = QFileDialog.getOpenFileName(self, 'Select profiles file for the launcher', MINECRAFT_LAUNCHER_PROFILES_PATH, "JSON Files (*.json);;All Files (*)")
 
-        logging.info(f'Importing profiles from {launcher_profiles_path}')
+        logger.info(f'Importing profiles from {launcher_profiles_path}')
 
         try:
             with open(launcher_profiles_path) as file:
@@ -265,7 +268,7 @@ class MainWindow(QMainWindow, MainWindowElements):
                             self.all_imported_launcher_profiles[display] = profile_id
 
                     except KeyError:
-                        logging.warning(f'Skipping profile {profile_id} due to faulty profile data')
+                        logger.warning(f'Skipping profile {profile_id} due to faulty profile data')
                         continue
 
             # If there was no error opening the file, create the checkboxes and display the popup
@@ -273,9 +276,9 @@ class MainWindow(QMainWindow, MainWindowElements):
             self.import_profiles_popup.show_popup()
 
         except FileNotFoundError:
-            logging.error("Profiles file not found.")
+            logger.error("Profiles file not found.")
         except json.JSONDecodeError or KeyError:
-            logging.error("There has been an error decoding the profiles JSON.")
+            logger.error("There has been an error decoding the profiles JSON.")
 
     def _import_selected_profiles(self):
         # Go through all the selected profiles and create the data for them
@@ -373,9 +376,28 @@ class MainWindow(QMainWindow, MainWindowElements):
         else:
             packedmc_options_file = os.path.join(packedmc_options_files_directory, instance_name + '.txt')
 
-        if os.path.exists(packedmc_options_file) and os.path.exists(MINECRAFT_OPTIONS_FILE_PATH):
-            shutil.copy2(packedmc_options_file, MINECRAFT_OPTIONS_FILE_PATH)
-            logging.info(f'Copied options file from "{packedmc_options_file}" to "{MINECRAFT_OPTIONS_FILE_PATH}"')
+        # Create the options file path based on the game location of the new instance
+        minecraft_options_file_path = os.path.join(self.data['instances'][instance_name]["minecraft_directory"], 'options.txt')
+
+        # Trying to copy the options file of the instance.
+        if os.path.exists(packedmc_options_file):
+            if not os.path.exists(minecraft_options_file_path):
+                logger.info("Options file to replace does not exist. Creating new one.")
+
+            shutil.copy2(packedmc_options_file, minecraft_options_file_path)
+            logger.info(f'Loaded options file from "{packedmc_options_file}" to "{minecraft_options_file_path}"')
+        # Trying to copy the options file of the default instance.
+        else:
+            logger.warning(f'Options file not found at "{packedmc_options_file}". Trying to load from the options file from the default PackedMC instance.')
+            packedmc_options_file = os.path.join(packedmc_options_files_directory, self.get_default_instance_name() + '.txt')
+            if os.path.exists(packedmc_options_file):
+                if not os.path.exists(minecraft_options_file_path):
+                    logger.info("Options file to replace does not exist. Creating new one.")
+
+                shutil.copy2(packedmc_options_file, minecraft_options_file_path)
+                logger.info(f'Loaded options file from default instance from "{packedmc_options_file}" to "{minecraft_options_file_path}"')
+            else:
+                logger.info("No default instance options file found.")
 
         # Set the last played instance
         self.data['last_played_instance'] = instance_name
@@ -383,17 +405,18 @@ class MainWindow(QMainWindow, MainWindowElements):
 
         # Modify the launcher profiles file
         if not os.path.exists(MINECRAFT_LAUNCHER_PROFILES_PATH):
-            logging.error("Could not find the Minecraft Launcher profiles file. Probably has the Minecraft Launcher never been started.")
+            logger.error("Could not find the Minecraft Launcher profiles file. Probably has the Minecraft Launcher never been started.")
             return
 
         with open(MINECRAFT_LAUNCHER_PROFILES_PATH, 'r') as f:
             profile_data = json.load(f)
 
-        # Overwrite or add the PackedMC profile with the most recent timestamp.
-        if MINECRAFT_LAUNCHER_PACKEDMC_ID in profile_data:
-            created_time = profile_data["profiles"][MINECRAFT_LAUNCHER_PACKEDMC_ID]["created"]
+        # Get the time for when the PackedMC profile was created. Either keep the existing value or set it to right now
+        if MINECRAFT_LAUNCHER_PACKEDMC_PROFILE_ID in profile_data["profiles"] and profile_data["profiles"][MINECRAFT_LAUNCHER_PACKEDMC_PROFILE_ID].get("created"):
+
+            created_time = profile_data["profiles"][MINECRAFT_LAUNCHER_PACKEDMC_PROFILE_ID]["created"]
         else:
-            created_time = datetime.now().isoformat(timespec="milliseconds") + "Z", # Time in this format: 2026-01-31T20:34:56.183Z
+            created_time = datetime.now().isoformat(timespec="milliseconds") + "Z"  # Time in this format: 2026-01-31T20:34:56.183Z
 
         # Set a default value for the version id
         version_id = self.data['instances'][instance_name]["version"]
@@ -410,12 +433,16 @@ class MainWindow(QMainWindow, MainWindowElements):
                 if split_name[-1] == self.data['instances'][instance_name]["version"]:
                     version_id = directory_name
                     break
-            # TODO: Download fabric if version_id is unchanged
+            else:  # The for loop did not break, thus the fabric version does not exist. Then it is installed.
+                version_id = install_version(versions_directory, minecraft_version=version_id)
+                logger.info(f'Installed fabric "{version_id}"')
 
-        profile_data["profiles"][MINECRAFT_LAUNCHER_PACKEDMC_ID] = {
+        # Overwrite or add the PackedMC profile with the most recent timestamp.
+        profile_data["profiles"][MINECRAFT_LAUNCHER_PACKEDMC_PROFILE_ID] = {
             "created" : created_time,
             "gameDir" : self.data['instances'][instance_name]["minecraft_directory"],
             "icon" : "Chest",  # TODO: Replace with the icon of PackedMC
+            # TODO: Set the java Args
             "lastUsed" : datetime.now().isoformat(timespec="milliseconds") + "Z", # Time in this format: 2026-01-31T20:34:56.183Z
             "lastVersionId" : version_id,
             "name" : "PackedMC - " + instance_name,
@@ -430,7 +457,7 @@ class MainWindow(QMainWindow, MainWindowElements):
         try:
             os.startfile(MINECRAFT_LAUNCHER_EXECUTABLE)
         except FileNotFoundError:
-            logging.error("Could not find the Minecraft Launcher executable.")
+            logger.error("Could not find the Minecraft Launcher executable.")
 
         # TODO: Download and update the mods (show status window)
         # TODO: Copy all the mods to the mods folder
@@ -526,7 +553,7 @@ class MainWindow(QMainWindow, MainWindowElements):
                 except InvalidModBaseUrl:
                     pass
                 except Exception as e:
-                    logging.error('Uncaught exception when displaying mod', exc_info=e)
+                    logger.error('Uncaught exception when displaying mod', exc_info=e)
 
                 # Add to the mods the name, the icon path and whether it is selected or not
                 mod_display_data.append((
@@ -559,7 +586,7 @@ class MainWindow(QMainWindow, MainWindowElements):
         old_options_file_path = os.path.join(packedmc_options_files_directory, old_instance_name + '.txt')
         if os.path.exists(old_options_file_path):
             os.rename(old_options_file_path, os.path.join(packedmc_options_files_directory, new_instance_name + '.txt'))
-            logging.info(f'Renaming options file at "{old_options_file_path}" to new name "{new_instance_name}.txt"')
+            logger.info(f'Renaming options file at "{old_options_file_path}" to new name "{new_instance_name}.txt"')
 
     def _set_minecraft_path(self):
         actual_path = self.data['instances'][self.selected_instance_name]['minecraft_directory']
@@ -593,7 +620,7 @@ class MainWindow(QMainWindow, MainWindowElements):
                 old_options_file_path = os.path.join(packedmc_options_files_directory, selected_instance + '.txt')
                 if os.path.exists(old_options_file_path):
                     os.rename(old_options_file_path, os.path.join(packedmc_options_files_directory, new_instance_name + '.txt'))
-                    logging.info(f'Renaming options file at "{old_options_file_path}" to new name "{new_instance_name}.txt"')
+                    logger.info(f'Renaming options file at "{old_options_file_path}" to new name "{new_instance_name}.txt"')
 
                 # Create a default instance under the default name
                 self.create_instance(new_instance_name, is_default=True)
@@ -706,7 +733,7 @@ class MainWindow(QMainWindow, MainWindowElements):
         except InvalidModBaseUrl:
             pass
         except Exception as e:
-            logging.error('Uncaught exception when changing editing mod', exc_info=e)
+            logger.error('Uncaught exception when changing editing mod', exc_info=e)
 
         self.MOD_DESCRIPTION.setHtml(description)
         self.MOD_LOADER.setText('\n'.join(loaders))
@@ -748,7 +775,7 @@ class MainWindow(QMainWindow, MainWindowElements):
             except InvalidModBaseUrl:
                 pass
             except Exception as e:
-                logging.error('Uncaught exception when changing mod URL', exc_info=e)
+                logger.error('Uncaught exception when changing mod URL', exc_info=e)
         else:
             pass
         self.edit_mod(self.selected_mod_name, focus_on_url=True)
@@ -803,7 +830,7 @@ class MainWindow(QMainWindow, MainWindowElements):
         """
 
         if stylesheet_file_name not in self.possible_stylesheet_file_names:
-            logging.error(f'Stylesheet called "{stylesheet_file_name}" does not exist. Possible themes are: {self.possible_stylesheet_file_names}')
+            logger.error(f'Stylesheet called "{stylesheet_file_name}" does not exist. Possible themes are: {self.possible_stylesheet_file_names}')
             return
 
         extra = {
@@ -851,7 +878,9 @@ class MainWindow(QMainWindow, MainWindowElements):
         """ , and if so, copy the options file to the corresponding instance. """
         packedmc_options_files_directory = os.path.join(PACKEDMC_MINECRAFT_DATA_DIRECTORY, 'options_files')
 
-        if self.get_last_played_minecraft_launcher_profile() == MINECRAFT_LAUNCHER_PACKEDMC_ID:
+        last_played_profile_id, last_played_profile_data = self.get_last_played_minecraft_launcher_profile()
+
+        if last_played_profile_id == MINECRAFT_LAUNCHER_PACKEDMC_PROFILE_ID:
             last_played_instance = self.data['last_played_instance']
 
             # Either use the default instance or the last played one
@@ -860,22 +889,32 @@ class MainWindow(QMainWindow, MainWindowElements):
             else:
                 output_file_path = os.path.join(packedmc_options_files_directory, last_played_instance + '.txt')
 
+            # Create the options file path based on the last profile's minecraft directory
+            minecraft_options_file_path = os.path.join(self.data['instances'][last_played_instance]["minecraft_directory"], 'options.txt')
+
             try:
-                shutil.copy2(MINECRAFT_OPTIONS_FILE_PATH, output_file_path)
-                logging.info(f'Copied options file to "{output_file_path}"')
+                shutil.copy2(minecraft_options_file_path, output_file_path)
+                logger.info(f'Stored previous options file from "{minecraft_options_file_path}" under "{output_file_path}"')
             except FileNotFoundError:
-                logging.warning(f'Options file not found at {MINECRAFT_OPTIONS_FILE_PATH}')
+                logger.warning(f'Options file not found at {minecraft_options_file_path}')
 
         else:
             # TODO: Maybe prompt the user whether he wants to replace the options file of the last played instance with this
-            logging.warning('PackedMC was not the last played profile, thus only a backup of the newest options file was made.')
+            logger.warning('PackedMC was not the last played profile, thus only a backup of the newest options file was made.')
             backup_file_path = os.path.join(PACKEDMC_MINECRAFT_DATA_DIRECTORY, 'backup_options.txt')
 
+            # Create the options file path based on the last profile's Game Directory
+            last_played_profile_game_dir = last_played_profile_data.get('gameDir')
+            if not last_played_profile_game_dir:
+                logger.warning("Launcher profile data could not be found.")
+                return
+            minecraft_options_file_path = os.path.join(last_played_profile_id, 'options.txt')
+
             try:
-                shutil.copy2(MINECRAFT_OPTIONS_FILE_PATH, backup_file_path)
-                logging.info(f'Copied options file as backup to "{backup_file_path}"')
+                shutil.copy2(minecraft_options_file_path, backup_file_path)
+                logger.info(f'Backed up options file from "{minecraft_options_file_path}" to "{backup_file_path}"')
             except FileNotFoundError:
-                logging.warning(f'Options file not found at {MINECRAFT_OPTIONS_FILE_PATH}')
+                logger.warning(f'Options file not found at {minecraft_options_file_path}')
 
     def get_default_instance_name(self) -> str:
         # Find the default instance name
@@ -886,8 +925,8 @@ class MainWindow(QMainWindow, MainWindowElements):
         return ''
 
     @staticmethod
-    def get_last_played_minecraft_launcher_profile() -> str:
-        """ Check if the last played profile in the Official Launcher was PackedMC and return True or False. """
+    def get_last_played_minecraft_launcher_profile() -> tuple[str, dict[str, str]]:
+        """ Returns the last played profile id and data """
         if os.path.exists(MINECRAFT_LAUNCHER_PROFILES_PATH):
             with open(MINECRAFT_LAUNCHER_PROFILES_PATH, 'r') as f:
                 profile_data = json.load(f)
@@ -904,6 +943,6 @@ class MainWindow(QMainWindow, MainWindowElements):
                         newest_launch_time = profile_launch_time
                         last_used_profile_id = profile_id
 
-                return last_used_profile_id
+                return last_used_profile_id, profile_data['profiles'][last_used_profile_id]
 
-        return ''
+        return '', {}

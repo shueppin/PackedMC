@@ -5,6 +5,9 @@ import threading
 import logging
 
 
+logger = logging.getLogger(__name__)
+
+
 _ACTUAL_FILE_DIRECTORY = os.path.dirname(__file__)
 _CACHE_FILE = os.path.join(_ACTUAL_FILE_DIRECTORY, 'cache/minecraft_versions.json')
 _MINECRAFT_VERSIONS_URL = 'https://launchermeta.mojang.com/mc/game/version_manifest.json'
@@ -49,7 +52,7 @@ def _reload_data():
 
         json.dump(cached_data, file)
 
-        logging.info('Updated cached data')
+        logger.info('Updated cached data')
 
 
 def initialize_versions():
@@ -69,7 +72,7 @@ def initialize_versions():
         ALL_RELEASE_VERSIONS = cached_data['all_release_versions']
         ALL_SNAPSHOT_VERSIONS = cached_data['all_snapshot_versions']
     except KeyError:
-        logging.warning('No cached minecraft versions found')
+        logger.warning('No cached minecraft versions found')
         _reload_data()
 
     # Start background updater
