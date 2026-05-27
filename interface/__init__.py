@@ -1,8 +1,11 @@
 import logging
 import os
+import shutil
 from platform import platform
 import json
 import validators
+import psutil
+from datetime import datetime
 
 from PyQt6 import uic
 from PyQt6.QtCore import QTimer
@@ -25,6 +28,7 @@ CUSTOM_STYLESHEET_FILE_PATH = os.path.join(ACTUAL_FILE_DIRECTORY, 'special_prope
 WINDOW_DEFAULT_SCALE = 3
 
 DEFAULT_DATA_FILE_PATH = os.path.join(ACTUAL_FILE_DIRECTORY, r'../data.json')
+PACKEDMC_MINECRAFT_DATA_DIRECTORY = os.path.join(ACTUAL_FILE_DIRECTORY, '../minecraft_data')
 DEFAULT_DATA = {
     # For the style of the App
     'style': {
@@ -32,18 +36,22 @@ DEFAULT_DATA = {
         'invert_secondary': False,
         'scale': 0
     },
+    'last_played_instance': '',
     'instances': {},
     'mods': {}
 }
 
 if 'windows' in platform().lower():
     ROAMING_DIRECTORY = os.getenv('Appdata')
-    STANDARD_MINECRAFT_DIRECTORY = os.path.join(ROAMING_DIRECTORY, '.minecraft')
-
+    MINECRAFT_DIRECTORY = os.path.join(ROAMING_DIRECTORY, '.minecraft')
+    MINECRAFT_LAUNCHER_PROFILES_PATH = os.path.join(MINECRAFT_DIRECTORY, 'launcher_profiles.json')
+    MINECRAFT_OPTIONS_FILE_PATH = os.path.join(MINECRAFT_DIRECTORY, 'options.txt')
+    MINECRAFT_LAUNCHER_EXECUTABLE = r"C:\Program Files\WindowsApps\Microsoft.4297127D64EC6_2.6.2.0_x64__8wekyb3d8bbwe\Minecraft.exe"  # TODO: Find the correct path via bruteforce. Sometimes the version number (here 2.6.2.0) changes
 else:
-    STANDARD_MINECRAFT_DIRECTORY = 'UNKNOWN'
+    MINECRAFT_DIRECTORY = 'UNKNOWN'
 
 DEFAULT_INSTANCE_NAME = 'Latest Release'
+MINECRAFT_LAUNCHER_PACKEDMC_ID = 'packedmc'
 
 
 class MainWindow(QMainWindow, MainWindowElements):
@@ -100,7 +108,7 @@ class MainWindow(QMainWindow, MainWindowElements):
         self.DELETE_INSTANCE_BUTTON.clicked.connect(self._delete_instance)
         self.INSTANCE_TYPE_SELECTION.currentIndexChanged.connect(self._changed_instance_type)
         self.INSTANCE_VERSION_SELECTION.currentIndexChanged.connect(self._changed_instance_version)
-        self.USE_STANDARD_OPTIONS.clicked.connect(self._changed_instance_use_standard_options)
+        self.USE_STANDARD_OPTIONS.clicked.connect(self._changed_instance_use_default_options_file)
         # TODO: Connect advanced options button
 
         # Add a layout to the Instances Mod Container and add the scrollable grid to it
@@ -142,6 +150,9 @@ class MainWindow(QMainWindow, MainWindowElements):
         self._style_scale_changed(self.data['style']['scale'] + WINDOW_DEFAULT_SCALE)  # Use this to also resize the fields
 
         self.INSTANCES_PAGE.rebuild_grid()
+
+        # Save the actual options file from the minecraft directory
+        self.save_options_file_of_last_used_instance()
 
 
     '''
@@ -231,9 +242,7 @@ class MainWindow(QMainWindow, MainWindowElements):
     Instance page & Instance Edit page
     '''
     def import_profiles_from_launcher(self):
-        standard_launcher_profiles_path = STANDARD_MINECRAFT_DIRECTORY + r'\launcher_profiles.json'
-
-        launcher_profiles_path, _ = QFileDialog.getOpenFileName(self, 'Select profiles file for the launcher', standard_launcher_profiles_path, "JSON Files (*.json);;All Files (*)")
+        launcher_profiles_path, _ = QFileDialog.getOpenFileName(self, 'Select profiles file for the launcher', MINECRAFT_LAUNCHER_PROFILES_PATH, "JSON Files (*.json);;All Files (*)")
 
         logging.info(f'Importing profiles from {launcher_profiles_path}')
 
@@ -319,7 +328,7 @@ class MainWindow(QMainWindow, MainWindowElements):
             if 'gameDir' in profile_data:
                 minecraft_directory = profile_data['gameDir']
             else:
-                minecraft_directory = STANDARD_MINECRAFT_DIRECTORY
+                minecraft_directory = MINECRAFT_DIRECTORY
 
             advanced_arguments = {}
 
@@ -349,10 +358,86 @@ class MainWindow(QMainWindow, MainWindowElements):
         self.import_profiles_popup.close()
 
     def play_instance(self, instance_name: str):
-        # TODO: Launch the official Launcher
-        print('Play instance', instance_name)
+        for proc in psutil.process_iter(['name', 'exe']):
+            if proc.info['name'] and "Minecraft" in proc.info['name']:
+                QMessageBox.information(self, 'Could not play', f'Found "{proc.info['name']}" running. Please close the Minecraft Launcher and the open Minecraft Instances. \nOtherwise PackedMC can not launch the game correctly.')
+                return
 
-    def create_instance(self, instance_name = 'New instance', is_default = False, edit_afterwards = True, instance_type = 'Release', instance_version = 'latest', minecraft_directory = STANDARD_MINECRAFT_DIRECTORY, advanced_arguments: dict = None):
+        # Save the actual options file from the minecraft directory
+        self.save_options_file_of_last_used_instance()
+
+        # Copy the options file from PackedMC (either default or the actual instance) to the minecraft directory
+        packedmc_options_files_directory = os.path.join(PACKEDMC_MINECRAFT_DATA_DIRECTORY, 'options_files')
+        if self.data['instances'][instance_name]['use_default_options_file']:
+            packedmc_options_file = os.path.join(packedmc_options_files_directory, self.get_default_instance_name() + '.txt')
+        else:
+            packedmc_options_file = os.path.join(packedmc_options_files_directory, instance_name + '.txt')
+
+        if os.path.exists(packedmc_options_file) and os.path.exists(MINECRAFT_OPTIONS_FILE_PATH):
+            shutil.copy2(packedmc_options_file, MINECRAFT_OPTIONS_FILE_PATH)
+            logging.info(f'Copied options file from "{packedmc_options_file}" to "{MINECRAFT_OPTIONS_FILE_PATH}"')
+
+        # Set the last played instance
+        self.data['last_played_instance'] = instance_name
+        self.data.save()
+
+        # Modify the launcher profiles file
+        if not os.path.exists(MINECRAFT_LAUNCHER_PROFILES_PATH):
+            logging.error("Could not find the Minecraft Launcher profiles file. Probably has the Minecraft Launcher never been started.")
+            return
+
+        with open(MINECRAFT_LAUNCHER_PROFILES_PATH, 'r') as f:
+            profile_data = json.load(f)
+
+        # Overwrite or add the PackedMC profile with the most recent timestamp.
+        if MINECRAFT_LAUNCHER_PACKEDMC_ID in profile_data:
+            created_time = profile_data["profiles"][MINECRAFT_LAUNCHER_PACKEDMC_ID]["created"]
+        else:
+            created_time = datetime.now().isoformat(timespec="milliseconds") + "Z", # Time in this format: 2026-01-31T20:34:56.183Z
+
+        # Set a default value for the version id
+        version_id = self.data['instances'][instance_name]["version"]
+
+        # Replace the version id for special types like fabric or forge
+        if self.data['instances'][instance_name]['type'] == "Fabric":
+            # Check what the newest fabric version for this Minecraft version is by looking at the directories
+            versions_directory = os.path.join(MINECRAFT_DIRECTORY, 'versions')
+            for directory_name in sorted(os.listdir(versions_directory), reverse=True):
+                if not directory_name.startswith('fabric-loader'):
+                    continue
+
+                split_name = directory_name.split('-')
+                if split_name[-1] == self.data['instances'][instance_name]["version"]:
+                    version_id = directory_name
+                    break
+            # TODO: Download fabric if version_id is unchanged
+
+        profile_data["profiles"][MINECRAFT_LAUNCHER_PACKEDMC_ID] = {
+            "created" : created_time,
+            "gameDir" : self.data['instances'][instance_name]["minecraft_directory"],
+            "icon" : "Chest",  # TODO: Replace with the icon of PackedMC
+            "lastUsed" : datetime.now().isoformat(timespec="milliseconds") + "Z", # Time in this format: 2026-01-31T20:34:56.183Z
+            "lastVersionId" : version_id,
+            "name" : "PackedMC - " + instance_name,
+            "type" : "custom"
+        }
+
+        # Writeback to the file
+        with open(MINECRAFT_LAUNCHER_PROFILES_PATH, 'w') as f:
+            json.dump(profile_data, f)
+
+        # Launch the official Launcher from the Microsoft Store
+        try:
+            os.startfile(MINECRAFT_LAUNCHER_EXECUTABLE)
+        except FileNotFoundError:
+            logging.error("Could not find the Minecraft Launcher executable.")
+
+        # TODO: Download and update the mods (show status window)
+        # TODO: Copy all the mods to the mods folder
+        # TODO: Optionally: Update other mods in the background and also periodically save the options file until the game is closed.
+        # TODO: Optionally: Close PackedMC
+
+    def create_instance(self, instance_name = 'New instance', is_default = False, edit_afterwards = True, instance_type = 'Release', instance_version = 'latest', minecraft_directory = MINECRAFT_DIRECTORY, advanced_arguments: dict = None):
         instance_name = self._make_name_unique(instance_name, self.data['instances'].keys())
         if advanced_arguments is None:
             advanced_arguments = {}
@@ -363,7 +448,7 @@ class MainWindow(QMainWindow, MainWindowElements):
             'version': instance_version,
             'is_default': is_default,
             'minecraft_directory': minecraft_directory,
-            'standard_options_file': is_default,  # Use standard options file for default, otherwise don't
+            'use_default_options_file': is_default,  # Use default options file for default instance (obviously), otherwise don't
             'advanced_arguments': advanced_arguments,
             'mods': []
         }
@@ -412,7 +497,7 @@ class MainWindow(QMainWindow, MainWindowElements):
 
         # Set the standard options button and the minecraft path
         self.USE_STANDARD_OPTIONS.blockSignals(True)
-        self.USE_STANDARD_OPTIONS.setChecked(instance_data['standard_options_file'])
+        self.USE_STANDARD_OPTIONS.setChecked(instance_data['use_default_options_file'])
         self.USE_STANDARD_OPTIONS.blockSignals(False)
 
         self.MINECRAFT_DIRECTORY_PATH.setText(instance_data['minecraft_directory'])
@@ -467,8 +552,14 @@ class MainWindow(QMainWindow, MainWindowElements):
 
         self.data['instances'][new_instance_name] = instance_data
         self.selected_instance_name = new_instance_name
-
         self.data.save()
+
+        # Rename the options file in PackedMC if it exists
+        packedmc_options_files_directory = os.path.join(PACKEDMC_MINECRAFT_DATA_DIRECTORY, 'options_files')
+        old_options_file_path = os.path.join(packedmc_options_files_directory, old_instance_name + '.txt')
+        if os.path.exists(old_options_file_path):
+            os.rename(old_options_file_path, os.path.join(packedmc_options_files_directory, new_instance_name + '.txt'))
+            logging.info(f'Renaming options file at "{old_options_file_path}" to new name "{new_instance_name}.txt"')
 
     def _set_minecraft_path(self):
         actual_path = self.data['instances'][self.selected_instance_name]['minecraft_directory']
@@ -494,8 +585,18 @@ class MainWindow(QMainWindow, MainWindowElements):
                 del self.data['instances'][selected_instance]
                 self.data.save()
 
+                # Make a unique name here already, to be able to rename the options file
+                new_instance_name = self._make_name_unique(DEFAULT_INSTANCE_NAME, self.data['instances'].keys())
+
+                # Rename the options file in PackedMC if it exists
+                packedmc_options_files_directory = os.path.join(PACKEDMC_MINECRAFT_DATA_DIRECTORY, 'options_files')
+                old_options_file_path = os.path.join(packedmc_options_files_directory, selected_instance + '.txt')
+                if os.path.exists(old_options_file_path):
+                    os.rename(old_options_file_path, os.path.join(packedmc_options_files_directory, new_instance_name + '.txt'))
+                    logging.info(f'Renaming options file at "{old_options_file_path}" to new name "{new_instance_name}.txt"')
+
                 # Create a default instance under the default name
-                self.create_instance(DEFAULT_INSTANCE_NAME, is_default=True)
+                self.create_instance(new_instance_name, is_default=True)
 
             return
 
@@ -535,7 +636,7 @@ class MainWindow(QMainWindow, MainWindowElements):
         else:
             # Reset the type
             self.INSTANCE_TYPE_SELECTION.blockSignals(True)
-            self.INSTANCE_TYPE_SELECTION.setCurrentText()
+            self.INSTANCE_TYPE_SELECTION.setCurrentText(old_type)
             self.INSTANCE_TYPE_SELECTION.blockSignals(False)
 
     def _changed_instance_version(self, _new_index: int):
@@ -543,8 +644,8 @@ class MainWindow(QMainWindow, MainWindowElements):
         self.data['instances'][self.selected_instance_name]['version'] = version
         self.data.save()
 
-    def _changed_instance_use_standard_options(self, new_state: bool):
-        self.data['instances'][self.selected_instance_name]['standard_options_file'] = new_state
+    def _changed_instance_use_default_options_file(self, new_state: bool):
+        self.data['instances'][self.selected_instance_name]['use_default_options_file'] = new_state
         self.data.save()
 
     def clicked_displayed_mod(self, mod_name: str, is_selected: bool):
@@ -745,3 +846,64 @@ class MainWindow(QMainWindow, MainWindowElements):
             i += 1
 
         return name
+
+    def save_options_file_of_last_used_instance(self):
+        """ , and if so, copy the options file to the corresponding instance. """
+        packedmc_options_files_directory = os.path.join(PACKEDMC_MINECRAFT_DATA_DIRECTORY, 'options_files')
+
+        if self.get_last_played_minecraft_launcher_profile() == MINECRAFT_LAUNCHER_PACKEDMC_ID:
+            last_played_instance = self.data['last_played_instance']
+
+            # Either use the default instance or the last played one
+            if self.data['instances'][last_played_instance]['use_default_options_file']:
+                output_file_path = os.path.join(packedmc_options_files_directory, self.get_default_instance_name() + '.txt')
+            else:
+                output_file_path = os.path.join(packedmc_options_files_directory, last_played_instance + '.txt')
+
+            try:
+                shutil.copy2(MINECRAFT_OPTIONS_FILE_PATH, output_file_path)
+                logging.info(f'Copied options file to "{output_file_path}"')
+            except FileNotFoundError:
+                logging.warning(f'Options file not found at {MINECRAFT_OPTIONS_FILE_PATH}')
+
+        else:
+            # TODO: Maybe prompt the user whether he wants to replace the options file of the last played instance with this
+            logging.warning('PackedMC was not the last played profile, thus only a backup of the newest options file was made.')
+            backup_file_path = os.path.join(PACKEDMC_MINECRAFT_DATA_DIRECTORY, 'backup_options.txt')
+
+            try:
+                shutil.copy2(MINECRAFT_OPTIONS_FILE_PATH, backup_file_path)
+                logging.info(f'Copied options file as backup to "{backup_file_path}"')
+            except FileNotFoundError:
+                logging.warning(f'Options file not found at {MINECRAFT_OPTIONS_FILE_PATH}')
+
+    def get_default_instance_name(self) -> str:
+        # Find the default instance name
+        for instance_name in self.data['instances'].keys():
+            if self.data['instances'][instance_name]['is_default']:
+                return instance_name
+
+        return ''
+
+    @staticmethod
+    def get_last_played_minecraft_launcher_profile() -> str:
+        """ Check if the last played profile in the Official Launcher was PackedMC and return True or False. """
+        if os.path.exists(MINECRAFT_LAUNCHER_PROFILES_PATH):
+            with open(MINECRAFT_LAUNCHER_PROFILES_PATH, 'r') as f:
+                profile_data = json.load(f)
+
+                # Find the last played profile
+                newest_launch_time = -1
+                last_used_profile_id = ''
+                for profile_id in profile_data['profiles'].keys():
+                    # Get the time in seconds
+                    profile_last_used = profile_data['profiles'][profile_id]['lastUsed']
+                    profile_launch_time = datetime.fromisoformat(profile_last_used.replace("Z", "+00:00")).timestamp()
+
+                    if newest_launch_time < profile_launch_time:
+                        newest_launch_time = profile_launch_time
+                        last_used_profile_id = profile_id
+
+                return last_used_profile_id
+
+        return ''

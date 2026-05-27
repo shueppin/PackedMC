@@ -147,7 +147,7 @@
     <item>
      <widget class="QStackedWidget" name="PAGE_CONTAINER">
       <property name="currentIndex">
-       <number>3</number>
+       <number>4</number>
       </property>
       <widget class="QWidget" name="INSTANCES_PAGE_PLACEHOLDER">
        <widget class="QLabel" name="label">
@@ -429,7 +429,7 @@
            <enum>Qt::NoFocus</enum>
           </property>
           <property name="text">
-           <string>Use standard &quot;options.txt&quot; file (NOT recommended when using mods)</string>
+           <string>Use default &quot;options.txt&quot; file (NOT recommended when using mods)</string>
           </property>
          </widget>
         </item>
@@ -889,7 +889,7 @@ colors</string>
          <rect>
           <x>270</x>
           <y>220</y>
-          <width>401</width>
+          <width>481</width>
           <height>31</height>
          </rect>
         </property>
