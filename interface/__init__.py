@@ -6,6 +6,7 @@ import json
 import validators
 import psutil
 from datetime import datetime
+import re
 
 from PyQt6 import uic
 from PyQt6.QtCore import QTimer
@@ -579,6 +580,12 @@ class MainWindow(QMainWindow, MainWindowElements):
 
         self.data['instances'][new_instance_name] = instance_data
         self.selected_instance_name = new_instance_name
+
+        # Rename the last played instance if needed
+        if self.data["last_played_instance"] == old_instance_name:
+            print("rename")
+            self.data["last_played_instance"] = new_instance_name
+
         self.data.save()
 
         # Rename the options file in PackedMC if it exists
@@ -722,7 +729,9 @@ class MainWindow(QMainWindow, MainWindowElements):
         self.MOD_URL.blockSignals(False)
 
         # Set the fields depending on the URL and also refresh the stored data
-        description, loaders, supported_versions = '', [], []
+        description = ''
+        loaders = []
+        supported_versions = []
         try:
             description, loaders, supported_versions = get_mod_data(mod_data['url'])
             self.data['mods'][self.selected_mod_name]['loaders'] = loaders
@@ -735,7 +744,8 @@ class MainWindow(QMainWindow, MainWindowElements):
         except Exception as e:
             logger.error('Uncaught exception when changing editing mod', exc_info=e)
 
-        self.MOD_DESCRIPTION.setHtml(description)
+        clean_description = re.sub(r'<img\b[^>]*>', '', description, flags=re.IGNORECASE)  # Remove the images from the HTML, so no need to load them.
+        self.MOD_DESCRIPTION.setHtml(clean_description)
         self.MOD_LOADER.setText('\n'.join(loaders))
         self.MOD_VERSIONS.setText('\n'.join(supported_versions))
 

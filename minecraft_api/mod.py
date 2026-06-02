@@ -149,7 +149,7 @@ def get_mod_data(mod_url: str) -> Tuple[str, list[str], list[str]]:
     if CURSEFORGE_BASE_URL in mod_url:
         mod_name = mod_url[len(CURSEFORGE_BASE_URL):]
         file_path = os.path.join(ACTUAL_FILE_DIRECTORY, 'cache', 'curseforge_mods', mod_name + '.json')
-        data_update_function = _update_modrinth_mod
+        data_update_function = _update_curseforge_mod
     elif MODRINTH_BASE_URL in mod_url:
         mod_name = mod_url[len(MODRINTH_BASE_URL):]
         file_path = os.path.join(ACTUAL_FILE_DIRECTORY, 'cache', 'modrinth_mods', mod_name + '.json')

@@ -237,9 +237,6 @@ class ScrollableGrid(QWidget):
             create_new_mod_button = _CreateNewElementButton(self.available_functions.create_new_function,'Create new\nmod', self.card_width, self.card_height)
             self.fields.append(create_new_mod_button)
 
-
-        # TODO: Create Mod Fields (either for display mode or in edit mode)
-
         self.rebuild_grid(force=True)
 
     def rebuild_grid(self, force=False):

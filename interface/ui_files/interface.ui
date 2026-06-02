@@ -147,7 +147,7 @@
     <item>
      <widget class="QStackedWidget" name="PAGE_CONTAINER">
       <property name="currentIndex">
-       <number>4</number>
+       <number>3</number>
       </property>
       <widget class="QWidget" name="INSTANCES_PAGE_PLACEHOLDER">
        <widget class="QLabel" name="label">
@@ -488,7 +488,7 @@
          </rect>
         </property>
         <property name="text">
-         <string>Placeholder for Dynamic Instances page</string>
+         <string>Placeholder for Dynamic Mods page</string>
         </property>
        </widget>
       </widget>
