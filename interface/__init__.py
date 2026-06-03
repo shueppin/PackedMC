@@ -16,7 +16,7 @@ from PyQt6.QtCore import QTimer, QObject, pyqtSignal
 from PyQt6.QtWidgets import QMainWindow, QPushButton, QFileDialog, QMessageBox, QCheckBox, QVBoxLayout
 from qt_material import apply_stylesheet, list_themes, get_theme, opacity
 
-from .type_hinting import MainWindowElements
+from .type_hinting import MainWindowElements, DataDictType
 from .dynamic_widgets import FieldType, ScrollableGrid, InstanceFieldFunctions, ModFieldFunctions
 from .utils import StoredDict, animate_transition, AnimationScrollDirection, create_buttons_in_scroll_area, ScrollAreaButtonType
 from .popups import ImportProfilesPopup
@@ -76,7 +76,7 @@ class MainWindow(QMainWindow, MainWindowElements):
         uic.loadUi(INTERFACE_FILE_PATH, self)  # Load UI
 
         # Non-UI elements
-        self.data = StoredDict(DEFAULT_DATA_FILE_PATH, DEFAULT_DATA)  # Initialize using Default Data as base
+        self.data: DataDictType = StoredDict(DEFAULT_DATA_FILE_PATH, DEFAULT_DATA)  # Initialize using Default Data as base
         self.application = application
         self.possible_stylesheet_file_names = list_themes()
         self.selected_instance_name = ''
@@ -172,6 +172,8 @@ class MainWindow(QMainWindow, MainWindowElements):
 
         # Save the actual options file from the minecraft directory
         self.save_options_file_of_last_used_instance()
+
+        # TODO: Download all the mod data
 
     '''
     Main Page
@@ -313,7 +315,7 @@ class MainWindow(QMainWindow, MainWindowElements):
             else:
                 original_instance_name = display_name.strip()
 
-            instance_name = self._make_name_unique(original_instance_name, self.data['instances'].keys())
+            instance_name = self._make_name_unique(original_instance_name, list(self.data['instances'].keys()))
 
             # Find out what type of instance it is
             if profile_data['lastVersionId'].startswith('latest'):
@@ -375,6 +377,8 @@ class MainWindow(QMainWindow, MainWindowElements):
         self.import_profiles_popup.close()
 
     def play_instance(self, instance_name: str):
+        actual_instance_data = self.data['instances'][instance_name]
+
         for proc in psutil.process_iter(['name', 'exe']):
             if proc.info['name'] and "Minecraft" in proc.info['name']:
                 QMessageBox.information(self, 'Could not play', f'Found "{proc.info['name']}" running. Please close the Minecraft Launcher and the open Minecraft Instances. \nOtherwise PackedMC can not launch the game correctly.')
@@ -385,13 +389,13 @@ class MainWindow(QMainWindow, MainWindowElements):
 
         # Copy the options file from PackedMC (either default or the actual instance) to the minecraft directory
         packedmc_options_files_directory = os.path.join(PACKEDMC_MINECRAFT_DATA_DIRECTORY, 'options_files')
-        if self.data['instances'][instance_name]['use_default_options_file']:
+        if actual_instance_data['use_default_options_file']:
             packedmc_options_file = os.path.join(packedmc_options_files_directory, self.get_default_instance_name() + '.txt')
         else:
             packedmc_options_file = os.path.join(packedmc_options_files_directory, instance_name + '.txt')
 
         # Create the options file path based on the game location of the new instance
-        minecraft_options_file_path = os.path.join(self.data['instances'][instance_name]["minecraft_directory"], 'options.txt')
+        minecraft_options_file_path = os.path.join(actual_instance_data["minecraft_directory"], 'options.txt')
 
         # Trying to copy the options file of the instance.
         if os.path.exists(packedmc_options_file):
@@ -433,10 +437,10 @@ class MainWindow(QMainWindow, MainWindowElements):
             created_time = datetime.now().isoformat(timespec="milliseconds") + "Z"  # Time in this format: 2026-01-31T20:34:56.183Z
 
         # Set a default value for the version id
-        version_id = self.data['instances'][instance_name]["version"]
+        version_id = actual_instance_data["version"]
 
         # Replace the version id for special types like fabric or forge
-        if self.data['instances'][instance_name]['type'] == "Fabric":
+        if actual_instance_data['type'] == "Fabric":
             # Check what the newest fabric version for this Minecraft version is by looking at the directories
             versions_directory = os.path.join(MINECRAFT_DIRECTORY, 'versions')
             for directory_name in sorted(os.listdir(versions_directory), reverse=True):
@@ -444,7 +448,7 @@ class MainWindow(QMainWindow, MainWindowElements):
                     continue
 
                 split_name = directory_name.split('-')
-                if split_name[-1] == self.data['instances'][instance_name]["version"]:
+                if split_name[-1] == actual_instance_data["version"]:
                     version_id = directory_name
                     break
             else:  # The for loop did not break, thus the fabric version does not exist. Then it is installed.
@@ -454,7 +458,7 @@ class MainWindow(QMainWindow, MainWindowElements):
         # Overwrite or add the PackedMC profile with the most recent timestamp.
         profile_data["profiles"][MINECRAFT_LAUNCHER_PACKEDMC_PROFILE_ID] = {
             "created": created_time,
-            "gameDir": self.data['instances'][instance_name]["minecraft_directory"],
+            "gameDir": actual_instance_data["minecraft_directory"],
             "icon": "Chest",  # TODO: Replace with the icon of PackedMC
             # TODO: Set the java Args
             "lastUsed": datetime.now().isoformat(timespec="milliseconds") + "Z",  # Time in this format: 2026-01-31T20:34:56.183Z
@@ -479,7 +483,7 @@ class MainWindow(QMainWindow, MainWindowElements):
         # TODO: Optionally: Close PackedMC
 
     def create_instance(self, instance_name='New instance', is_default=False, edit_afterwards=True, instance_type='Release', instance_version='latest', minecraft_directory=MINECRAFT_DIRECTORY, advanced_arguments: dict = None):
-        instance_name = self._make_name_unique(instance_name, self.data['instances'].keys())
+        instance_name = self._make_name_unique(instance_name, list(self.data['instances'].keys()))
         if advanced_arguments is None:
             advanced_arguments = {}
 
@@ -589,14 +593,13 @@ class MainWindow(QMainWindow, MainWindowElements):
         # First get the data and only then make the name unique, to avoid mistakes when the name already exists, because of itself
         instance_data = self.data['instances'].pop(old_instance_name)
 
-        new_instance_name = self._make_name_unique(new_instance_name, self.data['instances'].keys())
+        new_instance_name = self._make_name_unique(new_instance_name, list(self.data['instances'].keys()))
 
         self.data['instances'][new_instance_name] = instance_data
         self.selected_instance_name = new_instance_name
 
         # Rename the last played instance if needed
         if self.data["last_played_instance"] == old_instance_name:
-            print("rename")
             self.data["last_played_instance"] = new_instance_name
 
         self.data.save()
@@ -633,7 +636,7 @@ class MainWindow(QMainWindow, MainWindowElements):
                 self.data.save()
 
                 # Make a unique name here already, to be able to rename the options file
-                new_instance_name = self._make_name_unique(DEFAULT_INSTANCE_NAME, self.data['instances'].keys())
+                new_instance_name = self._make_name_unique(DEFAULT_INSTANCE_NAME, list(self.data['instances'].keys()))
 
                 # Rename the options file in PackedMC if it exists
                 packedmc_options_files_directory = os.path.join(PACKEDMC_MINECRAFT_DATA_DIRECTORY, 'options_files')
@@ -706,7 +709,7 @@ class MainWindow(QMainWindow, MainWindowElements):
     Mods Page
     '''
     def create_mod(self, mod_name='New Mod', edit_afterwards=True):
-        mod_name = self._make_name_unique(mod_name, self.data['mods'].keys())
+        mod_name = self._make_name_unique(mod_name, list(self.data['mods'].keys()))
 
         # Set the data
         self.data['mods'][mod_name] = {
@@ -749,7 +752,6 @@ class MainWindow(QMainWindow, MainWindowElements):
             logger.error('Uncaught exception when changing editing mod', exc_info=e)
 
     def set_mod_values(self, description: str, loaders: list[str], supported_versions: list[str], mod_name: str, mod_url: str):
-        print('update')
         """ If the URL of the given mod matches, then store the given values for said mod. Then display them, if it is the selected mod. """
 
         if self.data['mods'][mod_name]['url'] != mod_url:
@@ -777,10 +779,17 @@ class MainWindow(QMainWindow, MainWindowElements):
         # First get the data and only then make the name unique, to avoid mistakes when the name already exists, because of itself
         mod_data = self.data['mods'].pop(old_mod_name)
 
-        new_mod_name = self._make_name_unique(new_mod_name, self.data['mods'].keys())
+        new_mod_name = self._make_name_unique(new_mod_name, list(self.data['mods'].keys()))
 
+        # Update the mod name and data
         self.data['mods'][new_mod_name] = mod_data
         self.selected_mod_name = new_mod_name
+
+        # Update the mod name in every instance
+        for instance_name in self.data['instances']:
+            if old_mod_name in self.data['instances'][instance_name]['mods']:
+                self.data['instances'][instance_name]['mods'].remove(old_mod_name)
+                self.data['instances'][instance_name]['mods'].append(new_mod_name)
 
         self.data.save()
 
