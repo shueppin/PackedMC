@@ -1,6 +1,6 @@
 import requests
 import threading
-from typing import Tuple
+from typing import Callable, Unpack, TypeVarTuple
 import os
 import json
 import markdown
@@ -65,7 +65,7 @@ class NoFileAvailable(Exception):
         super().__init__(message)
 
 
-def get_download_url(mod_url: str, game_version: str, mod_loader: str) -> Tuple[str, str]:
+def get_download_url(mod_url: str, game_version: str, mod_loader: str) -> tuple[str, str]:
     """
     Returns the mod download URL and file name.
     """
@@ -79,7 +79,7 @@ def get_download_url(mod_url: str, game_version: str, mod_loader: str) -> Tuple[
         raise InvalidModBaseUrl(mod_url)
 
 
-def _get_curseforge_download_url(curseforge_url: str, game_version: str, mod_loader: str) -> Tuple[str, str]:
+def _get_curseforge_download_url(curseforge_url: str, game_version: str, mod_loader: str) -> tuple[str, str]:
     try:
         url_for_version_data = CURSEFORGE_API_BASE_URL + curseforge_url[len(CURSEFORGE_BASE_URL):] + '?version=' + game_version + '&loader=' + mod_loader  # Remove the base curseforge url and add the api part and a version and a loader search
         response = requests.get(url_for_version_data)
@@ -109,7 +109,7 @@ def _get_curseforge_download_url(curseforge_url: str, game_version: str, mod_loa
         raise NoFileAvailable(curseforge_url, mod_loader, game_version)
 
 
-def _get_modrinth_download_url(modrinth_url: str, game_version: str, mod_loader: str) -> Tuple[str, str]:
+def _get_modrinth_download_url(modrinth_url: str, game_version: str, mod_loader: str) -> tuple[str, str]:
     if not game_version:
         raise EmptyArguments('game_version', 'modrinth')
 
@@ -141,10 +141,26 @@ def _get_modrinth_download_url(modrinth_url: str, game_version: str, mod_loader:
     raise NoFileAvailable(modrinth_url, mod_loader, game_version)
 
 
-def get_mod_data(mod_url: str) -> Tuple[str, list[str], list[str]]:
+def get_mod_icon_path(mod_url: str) -> str:
+    if CURSEFORGE_BASE_URL in mod_url:
+        mod_name = mod_url[len(CURSEFORGE_BASE_URL):]
+        return os.path.join(ACTUAL_FILE_DIRECTORY, 'cache', 'curseforge_mods', mod_name + '.png')
+    elif MODRINTH_BASE_URL in mod_url:
+        mod_name = mod_url[len(MODRINTH_BASE_URL):]
+        return os.path.join(ACTUAL_FILE_DIRECTORY, 'cache', 'modrinth_mods', mod_name + '.png')
+    else:
+        raise InvalidModBaseUrl(mod_url)
+
+
+params = TypeVarTuple("params")
+
+
+def get_mod_data(mod_url: str, callback_function: Callable[[str, list[str], list[str], Unpack[params]], None] = None, callback_function_args: tuple[Unpack[params]] = None) -> tuple[str, list[str], list[str]]:
     """
     Get the actual mod data from the API and cache it.
-    Then return the description as HTML, the compatible mod loaders and the supported game versions (starting with the newest).
+    It returns the cached description as HTML, the compatible mod loaders and the supported game versions (starting with the newest).
+    If it could update the data from the API, then it will call the callback function.
+    It is recommended to let the callback be a pyqtSignal.emit function, so the Thread can change things in the window.
     """
     if CURSEFORGE_BASE_URL in mod_url:
         mod_name = mod_url[len(CURSEFORGE_BASE_URL):]
@@ -159,7 +175,7 @@ def get_mod_data(mod_url: str) -> Tuple[str, list[str], list[str]]:
 
     # If the file exists, then just start a thread, otherwise run a blocking update
     if os.path.exists(file_path):
-        update_thread = threading.Thread(target=data_update_function, args=(mod_name,), daemon=True)
+        update_thread = threading.Thread(target=data_update_function, args=(mod_name, callback_function, callback_function_args), daemon=True)
         update_thread.start()
     else:
         data_update_function(mod_name)
@@ -174,18 +190,7 @@ def get_mod_data(mod_url: str) -> Tuple[str, list[str], list[str]]:
         return mod_data['description'], mod_data['loaders'], mod_data['supported_versions']
 
 
-def get_mod_icon_path(mod_url: str) -> str:
-    if CURSEFORGE_BASE_URL in mod_url:
-        mod_name = mod_url[len(CURSEFORGE_BASE_URL):]
-        return os.path.join(ACTUAL_FILE_DIRECTORY, 'cache', 'curseforge_mods', mod_name + '.png')
-    elif MODRINTH_BASE_URL in mod_url:
-        mod_name = mod_url[len(MODRINTH_BASE_URL):]
-        return os.path.join(ACTUAL_FILE_DIRECTORY, 'cache', 'modrinth_mods', mod_name + '.png')
-    else:
-        raise InvalidModBaseUrl(mod_url)
-
-
-def _update_curseforge_mod(mod_name: str):
+def _update_curseforge_mod(mod_name: str, callback_function: Callable[[str, list[str], list[str], Unpack[params]], None] = None, callback_function_args: tuple[Unpack[params]] = None):
     try:
         url_for_mod_data = CURSEFORGE_API_BASE_URL + mod_name
         response = requests.get(url_for_mod_data, headers=PROJECT_OWN_HEADERS, timeout=10)
@@ -233,8 +238,11 @@ def _update_curseforge_mod(mod_name: str):
     with open(icon_file_path, 'wb') as file:
         file.write(response.content)
 
+    if callback_function is not None:
+        callback_function(html_description, sorted(loaders), supported_versions, *callback_function_args)
 
-def _update_modrinth_mod(mod_name: str):
+
+def _update_modrinth_mod(mod_name: str, callback_function: Callable[[str, list[str], list[str], Unpack[params]], None] = None, callback_function_args: tuple[Unpack[params]] = None):
     try:
         url_for_mod_data = MODRINTH_API_BASE_URL + mod_name
         response = requests.get(url_for_mod_data, headers=PROJECT_OWN_HEADERS, timeout=10)
@@ -245,7 +253,7 @@ def _update_modrinth_mod(mod_name: str):
         raise ModNotExisting('Modrinth', mod_name)
 
     if 'x-ratelimit-remaining' in response.headers:
-        if int(response.headers['x-ratelimit-remaining'])<1:
+        if int(response.headers['x-ratelimit-remaining']) < 1:
             raise APICooldown('modrinth')
 
     mod_data = response.json()
@@ -277,3 +285,6 @@ def _update_modrinth_mod(mod_name: str):
     response = requests.get(icon_url)
     with open(icon_file_path, 'wb') as file:
         file.write(response.content)
+
+    if callback_function is not None:
+        callback_function(html_description, sorted(loaders), supported_versions, *callback_function_args)

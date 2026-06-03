@@ -8,8 +8,11 @@ import psutil
 from datetime import datetime
 import re
 
+# noinspection PyPackageRequirements
 from PyQt6 import uic
-from PyQt6.QtCore import QTimer
+# noinspection PyPackageRequirements
+from PyQt6.QtCore import QTimer, QObject, pyqtSignal
+# noinspection PyPackageRequirements
 from PyQt6.QtWidgets import QMainWindow, QPushButton, QFileDialog, QMessageBox, QCheckBox, QVBoxLayout
 from qt_material import apply_stylesheet, list_themes, get_theme, opacity
 
@@ -58,6 +61,15 @@ DEFAULT_INSTANCE_NAME = 'Latest Release'
 MINECRAFT_LAUNCHER_PACKEDMC_PROFILE_ID = 'packedmc'
 
 
+# Signal Emitter for when the data of a mod was loaded from the API
+class ModDataConnector(QObject):
+    updated = pyqtSignal(str, list, list, str, str)  # declared on class
+
+    def emit_updated(self, description: str, loaders: list[str], supported_versions: list[str], mod_name: str, mod_url: str):
+        # noinspection PyUnresolvedReferences
+        self.updated.emit(description, loaders, supported_versions, mod_name, mod_url)
+
+
 class MainWindow(QMainWindow, MainWindowElements):
     def __init__(self, application):
         super().__init__()
@@ -82,6 +94,9 @@ class MainWindow(QMainWindow, MainWindowElements):
         self.mod_url_timer = QTimer(self)  # Use a timer that is restarted on every text input, but the real function is only executed after the time has run out.
         self.mod_url_timer.setSingleShot(True)
         self.mod_url_timer.timeout.connect(self._changed_mod_url)  # noqa
+        self.mod_data_connector = ModDataConnector()
+        # noinspection PyUnresolvedReferences
+        self.mod_data_connector.updated.connect(lambda description, loaders, supported_versions, mod_name, mod_url: self.set_mod_values(description, loaders, supported_versions, mod_name, mod_url))
 
         # Bind the page selection buttons
         self.INSTANCES_PAGE_BUTTON.pressed.connect(lambda: self._page_selection_button_on_press(self.INSTANCES_PAGE_BUTTON, 0))
@@ -142,7 +157,7 @@ class MainWindow(QMainWindow, MainWindowElements):
 
         selected_style = self.data['style']['theme'].replace('.xml', '').replace('500', '2').replace('_', ' ').title()
 
-        create_buttons_in_scroll_area(self.STYLES_SELECTION_LIST, all_style_names, selected_style,self._stylesheet_selection)
+        create_buttons_in_scroll_area(self.STYLES_SELECTION_LIST, all_style_names, selected_style, self._stylesheet_selection)
         self.SWITCH_SECONDARY_COLOR.setChecked(self.data['style']['invert_secondary'])
         self.SWITCH_SECONDARY_COLOR.clicked.connect(self._style_invert_button_clicked)
         self.SCALE_SELECTION.setValue(self.data['style']['scale']+WINDOW_DEFAULT_SCALE)
@@ -157,7 +172,6 @@ class MainWindow(QMainWindow, MainWindowElements):
 
         # Save the actual options file from the minecraft directory
         self.save_options_file_of_last_used_instance()
-
 
     '''
     Main Page
@@ -215,7 +229,7 @@ class MainWindow(QMainWindow, MainWindowElements):
         # Else:
         clicked_button.setChecked(False)
 
-    def show_page(self, page_index: int, animation_direction: AnimationScrollDirection = AnimationScrollDirection.VERTICAL, show_instantly = False):
+    def show_page(self, page_index: int, animation_direction: AnimationScrollDirection = AnimationScrollDirection.VERTICAL, show_instantly=False):
         # We don't care whether the page is still animating, because it doesn't matter if we execute the page function anyway.
         if show_instantly:
             animate_transition(self, self.PAGE_CONTAINER, page_index, animation_direction=animation_direction, animation_duration=0)
@@ -237,10 +251,9 @@ class MainWindow(QMainWindow, MainWindowElements):
                     pass
                 except Exception as e:
                     logger.error('Uncaught exception when listing mod', exc_info=e)
-                mod_page_values.append( (mod_name, icon_file_path) )  # It is important to add these as a tuple
+                mod_page_values.append((mod_name, icon_file_path))  # It is important to add these as a tuple
 
             self.MODS_PAGE.set_values(mod_page_values)
-
 
     '''
     Instance page & Instance Edit page
@@ -440,14 +453,14 @@ class MainWindow(QMainWindow, MainWindowElements):
 
         # Overwrite or add the PackedMC profile with the most recent timestamp.
         profile_data["profiles"][MINECRAFT_LAUNCHER_PACKEDMC_PROFILE_ID] = {
-            "created" : created_time,
-            "gameDir" : self.data['instances'][instance_name]["minecraft_directory"],
-            "icon" : "Chest",  # TODO: Replace with the icon of PackedMC
+            "created": created_time,
+            "gameDir": self.data['instances'][instance_name]["minecraft_directory"],
+            "icon": "Chest",  # TODO: Replace with the icon of PackedMC
             # TODO: Set the java Args
-            "lastUsed" : datetime.now().isoformat(timespec="milliseconds") + "Z", # Time in this format: 2026-01-31T20:34:56.183Z
-            "lastVersionId" : version_id,
-            "name" : "PackedMC - " + instance_name,
-            "type" : "custom"
+            "lastUsed": datetime.now().isoformat(timespec="milliseconds") + "Z",  # Time in this format: 2026-01-31T20:34:56.183Z
+            "lastVersionId": version_id,
+            "name": "PackedMC - " + instance_name,
+            "type": "custom"
         }
 
         # Writeback to the file
@@ -465,7 +478,7 @@ class MainWindow(QMainWindow, MainWindowElements):
         # TODO: Optionally: Update other mods in the background and also periodically save the options file until the game is closed.
         # TODO: Optionally: Close PackedMC
 
-    def create_instance(self, instance_name = 'New instance', is_default = False, edit_afterwards = True, instance_type = 'Release', instance_version = 'latest', minecraft_directory = MINECRAFT_DIRECTORY, advanced_arguments: dict = None):
+    def create_instance(self, instance_name='New instance', is_default=False, edit_afterwards=True, instance_type='Release', instance_version='latest', minecraft_directory=MINECRAFT_DIRECTORY, advanced_arguments: dict = None):
         instance_name = self._make_name_unique(instance_name, self.data['instances'].keys())
         if advanced_arguments is None:
             advanced_arguments = {}
@@ -689,11 +702,10 @@ class MainWindow(QMainWindow, MainWindowElements):
             self.data['instances'][self.selected_instance_name]['mods'].remove(mod_name)
         self.data.save()
 
-
     '''
     Mods Page
     '''
-    def create_mod(self, mod_name = 'New Mod', edit_afterwards=True):
+    def create_mod(self, mod_name='New Mod', edit_afterwards=True):
         mod_name = self._make_name_unique(mod_name, self.data['mods'].keys())
 
         # Set the data
@@ -707,14 +719,13 @@ class MainWindow(QMainWindow, MainWindowElements):
         if edit_afterwards:
             self.edit_mod(mod_name)  # Show it in edit mode
 
-    def edit_mod(self, mod_name: str, only_refresh_values=False, focus_on_url=False):
+    def edit_mod(self, mod_name: str):
         """ This function is executed to show the edit page and configure the values for the given instance. """
-        if not only_refresh_values:
-            self.show_page(3, animation_direction=AnimationScrollDirection.HORIZONTAL)
+        self.show_page(3, animation_direction=AnimationScrollDirection.HORIZONTAL)
 
         # Set the values for the edit page
         self.selected_mod_name = mod_name
-        mod_data = self.data['mods'][mod_name]
+        mod_url: str = self.data['mods'][mod_name]['url']
 
         # Set the name without triggering the changed_instance_data function (which triggers on text change)
         self.MOD_NAME.blockSignals(True)
@@ -723,26 +734,31 @@ class MainWindow(QMainWindow, MainWindowElements):
         self.MOD_NAME.blockSignals(False)
 
         self.MOD_URL.blockSignals(True)
-        self.MOD_URL.setText(mod_data['url'])
-        if focus_on_url:
-            self.MOD_URL.setFocus()
+        self.MOD_URL.setText(mod_url)
         self.MOD_URL.blockSignals(False)
 
         # Set the fields depending on the URL and also refresh the stored data
-        description = ''
-        loaders = []
-        supported_versions = []
         try:
-            description, loaders, supported_versions = get_mod_data(mod_data['url'])
-            self.data['mods'][self.selected_mod_name]['loaders'] = loaders
-            self.data['mods'][self.selected_mod_name]['supported_versions'] = supported_versions
-            self.data.save()
+            description, loaders, supported_versions = get_mod_data(mod_url, self.mod_data_connector.emit_updated, (mod_name, mod_url))
+            self.set_mod_values(description, loaders, supported_versions, mod_name, mod_url)
         except ModNotExisting:
             pass
         except InvalidModBaseUrl:
             pass
         except Exception as e:
             logger.error('Uncaught exception when changing editing mod', exc_info=e)
+
+    def set_mod_values(self, description: str, loaders: list[str], supported_versions: list[str], mod_name: str, mod_url: str):
+        print('update')
+        """ If the URL of the given mod matches, then store the given values for said mod. Then display them, if it is the selected mod. """
+
+        if self.data['mods'][mod_name]['url'] != mod_url:
+            logger.info("Mod URL changed in the meantime. Callback is discarded.")
+            return
+
+        self.data['mods'][mod_name]['loaders'] = loaders
+        self.data['mods'][mod_name]['supported_versions'] = supported_versions
+        self.data.save()
 
         clean_description = re.sub(r'<img\b[^>]*>', '', description, flags=re.IGNORECASE)  # Remove the images from the HTML, so no need to load them.
         self.MOD_DESCRIPTION.setHtml(clean_description)
@@ -770,16 +786,13 @@ class MainWindow(QMainWindow, MainWindowElements):
 
     def _changed_mod_url(self):
         # This function is only executed after a timer has run out, so after there were no keystrokes in 0.5 seconds.
-
         new_url = self.MOD_URL.text().strip()
         self.data['mods'][self.selected_mod_name]['url'] = new_url
         self.data.save()
         if validators.url(new_url):
             try:
-                _, loaders, supported_versions = get_mod_data(new_url)
-                self.data['mods'][self.selected_mod_name]['loaders'] = loaders
-                self.data['mods'][self.selected_mod_name]['supported_versions'] = supported_versions
-                self.data.save()
+                description, loaders, supported_versions = get_mod_data(new_url, self.mod_data_connector.emit_updated, (self.selected_mod_name, new_url))
+                self.set_mod_values(description, loaders, supported_versions, self.selected_mod_name, new_url)
             except ModNotExisting:
                 pass
             except InvalidModBaseUrl:
@@ -788,7 +801,6 @@ class MainWindow(QMainWindow, MainWindowElements):
                 logger.error('Uncaught exception when changing mod URL', exc_info=e)
         else:
             pass
-        self.edit_mod(self.selected_mod_name, focus_on_url=True)
         # TODO: Maybe change color of input field when it is an invalid URL
 
     def _delete_mod(self):
@@ -801,7 +813,6 @@ class MainWindow(QMainWindow, MainWindowElements):
 
             # Go to the mods page
             self.show_page(2, animation_direction=AnimationScrollDirection.HORIZONTAL)
-
 
     '''
     Settings Page
@@ -830,7 +841,6 @@ class MainWindow(QMainWindow, MainWindowElements):
         self.MODS_PAGE.set_size(70 + 50 * scale_value, 60 + 20 * scale_value)
         self.MODS_PAGE.set_spacing(vertical_spacing=10 * scale_value)
 
-
     '''
     General functions
     '''
@@ -857,11 +867,11 @@ class MainWindow(QMainWindow, MainWindowElements):
 
         # Set environment variable for hover color, using opacity to get the format "rgba(...)", accepted by PyQT
         theme = get_theme(stylesheet_file_name, invert_secondary=invert_secondary)
-        os.environ['PACKEDMC_FRAME_HOVER_COLOR'] = opacity(theme['secondaryLightColor'], 0.5)
+        os.environ['PACKEDMC_FRAME_HOVER_COLOR'] = opacity(theme['secondaryLightColor'], 0.3)
+        os.environ['PACKEDMC_FRAME_SELECTED_COLOR'] = opacity(theme['secondaryLightColor'], 0.7)
         os.environ['PACKEDMC_BUTTON_HOVER_COLOR'] = opacity(theme['primaryColor'], 0.1)
         os.environ['PACKEDMC_BUTTON_PRESSED_COLOR'] = opacity(theme['primaryColor'], 0.6)
         os.environ['PACKEDMC_PLAY_HOVER_COLOR'] = opacity(theme['primaryLightColor'], 0.9)
-
 
         # Apply the wanted stylesheet using custom special properties
         apply_stylesheet(self.application, theme=stylesheet_file_name, css_file=CUSTOM_STYLESHEET_FILE_PATH, extra=extra, invert_secondary=invert_secondary, style='windows11')

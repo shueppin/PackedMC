@@ -48,6 +48,10 @@ QScrollBar:vertical {{
 }}
 
 .clickable_frame_selected {{
+    background-color: {PACKEDMC_FRAME_SELECTED_COLOR};
+}}
+
+.clickable_frame_selected:hover {{
     background-color: {QTMATERIAL_SECONDARYLIGHTCOLOR};
 }}
 
@@ -82,6 +86,7 @@ QComboBox:on {{
 QCheckBox::indicator:hover {{
     background-color: {PACKEDMC_BUTTON_HOVER_COLOR};
 }}
+
 
 
 /* Page selection buttons & frame */
