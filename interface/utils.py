@@ -4,7 +4,9 @@ import os
 import json
 from typing import Callable
 
+# noinspection PyPackageRequirements
 from PyQt6.QtCore import QPropertyAnimation, QParallelAnimationGroup, QPoint, QEasingCurve, Qt
+# noinspection PyPackageRequirements
 from PyQt6.QtWidgets import QMainWindow, QWidget, QRadioButton, QCheckBox, QStackedWidget, QLayout
 
 
@@ -43,6 +45,7 @@ class _CompactListEncoder(json.JSONEncoder):
 
         else:
             yield json.dumps(obj, ensure_ascii=self.ensure_ascii)
+
 
 class StoredDict(dict):
     def __init__(self, filepath: str, *args, **kwargs):
@@ -83,12 +86,13 @@ class StoredDict(dict):
 PyQt Animation
 '''
 
+
 class AnimationScrollDirection(Enum):
     HORIZONTAL = 'Horizontal'
     VERTICAL = 'Vertical'
 
 
-def animate_transition(main_window: QMainWindow, stacked_widget: QStackedWidget, new_index: int, animation_duration=300, animation_direction: AnimationScrollDirection=AnimationScrollDirection.VERTICAL) -> bool:
+def animate_transition(main_window: QMainWindow, stacked_widget: QStackedWidget, new_index: int, animation_duration=300, animation_direction: AnimationScrollDirection = AnimationScrollDirection.VERTICAL) -> bool:
     """
     Function to animate the transition between pages of a stacked widget
 
@@ -171,6 +175,7 @@ def _animation_done(stacked_widget: QStackedWidget, new_index):
 Create Radiobuttons or Checkboxes in scroll area
 '''
 
+
 class ScrollAreaButtonType(Enum):
     RADIOBUTTON = 'Radiobutton'
     CHECKBOX = 'Checkbox'
@@ -227,9 +232,12 @@ def create_buttons_in_scroll_area(scroll_area_content_widget: QWidget, button_na
         # Connect the function to the button click and for the radiobutton pass the button and the name (to be able to fix the state of it) and for the checkbox the state and the name.
         # It's important to pass them as arguments to lambda and not directly to the function, because otherwise it will just use the same variable for all.
         if button_type == ScrollAreaButtonType.RADIOBUTTON:
+            # noinspection PyUnresolvedReferences
             button.clicked.connect(lambda state, name=button_name, clicked_button=button: button_on_click_function(clicked_button, name))  # Attention: "clicked.connect()" passes the click state as a first argument.
         elif button_type == ScrollAreaButtonType.CHECKBOX:
+            # noinspection PyUnresolvedReferences
             button.clicked.connect(lambda state, name=button_name: button_on_click_function(state, name))  # Attention: "clicked.connect()" passes the click state as a first argument.
 
         # Add the button to the layout above the spacer
+        # noinspection PyUnresolvedReferences
         layout.insertWidget(layout.count() - 1, button)

@@ -1,4 +1,5 @@
-from PyQt6.QtWidgets import QStackedWidget, QPushButton, QWidget, QSpinBox, QLineEdit, QComboBox, QFrame, QCheckBox, QTextBrowser, QListWidget, QTableWidget
+# noinspection PyPackageRequirements
+from PyQt6.QtWidgets import QStackedWidget, QPushButton, QWidget, QSpinBox, QLineEdit, QComboBox, QFrame, QCheckBox, QTextBrowser
 
 
 class MainWindowElements:

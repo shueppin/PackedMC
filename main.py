@@ -1,6 +1,7 @@
 import sys
 import logging
 
+# noinspection PyPackageRequirements
 from PyQt6.QtWidgets import QApplication
 
 from interface import MainWindow

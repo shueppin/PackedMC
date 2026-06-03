@@ -19,7 +19,7 @@ MODRINTH_API_BASE_URL = 'https://api.modrinth.com/v2/project/'
 
 
 PROJECT_OWN_HEADERS = {
-    'User-Agent': 'shueppin/PackedMC (in dev.)'
+    'User-Agent': 'shueppin/PackedMC (in development)'
 }
 
 
@@ -172,6 +172,8 @@ def get_mod_data(mod_url: str, callback_function: Callable[[str, list[str], list
         data_update_function = _update_modrinth_mod
     else:
         raise InvalidModBaseUrl(mod_url)
+
+    # TODO: Add a timestamp, so it only checks this mod after a certain time again, otherwise just use the cached data
 
     # If the file exists, then just start a thread, otherwise run a blocking update
     if os.path.exists(file_path):

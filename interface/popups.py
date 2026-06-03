@@ -1,4 +1,6 @@
+# noinspection PyPackageRequirements
 from PyQt6 import uic
+# noinspection PyPackageRequirements
 from PyQt6.QtWidgets import QWidget, QDialog, QPushButton, QMainWindow
 
 import os
@@ -33,4 +35,3 @@ class ImportProfilesPopup(_PopupTemplate):
     def __init__(self, parent: QMainWindow):
         file_path = os.path.join(ACTUAL_FILE_DIRECTORY, 'ui_files/import_profiles_popup.ui')
         super().__init__(file_path, parent)
-

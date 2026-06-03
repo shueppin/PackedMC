@@ -3,8 +3,11 @@ from enum import Enum
 from typing import Callable
 import os
 
+# noinspection PyPackageRequirements
 from PyQt6.QtWidgets import QWidget, QGridLayout, QScrollArea, QVBoxLayout, QLabel, QPushButton, QHBoxLayout, QFrame
+# noinspection PyPackageRequirements
 from PyQt6.QtGui import QPixmap
+# noinspection PyPackageRequirements
 from PyQt6.QtCore import Qt
 
 
@@ -65,10 +68,12 @@ class _InstanceField(QFrame):
         play_button.setProperty('class', 'play_button')
         play_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         play_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        # noinspection PyUnresolvedReferences
         play_button.clicked.connect(lambda: instance_field_functions.play_function(instance_name))
         edit_button = QPushButton("Edit")
         edit_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         edit_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        # noinspection PyUnresolvedReferences
         edit_button.clicked.connect(lambda: instance_field_functions.edit_function(instance_name))
         button_layout.addWidget(play_button)
         button_layout.addWidget(edit_button)
@@ -132,7 +137,7 @@ class _ModField(QFrame):
 
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
-            # If it is only displayed, it means it should be selectable, thus toggle the actual state and execute the display function. Otherwise execute the edit function.
+            # If it is only displayed, it means it should be selectable, thus toggle the actual state and execute the display function. Otherwise, execute the edit function.
             if self.only_displayed:
                 self.is_selected = not self.is_selected
                 self._set_correct_properties()
@@ -214,7 +219,7 @@ class ScrollableGrid(QWidget):
                 self.fields.append(field)
             create_new_instance_button = _CreateNewElementButton(self.available_functions.create_new_function, 'Create new\ninstance', self.card_width, self.card_height)
             self.fields.append(create_new_instance_button)
-            import_profiles_button = _CreateNewElementButton(self.available_functions.import_profiles_function,'Import profiles\nfrom Launcher', self.card_width, self.card_height)
+            import_profiles_button = _CreateNewElementButton(self.available_functions.import_profiles_function, 'Import profiles\nfrom Launcher', self.card_width, self.card_height)
             self.fields.append(import_profiles_button)
 
         elif self.field_type == FieldType.MODS_DISPLAYED:
@@ -234,7 +239,7 @@ class ScrollableGrid(QWidget):
                     self.fields.append(field)
                 except ValueError:
                     logger.warning(f'{FieldType.MODS_EDITABLE.name} expects values like "(name, icon_path)", but got {values[i]} instead')
-            create_new_mod_button = _CreateNewElementButton(self.available_functions.create_new_function,'Create new\nmod', self.card_width, self.card_height)
+            create_new_mod_button = _CreateNewElementButton(self.available_functions.create_new_function, 'Create new\nmod', self.card_width, self.card_height)
             self.fields.append(create_new_mod_button)
 
         self.rebuild_grid(force=True)
@@ -260,4 +265,3 @@ class ScrollableGrid(QWidget):
     def resizeEvent(self, event):  # On resize check whether to rebuild the grid
         super().resizeEvent(event)
         self.rebuild_grid()
-
