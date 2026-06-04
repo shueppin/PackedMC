@@ -19,6 +19,10 @@ ALL_RELEASE_VERSIONS = []
 ALL_SNAPSHOT_VERSIONS = []
 
 
+# Ensure correct directories exist
+os.makedirs(os.path.join(_ACTUAL_FILE_DIRECTORY, 'cache'), exist_ok=True)
+
+
 def _reload_data():
     global LATEST_RELEASE, LATEST_SNAPSHOT, ALL_RELEASE_VERSIONS, ALL_SNAPSHOT_VERSIONS
 

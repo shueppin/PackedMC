@@ -23,6 +23,11 @@ PROJECT_OWN_HEADERS = {
 }
 
 
+# Ensure correct directories exist
+os.makedirs(os.path.join(ACTUAL_FILE_DIRECTORY, 'cache', 'curseforge_mods'), exist_ok=True)
+os.makedirs(os.path.join(ACTUAL_FILE_DIRECTORY, 'cache', 'modrinth_mods'), exist_ok=True)
+
+
 class InvalidModBaseUrl(Exception):
     def __init__(self, url: str):
         message = f'The url "{url}" is not supported by this project. \nExamples for supported urls are: https://modrinth.com/mod/fabric-api or https://www.curseforge.com/minecraft/mc-mods/fabric-api'
@@ -58,7 +63,7 @@ class APICooldown(Exception):
         super().__init__(message)
 
 
-class NoFileAvailable(Exception):
+class NoModFileAvailable(Exception):
     def __init__(self, mod_url: str, loader: str, version: str):
         message = f'On "{mod_url}" there is no version available for {loader} {version}.'
 
@@ -70,10 +75,10 @@ def get_download_url(mod_url: str, game_version: str, mod_loader: str) -> tuple[
     Returns the mod download URL and file name.
     """
     if CURSEFORGE_BASE_URL in mod_url:
-        return _get_curseforge_download_url(mod_url, game_version, mod_loader)
+        return _get_curseforge_download_url(mod_url, game_version, mod_loader.lower())
 
     elif MODRINTH_BASE_URL in mod_url:
-        return _get_modrinth_download_url(mod_url, game_version, mod_loader)
+        return _get_modrinth_download_url(mod_url, game_version, mod_loader.lower())
 
     else:
         raise InvalidModBaseUrl(mod_url)
@@ -88,7 +93,7 @@ def _get_curseforge_download_url(curseforge_url: str, game_version: str, mod_loa
 
     if response.status_code != 200:
         if response.status_code == 202:
-            raise TryAgainLater
+            raise TryAgainLater()
 
         else:
             raise ModNotExisting('Curseforge', curseforge_url)
@@ -106,7 +111,7 @@ def _get_curseforge_download_url(curseforge_url: str, game_version: str, mod_loa
         return download_url, file_name
 
     except KeyError:
-        raise NoFileAvailable(curseforge_url, mod_loader, game_version)
+        raise NoModFileAvailable(curseforge_url, mod_loader, game_version)
 
 
 def _get_modrinth_download_url(modrinth_url: str, game_version: str, mod_loader: str) -> tuple[str, str]:
@@ -138,18 +143,22 @@ def _get_modrinth_download_url(modrinth_url: str, game_version: str, mod_loader:
 
             return download_url, file_name
 
-    raise NoFileAvailable(modrinth_url, mod_loader, game_version)
+    raise NoModFileAvailable(modrinth_url, mod_loader, game_version)
 
 
 def get_mod_icon_path(mod_url: str) -> str:
     if CURSEFORGE_BASE_URL in mod_url:
         mod_name = mod_url[len(CURSEFORGE_BASE_URL):]
-        return os.path.join(ACTUAL_FILE_DIRECTORY, 'cache', 'curseforge_mods', mod_name + '.png')
+        icon_path = os.path.join(ACTUAL_FILE_DIRECTORY, 'cache', 'curseforge_mods', mod_name + '.png')
     elif MODRINTH_BASE_URL in mod_url:
         mod_name = mod_url[len(MODRINTH_BASE_URL):]
-        return os.path.join(ACTUAL_FILE_DIRECTORY, 'cache', 'modrinth_mods', mod_name + '.png')
+        icon_path = os.path.join(ACTUAL_FILE_DIRECTORY, 'cache', 'modrinth_mods', mod_name + '.png')
     else:
         raise InvalidModBaseUrl(mod_url)
+
+    if not os.path.exists(icon_path):  # If it doesn't exist then try to download it
+        get_mod_data(mod_url)
+    return icon_path
 
 
 params = TypeVarTuple("params")
@@ -157,7 +166,7 @@ params = TypeVarTuple("params")
 
 def get_mod_data(mod_url: str, callback_function: Callable[[str, list[str], list[str], Unpack[params]], None] = None, callback_function_args: tuple[Unpack[params]] = None) -> tuple[str, list[str], list[str]]:
     """
-    Get the actual mod data from the API and cache it.
+    Get the actual mod data from the API and cache it. Also download the icon, but not return it.
     It returns the cached description as HTML, the compatible mod loaders and the supported game versions (starting with the newest).
     If it could update the data from the API, then it will call the callback function.
     It is recommended to let the callback be a pyqtSignal.emit function, so the Thread can change things in the window.
@@ -165,11 +174,11 @@ def get_mod_data(mod_url: str, callback_function: Callable[[str, list[str], list
     if CURSEFORGE_BASE_URL in mod_url:
         mod_name = mod_url[len(CURSEFORGE_BASE_URL):]
         file_path = os.path.join(ACTUAL_FILE_DIRECTORY, 'cache', 'curseforge_mods', mod_name + '.json')
-        data_update_function = _update_curseforge_mod
+        data_update_function = _update_curseforge_mod_data
     elif MODRINTH_BASE_URL in mod_url:
         mod_name = mod_url[len(MODRINTH_BASE_URL):]
         file_path = os.path.join(ACTUAL_FILE_DIRECTORY, 'cache', 'modrinth_mods', mod_name + '.json')
-        data_update_function = _update_modrinth_mod
+        data_update_function = _update_modrinth_mod_data
     else:
         raise InvalidModBaseUrl(mod_url)
 
@@ -192,7 +201,7 @@ def get_mod_data(mod_url: str, callback_function: Callable[[str, list[str], list
         return mod_data['description'], mod_data['loaders'], mod_data['supported_versions']
 
 
-def _update_curseforge_mod(mod_name: str, callback_function: Callable[[str, list[str], list[str], Unpack[params]], None] = None, callback_function_args: tuple[Unpack[params]] = None):
+def _update_curseforge_mod_data(mod_name: str, callback_function: Callable[[str, list[str], list[str], Unpack[params]], None] = None, callback_function_args: tuple[Unpack[params]] = None):
     try:
         url_for_mod_data = CURSEFORGE_API_BASE_URL + mod_name
         response = requests.get(url_for_mod_data, headers=PROJECT_OWN_HEADERS, timeout=10)
@@ -244,7 +253,7 @@ def _update_curseforge_mod(mod_name: str, callback_function: Callable[[str, list
         callback_function(html_description, sorted(loaders), supported_versions, *callback_function_args)
 
 
-def _update_modrinth_mod(mod_name: str, callback_function: Callable[[str, list[str], list[str], Unpack[params]], None] = None, callback_function_args: tuple[Unpack[params]] = None):
+def _update_modrinth_mod_data(mod_name: str, callback_function: Callable[[str, list[str], list[str], Unpack[params]], None] = None, callback_function_args: tuple[Unpack[params]] = None):
     try:
         url_for_mod_data = MODRINTH_API_BASE_URL + mod_name
         response = requests.get(url_for_mod_data, headers=PROJECT_OWN_HEADERS, timeout=10)
