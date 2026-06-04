@@ -14,9 +14,9 @@ import time
 # noinspection PyPackageRequirements
 from PyQt6 import uic
 # noinspection PyPackageRequirements
-from PyQt6.QtCore import QTimer, QObject, pyqtSignal
+from PyQt6.QtCore import QTimer, QObject, pyqtSignal, Qt
 # noinspection PyPackageRequirements
-from PyQt6.QtWidgets import QMainWindow, QPushButton, QFileDialog, QMessageBox, QCheckBox, QVBoxLayout
+from PyQt6.QtWidgets import QMainWindow, QPushButton, QFileDialog, QMessageBox, QCheckBox, QVBoxLayout, QProgressDialog
 from qt_material import apply_stylesheet, list_themes, get_theme, opacity
 
 from .type_hinting import MainWindowElements, DataDictType
@@ -103,7 +103,8 @@ class MainWindow(QMainWindow, MainWindowElements):
 
         self.mod_url_timer = QTimer(self)  # Use a timer that is restarted on every text input, but the real function is only executed after the time has run out.
         self.mod_url_timer.setSingleShot(True)
-        self.mod_url_timer.timeout.connect(self._changed_mod_url)  # noqa
+        # noinspection PyUnresolvedReferences
+        self.mod_url_timer.timeout.connect(self._changed_mod_url)
         self.mod_data_connector = ModDataConnector()
         # noinspection PyUnresolvedReferences
         self.mod_data_connector.updated.connect(lambda description, loaders, supported_versions, mod_name, mod_url: self.set_mod_values(description, loaders, supported_versions, mod_name, mod_url))
@@ -496,11 +497,24 @@ class MainWindow(QMainWindow, MainWindowElements):
         os.makedirs(packedmc_mods_directory, exist_ok=True)  # Ensure it exists
         unneeded_files = os.listdir(packedmc_mods_directory)
 
-        for mod_name in actual_instance_data['mods']:
+        mods_not_found_for_this_version = []
+        progress_dialog = QProgressDialog("Downloading mods...", "", 0, len(actual_instance_data['mods']), self)  # empty cancel text
+        progress_dialog.setCancelButton(None)  # remove cancel button
+        progress_dialog.setWindowModality(Qt.WindowModality.ApplicationModal)
+        progress_dialog.setAutoClose(True)
+        progress_dialog.setAutoReset(True)
+        progress_dialog.setMinimumDuration(0)
+
+        progress_dialog.setFixedSize(300, 250)  # or dlg.setFixedSize(w, h)
+
+        # Go through every mod and download it if needed
+        for index, mod_name in enumerate(actual_instance_data['mods']):
+            progress_dialog.setValue(index + 1)
+            progress_dialog.setLabelText("Downloading mod: \n" + mod_name)
+
             try:
                 old_download_url, old_filename, last_checked = actual_instance_data['mods'][mod_name]
-            except Exception as e:  # If there is a mistake in the data, then update it and use default values
-                print(e)
+            except Exception:  # If there is a mistake in the data, then update it and use default values
                 self.data['instances'][instance_name]['mods'][mod_name] = ('', '', 0)
                 self.data.save()
                 old_download_url, old_filename, last_checked = ('', '', 0)
@@ -528,14 +542,13 @@ class MainWindow(QMainWindow, MainWindowElements):
                     file_data = response.content
                     with open(file_path, 'wb') as f:
                         f.write(file_data)
-                    print(file_path)
 
                 # Remove the filename from the unneeded files, so it is not removed.
                 if filename in unneeded_files:
                     unneeded_files.remove(filename)
             except (InvalidModBaseUrl, NoModFileAvailable):
                 # Mod unavailable, thus no possible download URL
-                logger.info(f'No mod files found for mod "{mod_name}" for "{loader} {mc_version}"')
+                mods_not_found_for_this_version.append(mod_name)
                 self.data['instances'][instance_name]['mods'][mod_name] = ('', '', last_checked)
                 self.data.save()
             except (APICooldown, TryAgainLater):
@@ -544,13 +557,17 @@ class MainWindow(QMainWindow, MainWindowElements):
             except Exception:
                 traceback.print_exc()
 
+        progress_dialog.close()
+        if len(mods_not_found_for_this_version) > 0:
+            QMessageBox.information(self, 'Could not find all mods', f'Could not find a file for the following mods for {loader} {mc_version}: \n{"\n - ".join(mods_not_found_for_this_version)}')
+
         try:
             # Delete all unneeded files (either from removed mods, or old versions of a mod)
             for unneeded_filename in unneeded_files:
                 os.remove(os.path.join(packedmc_mods_directory, unneeded_filename))
 
             # Get all the files in the directory which were not copied by PackedMC
-            mods_directory = os.path.join(MINECRAFT_DIRECTORY, 'mods')
+            mods_directory = os.path.join(self.data['instances'][instance_name]['minecraft_directory'], 'mods')
             packedmc_copied_mods_file = os.path.join(mods_directory, 'packedmc.json')
             if os.path.exists(packedmc_copied_mods_file):
                 with open(packedmc_copied_mods_file, 'r') as f:
@@ -606,7 +623,7 @@ class MainWindow(QMainWindow, MainWindowElements):
             'minecraft_directory': minecraft_directory,
             'use_default_options_file': is_default,  # Use default options file for default instance (obviously), otherwise don't
             'advanced_arguments': advanced_arguments,
-            'mods': []
+            'mods': {}
         }
         self.data.save()
 
@@ -804,6 +821,11 @@ class MainWindow(QMainWindow, MainWindowElements):
     def _changed_instance_version(self, _new_index: int):
         version = self.INSTANCE_VERSION_SELECTION.currentText()
         self.data['instances'][self.selected_instance_name]['version'] = version
+
+        # Change the timestamp of all the mods for this instance
+        for mod_name in self.data['instances'][self.selected_instance_name]['mods']:
+            mod_url, filename, last_checked = self.data['instances'][self.selected_instance_name]['mods'][mod_name]
+            self.data['instances'][self.selected_instance_name]['mods'][mod_name] = (mod_url, filename, 0)
         self.data.save()
 
     def _changed_instance_use_default_options_file(self, new_state: bool):
@@ -836,6 +858,8 @@ class MainWindow(QMainWindow, MainWindowElements):
 
     def edit_mod(self, mod_name: str):
         """ This function is executed to show the edit page and configure the values for the given instance. """
+        # TODO: Allow manual file adding, via a directory, where you copy the files for each game version/loader you want supported
+
         self.show_page(3, animation_direction=AnimationScrollDirection.HORIZONTAL)
 
         # Set the values for the edit page
@@ -865,6 +889,8 @@ class MainWindow(QMainWindow, MainWindowElements):
 
     def set_mod_values(self, description: str, loaders: list[str], supported_versions: list[str], mod_name: str, mod_url: str):
         """ If the URL of the given mod matches, then store the given values for said mod. Then display them, if it is the selected mod. """
+        if mod_name not in self.data['mods']:  # This means the mod was probably renamed. Then take the selected mod and check if it is this URL
+            mod_name = self.selected_mod_name
 
         if self.data['mods'][mod_name]['url'] != mod_url:
             logger.info("Mod URL changed in the meantime. Callback is discarded.")

@@ -3,9 +3,14 @@ import threading
 from typing import Callable, Unpack, TypeVarTuple
 import os
 import json
-import markdown
+from markdown import markdown
+import re
+import logging
 
 from .minecraft import ALL_RELEASE_VERSIONS
+
+
+logger = logging.getLogger(__name__)
 
 
 ACTUAL_FILE_DIRECTORY = os.path.dirname(__file__)
@@ -164,7 +169,7 @@ def get_mod_icon_path(mod_url: str) -> str:
 params = TypeVarTuple("params")
 
 
-def get_mod_data(mod_url: str, callback_function: Callable[[str, list[str], list[str], Unpack[params]], None] = None, callback_function_args: tuple[Unpack[params]] = None) -> tuple[str, list[str], list[str]]:
+def get_mod_data(mod_url: str, callback_function: Callable[[str, list[str], list[str], Unpack[params]], None] = None, callback_function_args: tuple[Unpack[params]] = None, never_block=True) -> tuple[str, list[str], list[str]]:
     """
     Get the actual mod data from the API and cache it. Also download the icon, but not return it.
     It returns the cached description as HTML, the compatible mod loaders and the supported game versions (starting with the newest).
@@ -184,8 +189,8 @@ def get_mod_data(mod_url: str, callback_function: Callable[[str, list[str], list
 
     # TODO: Add a timestamp, so it only checks this mod after a certain time again, otherwise just use the cached data
 
-    # If the file exists, then just start a thread, otherwise run a blocking update
-    if os.path.exists(file_path):
+    # If the file exists or this function should never block, then just start a thread, otherwise run a blocking update
+    if os.path.exists(file_path) or never_block:
         update_thread = threading.Thread(target=data_update_function, args=(mod_name, callback_function, callback_function_args), daemon=True)
         update_thread.start()
     else:
@@ -253,6 +258,19 @@ def _update_curseforge_mod_data(mod_name: str, callback_function: Callable[[str,
         callback_function(html_description, sorted(loaders), supported_versions, *callback_function_args)
 
 
+def _remove_unnecessary_html_tags(text, tags=("div", "center", "details", "summary")):
+    """
+    Remove opening and closing tags (with attributes) for the given tags, leaving inner content intact.
+    This can be used because the markdown to HTML does not like HTML as Input.
+    """
+    tag_pattern = "|".join(re.escape(t) for t in tags)
+    # remove opening tags like <div ...> or <center ...>
+    text = re.sub(rf"<(?:{tag_pattern})(?:\s[^>]*)?>", "", text, flags=re.IGNORECASE)
+    # remove closing tags like </div> or </center>
+    text = re.sub(rf"</(?:{tag_pattern})\s*>", "", text, flags=re.IGNORECASE)
+    return text
+
+
 def _update_modrinth_mod_data(mod_name: str, callback_function: Callable[[str, list[str], list[str], Unpack[params]], None] = None, callback_function_args: tuple[Unpack[params]] = None):
     try:
         url_for_mod_data = MODRINTH_API_BASE_URL + mod_name
@@ -280,7 +298,9 @@ def _update_modrinth_mod_data(mod_name: str, callback_function: Callable[[str, l
 
     # Update the data
     data_file_path = os.path.join(ACTUAL_FILE_DIRECTORY, 'cache', 'modrinth_mods', mod_name + '.json')
-    html_description = markdown.markdown(mod_data['body'])
+    clean_body = _remove_unnecessary_html_tags(mod_data['body'])
+    html_description = markdown(clean_body, extensions=["extra", "attr_list"])
+
     with open(data_file_path, 'w') as f:
         json_data = {
             'description': html_description,
@@ -293,9 +313,12 @@ def _update_modrinth_mod_data(mod_name: str, callback_function: Callable[[str, l
     icon_url = mod_data['icon_url']
     icon_file_path = os.path.join(ACTUAL_FILE_DIRECTORY, 'cache', 'modrinth_mods', mod_name + '.png')
 
-    response = requests.get(icon_url)
-    with open(icon_file_path, 'wb') as file:
-        file.write(response.content)
+    if icon_url:
+        response = requests.get(icon_url)
+        with open(icon_file_path, 'wb') as file:
+            file.write(response.content)
+    else:
+        logger.warning(f'No icon URL available for mod "{mod_name}"')
 
     if callback_function is not None:
         callback_function(html_description, sorted(loaders), supported_versions, *callback_function_args)
