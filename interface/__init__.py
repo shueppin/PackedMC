@@ -3,10 +3,13 @@ import os
 import shutil
 from platform import platform
 import json
+import traceback
+import requests
 import validators
 import psutil
 from datetime import datetime
 import re
+import time
 
 # noinspection PyPackageRequirements
 from PyQt6 import uic
@@ -22,7 +25,7 @@ from .utils import StoredDict, animate_transition, AnimationScrollDirection, cre
 from .popups import ImportProfilesPopup
 
 from minecraft_api.minecraft import ALL_RELEASE_VERSIONS, ALL_SNAPSHOT_VERSIONS, get_installed_versions
-from minecraft_api.mod import get_mod_data, get_mod_icon_path, InvalidModBaseUrl, ModNotExisting
+from minecraft_api.mod import get_mod_data, get_mod_icon_path, InvalidModBaseUrl, ModNotExisting, get_download_url, NoModFileAvailable, APICooldown, TryAgainLater
 from minecraft_api.fabric import install_version
 
 
@@ -59,6 +62,13 @@ else:
 
 DEFAULT_INSTANCE_NAME = 'Latest Release'
 MINECRAFT_LAUNCHER_PACKEDMC_PROFILE_ID = 'packedmc'
+
+# This is the amount of seconds it should wait before checking something like the mod data or the mod download url again.
+SKIP_WHEN_LAST_CHECKED_BEFORE = 600
+
+
+# Ensure correct directories exist
+os.makedirs(os.path.join(PACKEDMC_MINECRAFT_DATA_DIRECTORY, 'options_files'), exist_ok=True)  # creates all missing parents; no error if exists
 
 
 # Signal Emitter for when the data of a mod was loaded from the API
@@ -477,8 +487,109 @@ class MainWindow(QMainWindow, MainWindowElements):
         except FileNotFoundError:
             logger.error("Could not find the Minecraft Launcher executable.")
 
-        # TODO: Download and update the mods (show status window)
-        # TODO: Copy all the mods to the mods folder
+        # Go through all mods and check if try to get their download links (if they were not just checked recently). Then download the files if they don't already exist.
+        mc_version = actual_instance_data["version"]
+        loader = actual_instance_data['type']
+        actual_time = round(time.time())
+
+        packedmc_mods_directory = os.path.join(PACKEDMC_MINECRAFT_DATA_DIRECTORY, 'mods', instance_name)
+        os.makedirs(packedmc_mods_directory, exist_ok=True)  # Ensure it exists
+        unneeded_files = os.listdir(packedmc_mods_directory)
+
+        for mod_name in actual_instance_data['mods']:
+            try:
+                old_download_url, old_filename, last_checked = actual_instance_data['mods'][mod_name]
+            except Exception as e:  # If there is a mistake in the data, then update it and use default values
+                print(e)
+                self.data['instances'][instance_name]['mods'][mod_name] = ('', '', 0)
+                self.data.save()
+                old_download_url, old_filename, last_checked = ('', '', 0)
+
+            # Skip when it was last checked before our waiting interval
+            if actual_time < last_checked + SKIP_WHEN_LAST_CHECKED_BEFORE:
+                # Remove the old filename from the unneeded files, so it is not removed. Because it is just skipped.
+                if old_filename in unneeded_files:
+                    unneeded_files.remove(old_filename)
+                continue
+
+            try:
+                download_url, filename = get_download_url(self.data['mods'][mod_name]['url'], mc_version, loader)
+                self.data['instances'][instance_name]['mods'][mod_name] = (download_url, filename, actual_time)
+
+                # If the version is not already in the supported versions, then add it.
+                if mc_version not in self.data['mods'][mod_name]['supported_versions']:
+                    self.data['mods'][mod_name]['supported_versions'].append(mc_version)
+                self.data.save()
+
+                # If the download url has changed or the file does not exist, then download the file
+                file_path = os.path.join(packedmc_mods_directory, filename)
+                if not os.path.exists(file_path) or old_download_url != download_url:
+                    response = requests.get(download_url)
+                    file_data = response.content
+                    with open(file_path, 'wb') as f:
+                        f.write(file_data)
+                    print(file_path)
+
+                # Remove the filename from the unneeded files, so it is not removed.
+                if filename in unneeded_files:
+                    unneeded_files.remove(filename)
+            except (InvalidModBaseUrl, NoModFileAvailable):
+                # Mod unavailable, thus no possible download URL
+                logger.info(f'No mod files found for mod "{mod_name}" for "{loader} {mc_version}"')
+                self.data['instances'][instance_name]['mods'][mod_name] = ('', '', last_checked)
+                self.data.save()
+            except (APICooldown, TryAgainLater):
+                # Just do nothing. It will be tried again when playing this instance again.
+                pass
+            except Exception:
+                traceback.print_exc()
+
+        try:
+            # Delete all unneeded files (either from removed mods, or old versions of a mod)
+            for unneeded_filename in unneeded_files:
+                os.remove(os.path.join(packedmc_mods_directory, unneeded_filename))
+
+            # Get all the files in the directory which were not copied by PackedMC
+            mods_directory = os.path.join(MINECRAFT_DIRECTORY, 'mods')
+            packedmc_copied_mods_file = os.path.join(mods_directory, 'packedmc.json')
+            if os.path.exists(packedmc_copied_mods_file):
+                with open(packedmc_copied_mods_file, 'r') as f:
+                    old_packedmc_copied_files: list[str] = json.load(f)
+            else:
+                old_packedmc_copied_files = []
+            old_packedmc_copied_files.append('packedmc.json')
+
+            with os.scandir(mods_directory) as it:
+                actual_mod_files = [entry.name for entry in it if entry.is_file()]
+
+            for filename in old_packedmc_copied_files:
+                if filename in actual_mod_files:
+                    actual_mod_files.remove(filename)
+
+            # Store all the mods which were not copied by PackedMC in a backup folder
+            if len(actual_mod_files) > 0:
+                backup_directory_name = 'packedmc_backup_' + datetime.now().isoformat(timespec='seconds').replace('T', '_').replace(':', '-')
+                backup_directory = os.path.join(mods_directory, backup_directory_name)
+                os.mkdir(backup_directory)
+                for filename in actual_mod_files:
+                    shutil.move(os.path.join(mods_directory, filename), backup_directory)
+
+            # Remove all the files which are not replaced soon with the files from the PackedMC mods directory
+            new_mod_files = os.listdir(packedmc_mods_directory)
+            for filename in old_packedmc_copied_files:
+                if filename not in new_mod_files:
+                    if os.path.exists(os.path.join(mods_directory, filename)):
+                        os.remove(os.path.join(mods_directory, filename))
+
+            # Copy all files from the packedmc mods folder to the minecraft mods folder and list them in the JSON file
+            for filename in new_mod_files:
+                shutil.copy2(os.path.join(packedmc_mods_directory, filename), mods_directory)
+
+            with open(packedmc_copied_mods_file, 'w') as f:
+                json.dump(new_mod_files, f)
+        except Exception:
+            traceback.print_exc()
+
         # TODO: Optionally: Update other mods in the background and also periodically save the options file until the game is closed.
         # TODO: Optionally: Close PackedMC
 
@@ -560,6 +671,7 @@ class MainWindow(QMainWindow, MainWindowElements):
             self.USE_STANDARD_OPTIONS.setEnabled(True)
 
         # Display the mods in their correct state
+        # TODO: Check which mods are available for this version and which aren't and mark them. Then update the mod data for the ones that aren't.
         mod_display_data = []
         for mod_name in sorted(self.data['mods'].keys()):
             if instance_data['type'] in self.data['mods'][mod_name]['loaders']:
@@ -679,7 +791,7 @@ class MainWindow(QMainWindow, MainWindowElements):
             # Remove all mods incompatible with the selected type
             for mod_name in self.data['instances'][self.selected_instance_name]['mods'].copy():  # Use a copy of the list
                 if new_type not in self.data['mods'][mod_name]['loaders']:
-                    self.data['instances'][self.selected_instance_name]['mods'].remove(mod_name)
+                    del self.data['instances'][self.selected_instance_name]['mods'][mod_name]
             self.data.save()
 
             self.edit_instance(self.selected_instance_name, only_refresh_values=True)
@@ -700,9 +812,9 @@ class MainWindow(QMainWindow, MainWindowElements):
 
     def clicked_displayed_mod(self, mod_name: str, is_selected: bool):
         if is_selected:
-            self.data['instances'][self.selected_instance_name]['mods'].append(mod_name)
+            self.data['instances'][self.selected_instance_name]['mods'][mod_name] = ('', '', 0)
         else:
-            self.data['instances'][self.selected_instance_name]['mods'].remove(mod_name)
+            del self.data['instances'][self.selected_instance_name]['mods'][mod_name]
         self.data.save()
 
     '''
@@ -745,9 +857,9 @@ class MainWindow(QMainWindow, MainWindowElements):
             description, loaders, supported_versions = get_mod_data(mod_url, self.mod_data_connector.emit_updated, (mod_name, mod_url))
             self.set_mod_values(description, loaders, supported_versions, mod_name, mod_url)
         except ModNotExisting:
-            pass
+            self.set_mod_values('', [], [], mod_name, mod_url)
         except InvalidModBaseUrl:
-            pass
+            self.set_mod_values('', [], [], mod_name, mod_url)
         except Exception as e:
             logger.error('Uncaught exception when changing editing mod', exc_info=e)
 
@@ -788,9 +900,8 @@ class MainWindow(QMainWindow, MainWindowElements):
         # Update the mod name in every instance
         for instance_name in self.data['instances']:
             if old_mod_name in self.data['instances'][instance_name]['mods']:
-                self.data['instances'][instance_name]['mods'].remove(old_mod_name)
-                self.data['instances'][instance_name]['mods'].append(new_mod_name)
-
+                mod_download_url = self.data['instances'][instance_name]['mods'].pop(old_mod_name)  # Load the old value and use it with the key of the new value
+                self.data['instances'][instance_name]['mods'][new_mod_name] = mod_download_url
         self.data.save()
 
     def _changed_mod_url(self):
@@ -818,6 +929,10 @@ class MainWindow(QMainWindow, MainWindowElements):
 
         if reply == 16384:  # Yes
             del self.data['mods'][self.selected_mod_name]
+            # Remove the mod from every instance
+            for instance_name in self.data['instances']:
+                if self.selected_mod_name in self.data['instances'][instance_name]['mods']:
+                    del self.data['instances'][instance_name]['mods'][self.selected_mod_name]
             self.data.save()
 
             # Go to the mods page
