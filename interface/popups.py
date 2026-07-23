@@ -1,7 +1,7 @@
 # noinspection PyPackageRequirements
 from PyQt6 import uic
 # noinspection PyPackageRequirements
-from PyQt6.QtWidgets import QWidget, QDialog, QPushButton, QMainWindow
+from PyQt6.QtWidgets import QWidget, QDialog, QPushButton, QMainWindow, QTextEdit, QSpinBox
 
 import os
 
@@ -35,3 +35,14 @@ class ImportProfilesPopup(_PopupTemplate):
     def __init__(self, parent: QMainWindow):
         file_path = os.path.join(ACTUAL_FILE_DIRECTORY, 'ui_files/import_profiles_popup.ui')
         super().__init__(file_path, parent)
+
+
+class AdvancedOptionsPopup(_PopupTemplate):
+    START_HEAP_SIZE: QSpinBox
+    MAX_HEAP_SIZE: QSpinBox
+    OTHER_ARGUMENTS: QTextEdit
+
+    def __init__(self, parent: QMainWindow):
+        file_path = os.path.join(ACTUAL_FILE_DIRECTORY, 'ui_files/advanced_options_popup.ui')
+        super().__init__(file_path, parent)
+

@@ -19,10 +19,10 @@ from PyQt6.QtCore import QTimer, QObject, pyqtSignal, Qt
 from PyQt6.QtWidgets import QMainWindow, QPushButton, QFileDialog, QMessageBox, QCheckBox, QVBoxLayout, QProgressDialog
 from qt_material import apply_stylesheet, list_themes, get_theme, opacity
 
-from .type_hinting import MainWindowElements, DataDictType
+from .type_hinting import MainWindowElements, DataDictType, _SingleInstanceDictType
 from .dynamic_widgets import FieldType, ScrollableGrid, InstanceFieldFunctions, ModFieldFunctions
 from .utils import StoredDict, animate_transition, AnimationScrollDirection, create_buttons_in_scroll_area, ScrollAreaButtonType
-from .popups import ImportProfilesPopup
+from .popups import ImportProfilesPopup, AdvancedOptionsPopup
 
 from minecraft_api.minecraft import ALL_RELEASE_VERSIONS, ALL_SNAPSHOT_VERSIONS, get_installed_versions
 from minecraft_api.mod import get_mod_data, get_mod_icon_path, InvalidModBaseUrl, ModNotExisting, get_download_url, NoModFileAvailable, APICooldown, TryAgainLater
@@ -101,6 +101,9 @@ class MainWindow(QMainWindow, MainWindowElements):
         self.import_profiles_popup = ImportProfilesPopup(self)
         self.import_profiles_popup.IMPORT_BUTTON.clicked.connect(self._import_selected_profiles)
 
+        self.advanced_options_popup = AdvancedOptionsPopup(self)
+        self.advanced_options_popup.finished.connect(self.store_advanced_options_popup_values)
+
         self.mod_url_timer = QTimer(self)  # Use a timer that is restarted on every text input, but the real function is only executed after the time has run out.
         self.mod_url_timer.setSingleShot(True)
         # noinspection PyUnresolvedReferences
@@ -139,7 +142,7 @@ class MainWindow(QMainWindow, MainWindowElements):
         self.INSTANCE_TYPE_SELECTION.currentIndexChanged.connect(self._changed_instance_type)
         self.INSTANCE_VERSION_SELECTION.currentIndexChanged.connect(self._changed_instance_version)
         self.USE_STANDARD_OPTIONS.clicked.connect(self._changed_instance_use_default_options_file)
-        # TODO: Connect advanced options button
+        self.ADVANCED_SETTINGS_BUTTON.clicked.connect(self.open_advanced_instance_popup)
 
         # Add a layout to the Instances Mod Container and add the scrollable grid to it
         layout = QVBoxLayout(self.INSTANCE_MODS_DISPLAY_CONTAINER)
@@ -185,6 +188,7 @@ class MainWindow(QMainWindow, MainWindowElements):
         self.save_options_file_of_last_used_instance()
 
         # TODO: Download all the mod data
+        # TODO: Add a button to redownload/update a certain fabric version
 
     '''
     Main Page
@@ -366,20 +370,21 @@ class MainWindow(QMainWindow, MainWindowElements):
             if 'javaDir' in profile_data:
                 advanced_arguments['java.path'] = profile_data['javaDir']
 
+            other_arguments = []
             # Go through all the java arguments and put them in a picomc format
             if 'javaArgs' in profile_data:
                 java_arguments = profile_data['javaArgs'].split(' ')
 
                 for argument in java_arguments:
                     if argument.startswith('-Xms'):
-                        advanced_arguments['java.memory.min'] = argument.replace('-Xms', '')
+                        advanced_arguments['start_heap_size'] = argument.replace('-Xms', '').replace('G', '')
                     elif argument.startswith('-Xmx'):
-                        advanced_arguments['java.memory.max'] = argument.replace('-Xmx', '')
+                        advanced_arguments['max_heap_size'] = argument.replace('-Xmx', '').replace('G', '')
                     else:
-                        if 'java.jvmargs' in advanced_arguments:
-                            advanced_arguments['java.jvmargs'].append(argument)
-                        else:
-                            advanced_arguments['java.jvmargs'] = [argument]
+                        other_arguments.append(argument)
+
+            if other_arguments:
+                advanced_arguments['other_arguments'] = other_arguments
 
             self.create_instance(instance_name, edit_afterwards=False, instance_type=instance_type, instance_version=instance_version, minecraft_directory=minecraft_directory, advanced_arguments=advanced_arguments)
 
@@ -450,6 +455,9 @@ class MainWindow(QMainWindow, MainWindowElements):
         # Set a default value for the version id
         version_id = actual_instance_data["version"]
 
+        if version_id == "latest":
+            version_id = ALL_RELEASE_VERSIONS[0]
+
         # Replace the version id for special types like fabric or forge
         if actual_instance_data['type'] == "Fabric":
             # Check what the newest fabric version for this Minecraft version is by looking at the directories
@@ -466,17 +474,32 @@ class MainWindow(QMainWindow, MainWindowElements):
                 version_id = install_version(versions_directory, minecraft_version=version_id)
                 logger.info(f'Installed fabric "{version_id}"')
 
+        # Set the java args
+        java_args = ""
+        if 'start_heap_size' in actual_instance_data['advanced_arguments']:
+            java_args += " -Xms{}G".format(actual_instance_data['advanced_arguments']['start_heap_size'])
+        else:
+            java_args += " -Xms2G"
+        if 'max_heap_size' in actual_instance_data['advanced_arguments']:
+            java_args += " -Xmx{}G".format(actual_instance_data['advanced_arguments']['max_heap_size'])
+        else:
+            java_args += " -Xmx2G"
+        if 'other_arguments' in actual_instance_data['advanced_arguments']:
+            java_args += " " + actual_instance_data['advanced_arguments']['other_arguments']
+
         # Overwrite or add the PackedMC profile with the most recent timestamp.
         profile_data["profiles"][MINECRAFT_LAUNCHER_PACKEDMC_PROFILE_ID] = {
             "created": created_time,
             "gameDir": actual_instance_data["minecraft_directory"],
             "icon": "Chest",  # TODO: Replace with the icon of PackedMC
-            # TODO: Set the java Args
+            "javaArgs": java_args,
             "lastUsed": datetime.now().isoformat(timespec="milliseconds") + "Z",  # Time in this format: 2026-01-31T20:34:56.183Z
             "lastVersionId": version_id,
             "name": "PackedMC - " + instance_name,
             "type": "custom"
         }
+
+        # TODO: Add tags to the mods. They can be set in the mod edit view using CheckButtons. You can sort for them with a dropdown menu when selecting them for the instance.
 
         # Writeback to the file
         with open(MINECRAFT_LAUNCHER_PROFILES_PATH, 'w') as f:
@@ -616,6 +639,7 @@ class MainWindow(QMainWindow, MainWindowElements):
             advanced_arguments = {}
 
         # Set the data
+        # noinspection PyTypeChecker
         self.data['instances'][instance_name] = {
             'type': instance_type,
             'version': instance_version,
@@ -745,13 +769,11 @@ class MainWindow(QMainWindow, MainWindowElements):
 
         new_path = QFileDialog.getExistingDirectory(self, 'Select Minecraft Directory', actual_path)
 
-        # TODO: Allow the user only to use userdata paths
-
-        self.data['instances'][self.selected_instance_name]['minecraft_directory'] = new_path
-
-        self.data.save()
-
-        self.MINECRAFT_DIRECTORY_PATH.setText(new_path)  # Refresh the values
+        # Allow only user data paths
+        if self.is_subdir_of_user_home(new_path):
+            self.data['instances'][self.selected_instance_name]['minecraft_directory'] = new_path
+            self.data.save()
+            self.MINECRAFT_DIRECTORY_PATH.setText(new_path)  # Refresh the values
 
     def _delete_instance(self):
         selected_instance = self.selected_instance_name
@@ -837,6 +859,30 @@ class MainWindow(QMainWindow, MainWindowElements):
             self.data['instances'][self.selected_instance_name]['mods'][mod_name] = ('', '', 0)
         else:
             del self.data['instances'][self.selected_instance_name]['mods'][mod_name]
+        self.data.save()
+
+    def open_advanced_instance_popup(self):
+        # Set the values from the saved data when opening the popup
+        arguments = self.data['instances'][self.selected_instance_name]['advanced_arguments']
+        if 'start_heap_size' in arguments:
+            self.advanced_options_popup.START_HEAP_SIZE.setValue(arguments['start_heap_size'])
+        else:
+            self.advanced_options_popup.START_HEAP_SIZE.setValue(2)
+        if 'max_heap_size' in arguments:
+            self.advanced_options_popup.MAX_HEAP_SIZE.setValue(arguments['max_heap_size'])
+        else:
+            self.advanced_options_popup.MAX_HEAP_SIZE.setValue(2)
+        if 'other_arguments' in arguments:
+            self.advanced_options_popup.OTHER_ARGUMENTS.setText(arguments['other_arguments'])
+
+        self.advanced_options_popup.show_popup(True)
+
+    def store_advanced_options_popup_values(self):
+        # Store the values oof the popup before closing
+        self.data['instances'][self.selected_instance_name]['advanced_arguments']['max_heap_size'] = self.advanced_options_popup.MAX_HEAP_SIZE.value()
+        self.data['instances'][self.selected_instance_name]['advanced_arguments']['start_heap_size'] = self.advanced_options_popup.START_HEAP_SIZE.value()
+        self.data['instances'][self.selected_instance_name]['advanced_arguments']['other_arguments'] = self.advanced_options_popup.OTHER_ARGUMENTS.toPlainText()
+
         self.data.save()
 
     '''
@@ -1116,3 +1162,13 @@ class MainWindow(QMainWindow, MainWindowElements):
                 return last_used_profile_id, profile_data['profiles'][last_used_profile_id]
 
         return '', {}
+
+    @staticmethod
+    def is_subdir_of_user_home(path: str) -> bool:
+        # Expand ~ and normalize symlinks/relative parts
+        p = os.path.realpath(os.path.expanduser(path))
+        home = os.path.realpath(os.path.expanduser("~"))
+
+        # True only if p is inside home, not equal to home
+        rel = os.path.relpath(p, home)
+        return rel != "." and not rel.startswith(".." + os.sep) and rel != ".."
