@@ -47,6 +47,7 @@ class MainWindowElements:
     STYLES_SELECTION_LIST: QWidget
     SCALE_SELECTION: QSpinBox
     SWITCH_SECONDARY_COLOR: QPushButton
+    CLOSE_PACKEDMC_BUTTON: QPushButton
 
 
 '''
@@ -54,16 +55,16 @@ Type hints for the data dictionary and all children
 '''
 
 
-class _StyleDictType(Protocol):
+class _SettingsDictType(Protocol):
     @overload
     def __getitem__(self, key: Literal["theme"]) -> str: ...
     @overload
     def __setitem__(self, key: Literal["theme"], value: str): ...
 
     @overload
-    def __getitem__(self, key: Literal["invert_secondary"]) -> bool: ...
+    def __getitem__(self, key: Literal["invert_secondary", "close_packedmc"]) -> bool: ...
     @overload
-    def __setitem__(self, key: Literal["invert_secondary"], value: bool): ...
+    def __setitem__(self, key: Literal["invert_secondary", "close_packedmc"], value: bool): ...
 
     @overload
     def __getitem__(self, key: Literal["scale"]) -> int: ...
@@ -127,9 +128,9 @@ class _ModsDictType(dict[str, _SingleModDictType]):
 
 class DataDictType(Protocol):
     @overload
-    def __getitem__(self, key: Literal["style"]) -> _StyleDictType: ...
+    def __getitem__(self, key: Literal["settings"]) -> _SettingsDictType: ...
     @overload
-    def __setitem__(self, key: Literal["style"], value: _StyleDictType): ...
+    def __setitem__(self, key: Literal["settings"], value: _SettingsDictType): ...
 
     @overload
     def __getitem__(self, key: Literal["last_played_instance"]) -> str: ...

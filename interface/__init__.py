@@ -43,10 +43,11 @@ DEFAULT_DATA_FILE_PATH = os.path.join(ACTUAL_FILE_DIRECTORY, r'../data.json')
 PACKEDMC_MINECRAFT_DATA_DIRECTORY = os.path.abspath(os.path.join(ACTUAL_FILE_DIRECTORY, '../minecraft_data'))
 DEFAULT_DATA = {
     # For the style of the App
-    'style': {
+    'settings': {
         'theme': 'dark_lightgreen.xml',
         'invert_secondary': False,
-        'scale': 0
+        'scale': 0,
+        'close_packedmc': False
     },
     'last_played_instance': '',
     'instances': {},
@@ -159,7 +160,7 @@ class MainWindow(QMainWindow, MainWindowElements):
         self.MOD_URL.textChanged.connect(lambda: self.mod_url_timer.start(500))
         self.DELETE_MOD_BUTTON.clicked.connect(self._delete_mod)
 
-        # If there are no instance, create the default one
+        # If there are no instances, create the default one
         if not self.data['instances']:
             self.create_instance(DEFAULT_INSTANCE_NAME, is_default=True, edit_afterwards=False)
 
@@ -170,18 +171,20 @@ class MainWindow(QMainWindow, MainWindowElements):
             style_name = filename.replace('.xml', '').replace('500', '2').replace('_', ' ').title()  # Changes the name from light_green_500.xml to Light Green 2
             all_style_names.append(style_name)
 
-        selected_style = self.data['style']['theme'].replace('.xml', '').replace('500', '2').replace('_', ' ').title()
+        selected_style = self.data['settings']['theme'].replace('.xml', '').replace('500', '2').replace('_', ' ').title()
 
         create_buttons_in_scroll_area(self.STYLES_SELECTION_LIST, all_style_names, selected_style, self._stylesheet_selection)
-        self.SWITCH_SECONDARY_COLOR.setChecked(self.data['style']['invert_secondary'])
+        self.SWITCH_SECONDARY_COLOR.setChecked(self.data['settings']['invert_secondary'])
         self.SWITCH_SECONDARY_COLOR.clicked.connect(self._style_invert_button_clicked)
-        self.SCALE_SELECTION.setValue(self.data['style']['scale']+WINDOW_DEFAULT_SCALE)
+        self.SCALE_SELECTION.setValue(self.data['settings']['scale']+WINDOW_DEFAULT_SCALE)
         self.SCALE_SELECTION.valueChanged.connect(self._style_scale_changed)
+        self.CLOSE_PACKEDMC_BUTTON.setChecked(self.data['settings']['close_packedmc'])
+        self.CLOSE_PACKEDMC_BUTTON.clicked.connect(self.close_packedmc_button_clicked)
 
         # Show the initial page instantly and refresh whole window again
         self.show_page(0, show_instantly=True)
 
-        self._style_scale_changed(self.data['style']['scale'] + WINDOW_DEFAULT_SCALE)  # Use this to also resize the fields
+        self._style_scale_changed(self.data['settings']['scale'] + WINDOW_DEFAULT_SCALE)  # Use this to also resize the fields
 
         self.INSTANCES_PAGE.rebuild_grid()
 
@@ -508,8 +511,6 @@ class MainWindow(QMainWindow, MainWindowElements):
             "type": "custom"
         }
 
-        # TODO: Add tags to the mods. They can be set in the mod edit view using CheckButtons. You can sort for them with a dropdown menu when selecting them for the instance.
-
         # Writeback to the file
         with open(MINECRAFT_LAUNCHER_PROFILES_PATH, 'w') as f:
             json.dump(profile_data, f)
@@ -566,8 +567,12 @@ class MainWindow(QMainWindow, MainWindowElements):
         except Exception:
             traceback.print_exc()
 
-        # TODO: Optionally: Update other mods in the background and also periodically save the options file until the game is closed.
-        # TODO: Optionally: Close PackedMC
+        # Close PackedMC if the setting is selected
+        if self.data['settings']['close_packedmc']:
+            logger.info(f'Closing PackedMC')
+            exit()
+
+        # TODO: Optionally: Periodically save the options file until the game is closed if packedmc stays open.
 
     def create_instance(self, instance_name='New instance', is_default=False, edit_afterwards=True, instance_type='Release', instance_version='latest', minecraft_directory=MINECRAFT_DIRECTORY, advanced_arguments: dict = None):
         instance_name = self._make_name_unique(instance_name, list(self.data['instances'].keys()))
@@ -840,8 +845,6 @@ class MainWindow(QMainWindow, MainWindowElements):
 
     def edit_mod(self, mod_name: str):
         """ This function is executed to show the edit page and configure the values for the given instance. """
-        # TODO: Allow manual file adding, via a directory, where you copy the files for each game version/loader you want supported
-
         self.show_page(3, animation_direction=AnimationScrollDirection.HORIZONTAL)
 
         # Set the values for the edit page
@@ -929,7 +932,7 @@ class MainWindow(QMainWindow, MainWindowElements):
                 logger.error('Uncaught exception when changing mod URL', exc_info=e)
         else:
             pass
-        # TODO: Maybe change color of input field when it is an invalid URL
+        # TODO: Change color of input field when it is an invalid URL
 
     def _delete_mod(self):
         # Ask to delete it
@@ -954,14 +957,14 @@ class MainWindow(QMainWindow, MainWindowElements):
         filename = style_name.replace('2', '500').replace(' ', '_').lower()  # Changes the name from "Light Green 2" to "light_green_500.xml"
         filename += '.xml'
 
-        self.apply_stylesheet(filename, invert_secondary=self.data['style']['invert_secondary'], density_scale=self.data['style']['scale'])
+        self.apply_stylesheet(filename, invert_secondary=self.data['settings']['invert_secondary'], density_scale=self.data['settings']['scale'])
 
     def _style_invert_button_clicked(self, button_state: bool):
-        self.apply_stylesheet(self.data['style']['theme'], invert_secondary=button_state, density_scale=self.data['style']['scale'])
+        self.apply_stylesheet(self.data['settings']['theme'], invert_secondary=button_state, density_scale=self.data['settings']['scale'])
 
     def _style_scale_changed(self, scale_value: int):
         # We calculate minus the default scale, so we can use values between 1 and 5 in the UI
-        self.apply_stylesheet(self.data['style']['theme'], invert_secondary=self.data['style']['invert_secondary'], density_scale=scale_value - WINDOW_DEFAULT_SCALE)
+        self.apply_stylesheet(self.data['settings']['theme'], invert_secondary=self.data['settings']['invert_secondary'], density_scale=scale_value - WINDOW_DEFAULT_SCALE)
 
         # Change grid size
         self.INSTANCES_PAGE.set_size(100+50*scale_value, 60+20*scale_value)
@@ -1010,9 +1013,9 @@ class MainWindow(QMainWindow, MainWindowElements):
         apply_stylesheet(self.application, theme=stylesheet_file_name, css_file=CUSTOM_STYLESHEET_FILE_PATH, extra=extra, invert_secondary=invert_secondary, style='windows11')
 
         # Set the variables and save them
-        self.data['style']['theme'] = stylesheet_file_name
-        self.data['style']['invert_secondary'] = invert_secondary
-        self.data['style']['scale'] = density_scale
+        self.data['settings']['theme'] = stylesheet_file_name
+        self.data['settings']['invert_secondary'] = invert_secondary
+        self.data['settings']['scale'] = density_scale
         self.data.save()
 
     @staticmethod
@@ -1199,3 +1202,7 @@ class MainWindow(QMainWindow, MainWindowElements):
 
         if not output:
             logger.info(f'Updated mods in the background for {instance_name}.')
+
+    def close_packedmc_button_clicked(self, button_state: bool):
+        self.data['settings']['close_packedmc'] = button_state
+        self.data.save()
