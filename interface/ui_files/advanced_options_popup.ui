@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Advanced Options</string>
+   <string>Advanced JVM Options</string>
   </property>
   <layout class="QGridLayout" name="gridLayout" rowstretch="1,1,1,1,1" columnstretch="4,1">
    <item row="0" column="0">

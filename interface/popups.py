@@ -45,4 +45,3 @@ class AdvancedOptionsPopup(_PopupTemplate):
     def __init__(self, parent: QMainWindow):
         file_path = os.path.join(ACTUAL_FILE_DIRECTORY, 'ui_files/advanced_options_popup.ui')
         super().__init__(file_path, parent)
-

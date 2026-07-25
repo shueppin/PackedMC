@@ -1,5 +1,5 @@
 # PackedMC
-A Minecraft Manager to for Instances and Mods, using Python 3.12
+A Minecraft Manager for Instances and Mods, using Python 3.14
 
 ## System
 It is a PyQT6 based GUI on which you can create your own instances and Download mods.  
