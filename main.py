@@ -1,5 +1,7 @@
 import sys
 import logging
+import subprocess
+from pathlib import Path
 
 # noinspection PyPackageRequirements
 from PyQt6.QtWidgets import QApplication
@@ -17,6 +19,22 @@ from interface import MainWindow
 
 
 logging.basicConfig(format="%(levelname)s %(name)s: %(message)s", level=logging.INFO)
+
+
+def launch_background(script_path, args=None):
+    script_path = Path(script_path)
+    cmd = [sys.executable, str(script_path)]
+    if args:
+        cmd += list(args)
+
+    subprocess.Popen(  # Take the output to the main console
+        cmd,
+        start_new_session=True,  # mostly helps on Unix/POSIX
+    )
+
+
+launch_background("updater.py")
+
 
 app = QApplication(sys.argv)
 window = MainWindow(app)
