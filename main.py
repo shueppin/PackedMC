@@ -2,7 +2,10 @@ import sys
 import logging
 import subprocess
 from pathlib import Path
+import os
 
+# noinspection PyPackageRequirements
+from PyQt6.QtGui import QIcon
 # noinspection PyPackageRequirements
 from PyQt6.QtWidgets import QApplication
 
@@ -18,6 +21,10 @@ from interface import MainWindow
 
 # TODO: Eventually add modpack support
 # TODO: Eventually add Forge support
+
+
+ACTUAL_FILE_DIRECTORY = os.path.dirname(__file__)
+ICONS_FILE_PATH = os.path.join(ACTUAL_FILE_DIRECTORY, 'icons')
 
 
 logging.basicConfig(format="%(levelname)s %(name)s: %(message)s", level=logging.INFO)
@@ -39,6 +46,7 @@ launch_background("updater.py")
 
 
 app = QApplication(sys.argv)
+app.setWindowIcon(QIcon(os.path.join(ICONS_FILE_PATH, 'logo.png')))
 window = MainWindow(app)
 window.show()
 window.INSTANCES_PAGE.rebuild_grid()

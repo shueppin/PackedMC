@@ -11,6 +11,7 @@ from datetime import datetime
 import re
 import time
 import threading
+import subprocess
 
 # noinspection PyPackageRequirements
 from PyQt6 import uic
@@ -37,6 +38,7 @@ ACTUAL_FILE_DIRECTORY = os.path.dirname(__file__)
 
 INTERFACE_FILE_PATH = os.path.join(ACTUAL_FILE_DIRECTORY, 'ui_files/interface.ui')
 CUSTOM_STYLESHEET_FILE_PATH = os.path.join(ACTUAL_FILE_DIRECTORY, 'special_properties.cqss')
+ICONS_FILE_PATH = os.path.join(ACTUAL_FILE_DIRECTORY, '../icons')
 WINDOW_DEFAULT_SCALE = 3
 
 DEFAULT_DATA_FILE_PATH = os.path.join(ACTUAL_FILE_DIRECTORY, r'../data.json')
@@ -58,7 +60,7 @@ if 'windows' in platform().lower():
     ROAMING_DIRECTORY = os.getenv('Appdata')
     MINECRAFT_DIRECTORY = os.path.join(ROAMING_DIRECTORY, '.minecraft')
     MINECRAFT_LAUNCHER_PROFILES_PATH = os.path.join(MINECRAFT_DIRECTORY, 'launcher_profiles.json')
-    MINECRAFT_LAUNCHER_EXECUTABLE = r"C:\Program Files\WindowsApps\Microsoft.4297127D64EC6_2.6.2.0_x64__8wekyb3d8bbwe\Minecraft.exe"  # TODO: Find the correct path via bruteforce. Sometimes the version number (here 2.6.2.0) changes
+    MINECRAFT_LAUNCHER_APP = r"Microsoft.4297127D64EC6_8wekyb3d8bbwe!Minecraft"
 else:
     MINECRAFT_DIRECTORY = 'UNKNOWN'
 
@@ -501,11 +503,14 @@ class MainWindow(QMainWindow, MainWindowElements):
         if 'other_arguments' in actual_instance_data['advanced_arguments']:
             java_args += " " + actual_instance_data['advanced_arguments']['other_arguments']
 
+        with open(os.path.join(ICONS_FILE_PATH, 'logo64.b64')) as f:
+            base64_icon = f.read()
+
         # Overwrite or add the PackedMC profile with the most recent timestamp.
         profile_data["profiles"][MINECRAFT_LAUNCHER_PACKEDMC_PROFILE_ID] = {
             "created": created_time,
             "gameDir": actual_instance_data["minecraft_directory"],
-            "icon": "Chest",  # TODO: Replace with the icon of PackedMC
+            "icon": "data:image/png;base64," + base64_icon,
             "javaArgs": java_args,
             "lastUsed": datetime.now().isoformat(timespec="milliseconds") + "Z",  # Time in this format: 2026-01-31T20:34:56.183Z
             "lastVersionId": version_id,
@@ -519,7 +524,7 @@ class MainWindow(QMainWindow, MainWindowElements):
 
         # Launch the official Launcher from the Microsoft Store
         try:
-            os.startfile(MINECRAFT_LAUNCHER_EXECUTABLE)
+            subprocess.run(rf'explorer.exe shell:AppsFolder\{MINECRAFT_LAUNCHER_APP}', shell=True)
         except FileNotFoundError:
             logger.error("Could not find the Minecraft Launcher executable.")
 
@@ -1137,6 +1142,7 @@ class MainWindow(QMainWindow, MainWindowElements):
             progress_dialog.setCancelButton(None)  # remove cancel button
             progress_dialog.setWindowModality(Qt.WindowModality.ApplicationModal)
             progress_dialog.setAutoClose(True)
+            progress_dialog.setWindowTitle("Downloading mods...")
             progress_dialog.setAutoReset(True)
             progress_dialog.setMinimumDuration(0)
 
@@ -1195,6 +1201,7 @@ class MainWindow(QMainWindow, MainWindowElements):
 
         if output:
             progress_dialog.close()
+            # If not all mods could be updated, show a message
             if len(mods_not_found_for_this_version) > 0:
                 QMessageBox.information(self, 'Could not find all mods', f'Could not find a file for the following mods for {loader} {mc_version}: \n - {"\n - ".join(mods_not_found_for_this_version)}')
 
