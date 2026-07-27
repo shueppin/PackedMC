@@ -182,7 +182,7 @@ if __name__ == "__main__":
             with open(sitecustomize_path, encoding="utf-8") as f:
                 content = f.read()
 
-            content.replace("updater.py", "main.py")
+            content = content.replace("updater.py", "main.py")
 
             with open(sitecustomize_path, "w", encoding="utf-8") as f:
                 f.write(content)
