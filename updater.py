@@ -143,7 +143,7 @@ def sync_files(source_root: Path):
 def main():
     history = load_version_history()
     if "dev" in history:
-        logger.info(f'Development mode is active. To deactivate, remove "dev" from the history.')
+        logger.info(f'Development mode is active, files are not updated. To deactivate, remove "dev" from the history.')
         return
 
     latest_tag = get_latest_tag()
@@ -175,6 +175,17 @@ def main():
 
 
 if __name__ == "__main__":
+    if len(sys.argv) >= 2:
+        if sys.argv[1] == "cmd_installer":
+            sitecustomize_path = PROJECT_ROOT / "python" / "sitecustomize.py"
+            # Change the installation and reconfigure that the main.py file will be run from now on
+            with open(sitecustomize_path, encoding="utf-8") as f:
+                content = f.read()
+
+            content.replace("updater.py", "main.py")
+
+            with open(sitecustomize_path, "w", encoding="utf-8") as f:
+                f.write(content)
     try:
         main()
     except Exception as e:

@@ -163,6 +163,8 @@ class MainWindow(QMainWindow, MainWindowElements):
         # If there are no instances, create the default one
         if not self.data['instances']:
             self.create_instance(DEFAULT_INSTANCE_NAME, is_default=True, edit_afterwards=False)
+            self.data['last_played_instance'] = DEFAULT_INSTANCE_NAME
+            self.data.save()
 
         # Create the settings page
         available_stylesheet_filenames = self.possible_stylesheet_file_names

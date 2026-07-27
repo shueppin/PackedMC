@@ -6,10 +6,12 @@ from pathlib import Path
 # noinspection PyPackageRequirements
 from PyQt6.QtWidgets import QApplication
 
+# This is a fix to allow this project to use relative imports when run via a portable python instance
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
 from interface import MainWindow
 
 
-# TODO: Check for PackedMC updates in a thread
 # TODO: Maybe change the whole mods file system, to have less duplicate files
 # TODO: Add tags to the mods. They can be set in the mod edit view using CheckButtons. You can sort for them with a dropdown menu inside the dynamic widget.
 # TODO: Allow manual mod file adding: Instead of using a link for the mod, we add a file (via the explorer). Then we specify the version (using checkboxes) and the loader.
