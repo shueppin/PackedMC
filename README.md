@@ -1,6 +1,7 @@
 # PackedMC
 A fully Open Source GUI to manage Minecraft Instances and Mods.  
 It is written in Python 3.14 and uses a PyQT6 interface in combination with [qt-material](https://github.com/dunderlab/qt-material).
+When pressing "Play" inside PackedMC, it will start the official Minecraft Launcher and select a profile, so you can just press "play" inside the Launcher and start the correct version.
 
 
 ## Features
@@ -12,7 +13,8 @@ It is written in Python 3.14 and uses a PyQT6 interface in combination with [qt-
 
 
 ## Installation
-You can find premade installer files [here](https://github.com/shueppin/PackedMC/releases/tag/Installer).
+You can find premade installer files [here](https://github.com/shueppin/PackedMC/releases/tag/Installer).  
+PackedMC requires the standard (official) Minecraft Launcher to be able to play.
 ### Windows
 Download the [Installer for Windows](https://github.com/shueppin/PackedMC/releases/download/Installer/PackedMC-Installer.cmd).  
 Execute the installer and follow the instructions. It will automatically install the newest Version of PackedMC.  

@@ -4,6 +4,7 @@ import sys
 import tempfile
 import zipfile
 from pathlib import Path
+import subprocess
 
 import requests
 
@@ -140,7 +141,7 @@ def sync_files(source_root: Path):
             copy_file(source, destination)
 
 
-def main():
+def update_project():
     history = load_version_history()
     if "dev" in history:
         logger.info(f'Development mode is active, files are not updated. To deactivate, remove "dev" from the history.')
@@ -174,6 +175,18 @@ def main():
     logger.info(f"Updated to {latest_tag} successfully.")
 
 
+def launch_background(script_path, args=None):
+    script_path = Path(script_path)
+    cmd = [sys.executable, str(script_path)]
+    if args:
+        cmd += list(args)
+
+    subprocess.Popen(  # Take the output to the main console
+        cmd,
+        start_new_session=True,  # mostly helps on Unix/POSIX
+    )
+
+
 if __name__ == "__main__":
     if len(sys.argv) >= 2:
         if sys.argv[1] == "cmd_installer":
@@ -186,8 +199,14 @@ if __name__ == "__main__":
 
             with open(sitecustomize_path, "w", encoding="utf-8") as f:
                 f.write(content)
+
     try:
-        main()
+        update_project()
     except Exception as e:
         logger.error(f"\nUpdate failed: {e}")
         sys.exit(1)
+
+    if len(sys.argv) >= 2:
+        if sys.argv[1] == "cmd_installer":
+            # Run the main file
+            launch_background("main.py")

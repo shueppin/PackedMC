@@ -147,7 +147,7 @@
     <item>
      <widget class="QStackedWidget" name="PAGE_CONTAINER">
       <property name="currentIndex">
-       <number>4</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="INSTANCES_PAGE_PLACEHOLDER">
        <widget class="QLabel" name="label">
@@ -342,7 +342,7 @@
            <enum>Qt::NoFocus</enum>
           </property>
           <property name="text">
-           <string>Back</string>
+           <string>Save</string>
           </property>
          </widget>
         </item>
@@ -528,7 +528,7 @@
            <enum>Qt::NoFocus</enum>
           </property>
           <property name="text">
-           <string>Back</string>
+           <string>Save</string>
           </property>
          </widget>
         </item>
