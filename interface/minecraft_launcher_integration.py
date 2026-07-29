@@ -4,11 +4,7 @@ from datetime import datetime
 import logging
 import shutil
 
-# noinspection PyPackageRequirements
-from PyQt6.QtWidgets import QCheckBox, QFileDialog
-
 from .file_paths import PACKEDMC_MINECRAFT_DATA_DIRECTORY, MINECRAFT_DIRECTORY, MINECRAFT_LAUNCHER_PROFILES_PATH, ICONS_FILE_PATH
-from .utils import create_buttons_in_scroll_area, ScrollAreaButtonType
 
 from minecraft_api.minecraft import ALL_RELEASE_VERSIONS, ALL_SNAPSHOT_VERSIONS
 from minecraft_api.fabric import install_version
@@ -30,126 +26,6 @@ MINECRAFT_LAUNCHER_APP = r"Microsoft.4297127D64EC6_8wekyb3d8bbwe!Minecraft"
 class MinecraftLauncherIntegration:
     def __init__(self, window: MainWindow):
         self.window = window
-
-    def configure_profile_import_popup(self):
-        launcher_profiles_path, _ = QFileDialog.getOpenFileName(self.window, 'Select profiles file for the launcher', MINECRAFT_LAUNCHER_PROFILES_PATH, "JSON Files (*.json);;All Files (*)")
-
-        logger.info(f'Importing profiles from {launcher_profiles_path}')
-
-        try:
-            with open(launcher_profiles_path) as file:
-                self.window.imported_launcher_profiles_file_data = json.load(file)
-
-                # Go through all profiles and save the display name and the profile id in a dictionary
-                for profile_id, profile_data in self.window.imported_launcher_profiles_file_data['profiles'].items():
-                    try:
-                        # Set the profile name and what version (and launcher) it is running as the display name
-                        name = profile_data['name']
-                        version_id = profile_data['lastVersionId']
-                        if name:
-                            display = f'{name} (running {version_id})'
-                        else:
-                            display = version_id
-
-                        if display not in self.window.all_imported_launcher_profiles.keys():
-                            self.window.all_imported_launcher_profiles[display] = profile_id
-
-                    except KeyError:
-                        logger.warning(f'Skipping profile {profile_id} due to faulty profile data')
-                        continue
-
-            # If there was no error opening the file, create the checkboxes and display the popup
-            create_buttons_in_scroll_area(self.window.import_profiles_popup.PROFILES_SELECTION_LIST, sorted(self.window.all_imported_launcher_profiles.keys()), [], lambda *args: None, button_type=ScrollAreaButtonType.CHECKBOX)
-            self.window.import_profiles_popup.show_popup()
-
-        except FileNotFoundError:
-            logger.error("Profiles file not found.")
-        except json.JSONDecodeError or KeyError:
-            logger.error("There has been an error decoding the profiles JSON.")
-
-    def import_selected_profiles(self):
-        """
-        Gets all selected profiles from the import_profiles_popup and creates an instance for them
-        """
-        # Go through all the selected profiles and create the data for them
-        profile_checkbox_widget: QCheckBox
-        for profile_checkbox_widget in self.window.import_profiles_popup.PROFILES_SELECTION_LIST.findChildren(QCheckBox):
-            display_name = profile_checkbox_widget.text()
-
-            if not profile_checkbox_widget.isChecked():
-                continue
-
-            # If it is checked get the profile ID from the display name and then the all the data
-            profile_id = self.window.all_imported_launcher_profiles[display_name]
-            profile_data = self.window.imported_launcher_profiles_file_data['profiles'][profile_id]
-
-            # Define the instance name and remove the duplicates
-            if profile_data['name']:
-                original_instance_name = profile_data['name'].strip()
-            else:
-                original_instance_name = display_name.strip()
-
-            instance_name = self.window.make_name_unique(original_instance_name, list(self.window.data['instances'].keys()))
-
-            # Find out what type of instance it is
-            if profile_data['lastVersionId'].startswith('latest'):
-                instance_type = profile_data['lastVersionId'].replace('latest-', '').title()
-            elif profile_data['lastVersionId'] in ALL_RELEASE_VERSIONS:
-                instance_type = 'Release'
-            elif profile_data['lastVersionId'] in ALL_SNAPSHOT_VERSIONS:
-                instance_type = 'Snapshot'
-            elif 'fabric' in profile_data['lastVersionId']:
-                instance_type = 'Fabric'
-            elif 'forge' in profile_data['lastVersionId']:
-                instance_type = 'Forge'
-            else:
-                instance_type = 'Other'
-
-            # Set the version depending on the type of the instance
-            if 'latest' in profile_data['lastVersionId']:
-                instance_version = 'latest'
-            elif instance_type == 'Release' or instance_type == 'Latest':
-                instance_version = profile_data['lastVersionId']
-            elif instance_type == 'Fabric':
-                instance_version = profile_data['lastVersionId'].split('-')[-1]
-            elif instance_type == 'Forge':
-                instance_version = profile_data['lastVersionId'].split('-')[0]
-            else:
-                instance_version = profile_data['lastVersionId']
-
-            # Get the game directory and advanced java arguments
-            if 'gameDir' in profile_data:
-                minecraft_directory = profile_data['gameDir']
-            else:
-                minecraft_directory = MINECRAFT_DIRECTORY
-
-            advanced_arguments = {}
-
-            # Get the java path
-            if 'javaDir' in profile_data:
-                advanced_arguments['java.path'] = profile_data['javaDir']
-
-            other_arguments = []
-            # Go through all the java arguments and put them in a picomc format
-            if 'javaArgs' in profile_data:
-                java_arguments = profile_data['javaArgs'].split(' ')
-
-                for argument in java_arguments:
-                    if argument.startswith('-Xms'):
-                        advanced_arguments['start_heap_size'] = argument.replace('-Xms', '').replace('G', '')
-                    elif argument.startswith('-Xmx'):
-                        advanced_arguments['max_heap_size'] = argument.replace('-Xmx', '').replace('G', '')
-                    else:
-                        other_arguments.append(argument)
-
-            if other_arguments:
-                advanced_arguments['other_arguments'] = other_arguments
-
-            self.window.instance_page_class.create_instance(instance_name, edit_afterwards=False, instance_type=instance_type, instance_version=instance_version, minecraft_directory=minecraft_directory, advanced_arguments=advanced_arguments)
-
-        # After all profiles were added refresh the list and close the dialog
-        self.window.show_page(0, show_instantly=True)
-        self.window.import_profiles_popup.close()
 
     def save_options_file_of_last_used_instance(self):
         """Copy the options file of the last used instance to the folder of the corresponding instance. """

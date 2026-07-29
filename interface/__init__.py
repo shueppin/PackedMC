@@ -15,10 +15,10 @@ from qt_material import apply_stylesheet, list_themes, get_theme, opacity
 
 from .type_hinting import MainWindowElements, DataDictType
 from .dynamic_widgets import FieldType, ScrollableGrid, InstanceFieldFunctions, ModFieldFunctions
-from .utils import StoredDict, animate_transition, AnimationScrollDirection, create_buttons_in_scroll_area, ScrollAreaButtonType
-from .popups import ImportProfilesPopup, AdvancedOptionsPopup
-from .file_paths import ACTUAL_FILE_DIRECTORY, INTERFACE_FILE_PATH, CUSTOM_STYLESHEET_FILE_PATH, DATA_FILE_PATH, PACKEDMC_MINECRAFT_DATA_DIRECTORY, ROAMING_DIRECTORY, MINECRAFT_DIRECTORY, MINECRAFT_LAUNCHER_PROFILES_PATH
+from .utils import StoredDict, animate_transition, AnimationScrollDirection, create_buttons_in_scroll_area
+from .file_paths import INTERFACE_FILE_PATH, CUSTOM_STYLESHEET_FILE_PATH, DATA_FILE_PATH, PACKEDMC_MINECRAFT_DATA_DIRECTORY
 from .minecraft_launcher_integration import MinecraftLauncherIntegration
+from .popups import ImportProfilesHandler
 
 from minecraft_api.mod import get_mod_icon_path, InvalidModBaseUrl, ModNotExisting, get_download_url, NoModFileAvailable, APICooldown, TryAgainLater
 
@@ -62,8 +62,6 @@ class MainWindow(QMainWindow, MainWindowElements):
         self.data: DataDictType = StoredDict(DATA_FILE_PATH, DEFAULT_DATA)  # Initialize using Default Data as base
         self.application = application
         self.possible_stylesheet_file_names = list_themes()
-        self.all_imported_launcher_profiles = {}
-        self.imported_launcher_profiles_file_data = {}
 
         # Create the official launcher integration, pages and popups from their respective classes
         self.minecraft_launcher_integration = MinecraftLauncherIntegration(self)
@@ -71,14 +69,10 @@ class MainWindow(QMainWindow, MainWindowElements):
         self.mods_page_class = ModPageClass(self)
         self.instance_page_class = InstancePageClass(self)
 
-        self.import_profiles_popup = ImportProfilesPopup(self)
-        self.import_profiles_popup.IMPORT_BUTTON.clicked.connect(self.minecraft_launcher_integration.import_selected_profiles)
-
-        self.advanced_options_popup = AdvancedOptionsPopup(self)
-        self.advanced_options_popup.finished.connect(self.store_advanced_options_popup_values)
+        self.import_profiles_popup_handler = ImportProfilesHandler(self)
 
         # "Collect" the functions for the clickable fields inside the scrollable grids
-        instance_field_functions = InstanceFieldFunctions(self.instance_page_class.play_instance, self.instance_page_class.edit_instance, self.instance_page_class.create_instance, self.minecraft_launcher_integration.configure_profile_import_popup)
+        instance_field_functions = InstanceFieldFunctions(self.instance_page_class.play_instance, self.instance_page_class.edit_instance, self.instance_page_class.create_instance, self.import_profiles_popup_handler.open_popup)
         mod_field_functions = ModFieldFunctions(self.mods_page_class.edit_mod, self.mods_page_class.create_mod, self.instance_page_class.clicked_displayed_mod)
 
         # Bind the page selection buttons
@@ -410,12 +404,4 @@ class MainWindow(QMainWindow, MainWindowElements):
 
     def close_packedmc_button_clicked(self, button_state: bool):
         self.data['settings']['close_packedmc'] = button_state
-        self.data.save()
-
-    def store_advanced_options_popup_values(self):
-        # Store the values of the popup before closing
-        self.data['instances'][self.instance_page_class.selected_instance_name]['advanced_arguments']['max_heap_size'] = self.advanced_options_popup.MAX_HEAP_SIZE.value()
-        self.data['instances'][self.instance_page_class.selected_instance_name]['advanced_arguments']['start_heap_size'] = self.advanced_options_popup.START_HEAP_SIZE.value()
-        self.data['instances'][self.instance_page_class.selected_instance_name]['advanced_arguments']['other_arguments'] = self.advanced_options_popup.OTHER_ARGUMENTS.toPlainText()
-
         self.data.save()

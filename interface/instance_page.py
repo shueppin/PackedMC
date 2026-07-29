@@ -13,6 +13,7 @@ from PyQt6.QtWidgets import QFileDialog, QMessageBox
 from .utils import AnimationScrollDirection
 from .file_paths import PACKEDMC_MINECRAFT_DATA_DIRECTORY, MINECRAFT_DIRECTORY, is_subdir_of_user_home
 from .minecraft_launcher_integration import MinecraftLauncherIntegration, MINECRAFT_LAUNCHER_APP
+from .popups import AdvancedOptionsHandler
 
 from minecraft_api.minecraft import ALL_RELEASE_VERSIONS, ALL_SNAPSHOT_VERSIONS, get_installed_versions
 from minecraft_api.mod import get_mod_icon_path, InvalidModBaseUrl, ModNotExisting
@@ -38,6 +39,9 @@ class InstancePageClass:
         self.selected_instance_name = ''
         self.minecraft_launcher_integration = MinecraftLauncherIntegration(parent)
 
+        # Create the advanced options popup
+        self.advanced_options_popup_handler = AdvancedOptionsHandler(parent)
+
         # Create the instance edit page
         parent.INSTANCES_BACK_BUTTON.clicked.connect(lambda: self.parent.show_page(0, animation_direction=AnimationScrollDirection.HORIZONTAL))
         parent.BROWSE_MINECRAFT_PATH_BUTTON.clicked.connect(self._set_minecraft_path)
@@ -46,7 +50,7 @@ class InstancePageClass:
         parent.INSTANCE_TYPE_SELECTION.currentIndexChanged.connect(self._changed_instance_type)
         parent.INSTANCE_VERSION_SELECTION.currentIndexChanged.connect(self._changed_instance_version)
         parent.USE_STANDARD_OPTIONS.clicked.connect(self._changed_instance_use_default_options_file)
-        parent.ADVANCED_SETTINGS_BUTTON.clicked.connect(self.open_advanced_instance_popup)
+        parent.ADVANCED_SETTINGS_BUTTON.clicked.connect(self.advanced_options_popup_handler.open_popup)
 
     def play_instance(self, instance_name: str):
         actual_instance_data = self.data['instances'][instance_name]
@@ -358,22 +362,6 @@ class InstancePageClass:
         else:
             del self.data['instances'][self.selected_instance_name]['mods'][mod_name]
         self.data.save()
-
-    def open_advanced_instance_popup(self):
-        # Set the values from the saved data when opening the popup
-        arguments = self.data['instances'][self.selected_instance_name]['advanced_arguments']
-        if 'start_heap_size' in arguments:
-            self.parent.advanced_options_popup.START_HEAP_SIZE.setValue(arguments['start_heap_size'])
-        else:
-            self.parent.advanced_options_popup.START_HEAP_SIZE.setValue(2)
-        if 'max_heap_size' in arguments:
-            self.parent.advanced_options_popup.MAX_HEAP_SIZE.setValue(arguments['max_heap_size'])
-        else:
-            self.parent.advanced_options_popup.MAX_HEAP_SIZE.setValue(2)
-        if 'other_arguments' in arguments:
-            self.parent.advanced_options_popup.OTHER_ARGUMENTS.setText(arguments['other_arguments'])
-
-        self.parent.advanced_options_popup.show_popup(True)
 
     def get_default_instance_name(self) -> str:
         # Find the default instance name
