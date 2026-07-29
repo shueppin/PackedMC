@@ -21,3 +21,13 @@ if 'windows' in platform().lower():
 else:
     # TODO: Show a message here and exit
     MINECRAFT_DIRECTORY = 'UNKNOWN'
+
+
+def is_subdir_of_user_home(path: str) -> bool:
+    # Expand ~ and normalize symlinks/relative parts
+    p = os.path.realpath(os.path.expanduser(path))
+    home = os.path.realpath(os.path.expanduser("~"))
+
+    # True only if p is inside home, not equal to home
+    rel = os.path.relpath(p, home)
+    return rel != "." and not rel.startswith(".." + os.sep) and rel != ".."

@@ -1,9 +1,7 @@
 import logging
 import os
-import json
 import traceback
 import requests
-from datetime import datetime
 import time
 import threading
 
@@ -12,7 +10,7 @@ from PyQt6 import uic
 # noinspection PyPackageRequirements
 from PyQt6.QtCore import Qt
 # noinspection PyPackageRequirements
-from PyQt6.QtWidgets import QMainWindow, QPushButton, QMessageBox, QVBoxLayout, QProgressDialog, QCheckBox
+from PyQt6.QtWidgets import QMainWindow, QPushButton, QMessageBox, QVBoxLayout, QProgressDialog
 from qt_material import apply_stylesheet, list_themes, get_theme, opacity
 
 from .type_hinting import MainWindowElements, DataDictType
@@ -20,8 +18,8 @@ from .dynamic_widgets import FieldType, ScrollableGrid, InstanceFieldFunctions, 
 from .utils import StoredDict, animate_transition, AnimationScrollDirection, create_buttons_in_scroll_area, ScrollAreaButtonType
 from .popups import ImportProfilesPopup, AdvancedOptionsPopup
 from .file_paths import ACTUAL_FILE_DIRECTORY, INTERFACE_FILE_PATH, CUSTOM_STYLESHEET_FILE_PATH, DATA_FILE_PATH, PACKEDMC_MINECRAFT_DATA_DIRECTORY, ROAMING_DIRECTORY, MINECRAFT_DIRECTORY, MINECRAFT_LAUNCHER_PROFILES_PATH
+from .minecraft_launcher_integration import MinecraftLauncherIntegration
 
-from minecraft_api.minecraft import ALL_RELEASE_VERSIONS, ALL_SNAPSHOT_VERSIONS
 from minecraft_api.mod import get_mod_icon_path, InvalidModBaseUrl, ModNotExisting, get_download_url, NoModFileAvailable, APICooldown, TryAgainLater
 
 from .mod_page import ModPageClass
@@ -67,18 +65,20 @@ class MainWindow(QMainWindow, MainWindowElements):
         self.all_imported_launcher_profiles = {}
         self.imported_launcher_profiles_file_data = {}
 
-        # Create the pages and popups from their respective classes
+        # Create the official launcher integration, pages and popups from their respective classes
+        self.minecraft_launcher_integration = MinecraftLauncherIntegration(self)
+
         self.mods_page_class = ModPageClass(self)
         self.instance_page_class = InstancePageClass(self)
 
         self.import_profiles_popup = ImportProfilesPopup(self)
-        self.import_profiles_popup.IMPORT_BUTTON.clicked.connect(self.import_selected_profiles)
+        self.import_profiles_popup.IMPORT_BUTTON.clicked.connect(self.minecraft_launcher_integration.import_selected_profiles)
 
         self.advanced_options_popup = AdvancedOptionsPopup(self)
         self.advanced_options_popup.finished.connect(self.store_advanced_options_popup_values)
 
         # "Collect" the functions for the clickable fields inside the scrollable grids
-        instance_field_functions = InstanceFieldFunctions(self.instance_page_class.play_instance, self.instance_page_class.edit_instance, self.instance_page_class.create_instance, self.instance_page_class.import_profiles_from_launcher)
+        instance_field_functions = InstanceFieldFunctions(self.instance_page_class.play_instance, self.instance_page_class.edit_instance, self.instance_page_class.create_instance, self.minecraft_launcher_integration.configure_profile_import_popup)
         mod_field_functions = ModFieldFunctions(self.mods_page_class.edit_mod, self.mods_page_class.create_mod, self.instance_page_class.clicked_displayed_mod)
 
         # Bind the page selection buttons
@@ -103,7 +103,7 @@ class MainWindow(QMainWindow, MainWindowElements):
         self.PAGE_CONTAINER.insertWidget(index, self.MODS_PAGE)  # insert new page at same position
         self.MODS_PAGE_PLACEHOLDER.deleteLater()  # Cleanup
 
-        # Add a layout to the Instances Mod Container in the instaces and add the scrollable grid to it
+        # Add a layout to the Instances Mod Container in the instances and add the scrollable grid to it
         layout = QVBoxLayout(self.INSTANCE_MODS_DISPLAY_CONTAINER)
         layout.setContentsMargins(0, 0, 0, 0)  # Remove padding around edges
         layout.setSpacing(0)  # Remove spacing between items
@@ -142,8 +142,7 @@ class MainWindow(QMainWindow, MainWindowElements):
         self.INSTANCES_PAGE.rebuild_grid()
 
         # Save the actual options file from the minecraft directory
-        # TODO: Check inside the profiles.json if packedmc was the last played
-        self.instance_page_class.save_options_file_of_last_used_instance()
+        self.minecraft_launcher_integration.save_options_file_of_last_used_instance()
 
         # Update the mods of the last played instance in a thread
         last_played_instance = self.data['last_played_instance']
@@ -317,39 +316,6 @@ class MainWindow(QMainWindow, MainWindowElements):
 
         return name
 
-    @staticmethod
-    def get_last_played_minecraft_launcher_profile() -> tuple[str, dict[str, str]]:
-        """ Returns the last played profile id and data """
-        if os.path.exists(MINECRAFT_LAUNCHER_PROFILES_PATH):
-            with open(MINECRAFT_LAUNCHER_PROFILES_PATH, 'r') as f:
-                profile_data = json.load(f)
-
-                # Find the last played profile
-                newest_launch_time = -1
-                last_used_profile_id = ''
-                for profile_id in profile_data['profiles'].keys():
-                    # Get the time in seconds
-                    profile_last_used = profile_data['profiles'][profile_id]['lastUsed']
-                    profile_launch_time = datetime.fromisoformat(profile_last_used.replace("Z", "+00:00")).timestamp()
-
-                    if newest_launch_time < profile_launch_time:
-                        newest_launch_time = profile_launch_time
-                        last_used_profile_id = profile_id
-
-                return last_used_profile_id, profile_data['profiles'][last_used_profile_id]
-
-        return '', {}
-
-    @staticmethod
-    def is_subdir_of_user_home(path: str) -> bool:
-        # Expand ~ and normalize symlinks/relative parts
-        p = os.path.realpath(os.path.expanduser(path))
-        home = os.path.realpath(os.path.expanduser("~"))
-
-        # True only if p is inside home, not equal to home
-        rel = os.path.relpath(p, home)
-        return rel != "." and not rel.startswith(".." + os.sep) and rel != ".."
-
     def update_mod_files(self, instance_name: str, mods_data: dict[str, tuple[str, str, int]], mc_version: str, loader: str, output=True):
         """
         Go through all mods and try to get their download links (if they were not just checked recently).
@@ -446,90 +412,6 @@ class MainWindow(QMainWindow, MainWindowElements):
         self.data['settings']['close_packedmc'] = button_state
         self.data.save()
 
-    '''
-    Popup Functions
-    '''
-    def import_selected_profiles(self):
-        # Go through all the selected profiles and create the data for them
-        profile_checkbox_widget: QCheckBox
-        for profile_checkbox_widget in self.import_profiles_popup.PROFILES_SELECTION_LIST.findChildren(QCheckBox):
-            display_name = profile_checkbox_widget.text()
-
-            if not profile_checkbox_widget.isChecked():
-                continue
-
-            # If it is checked get the profile ID from the display name and then the all the data
-            profile_id = self.all_imported_launcher_profiles[display_name]
-            profile_data = self.imported_launcher_profiles_file_data['profiles'][profile_id]
-
-            # Define the instance name and remove the duplicates
-            if profile_data['name']:
-                original_instance_name = profile_data['name'].strip()
-            else:
-                original_instance_name = display_name.strip()
-
-            instance_name = self.make_name_unique(original_instance_name, list(self.data['instances'].keys()))
-
-            # Find out what type of instance it is
-            if profile_data['lastVersionId'].startswith('latest'):
-                instance_type = profile_data['lastVersionId'].replace('latest-', '').title()
-            elif profile_data['lastVersionId'] in ALL_RELEASE_VERSIONS:
-                instance_type = 'Release'
-            elif profile_data['lastVersionId'] in ALL_SNAPSHOT_VERSIONS:
-                instance_type = 'Snapshot'
-            elif 'fabric' in profile_data['lastVersionId']:
-                instance_type = 'Fabric'
-            elif 'forge' in profile_data['lastVersionId']:
-                instance_type = 'Forge'
-            else:
-                instance_type = 'Other'
-
-            # Set the version depending on the type of the instance
-            if 'latest' in profile_data['lastVersionId']:
-                instance_version = 'latest'
-            elif instance_type == 'Release' or instance_type == 'Latest':
-                instance_version = profile_data['lastVersionId']
-            elif instance_type == 'Fabric':
-                instance_version = profile_data['lastVersionId'].split('-')[-1]
-            elif instance_type == 'Forge':
-                instance_version = profile_data['lastVersionId'].split('-')[0]
-            else:
-                instance_version = profile_data['lastVersionId']
-
-            # Get the game directory and advanced java arguments
-            if 'gameDir' in profile_data:
-                minecraft_directory = profile_data['gameDir']
-            else:
-                minecraft_directory = MINECRAFT_DIRECTORY
-
-            advanced_arguments = {}
-
-            # Get the java path
-            if 'javaDir' in profile_data:
-                advanced_arguments['java.path'] = profile_data['javaDir']
-
-            other_arguments = []
-            # Go through all the java arguments and put them in a picomc format
-            if 'javaArgs' in profile_data:
-                java_arguments = profile_data['javaArgs'].split(' ')
-
-                for argument in java_arguments:
-                    if argument.startswith('-Xms'):
-                        advanced_arguments['start_heap_size'] = argument.replace('-Xms', '').replace('G', '')
-                    elif argument.startswith('-Xmx'):
-                        advanced_arguments['max_heap_size'] = argument.replace('-Xmx', '').replace('G', '')
-                    else:
-                        other_arguments.append(argument)
-
-            if other_arguments:
-                advanced_arguments['other_arguments'] = other_arguments
-
-            self.instance_page_class.create_instance(instance_name, edit_afterwards=False, instance_type=instance_type, instance_version=instance_version, minecraft_directory=minecraft_directory, advanced_arguments=advanced_arguments)
-
-        # After all profiles were added refresh the list and close the dialog
-        self.show_page(0, show_instantly=True)
-        self.import_profiles_popup.close()
-
     def store_advanced_options_popup_values(self):
         # Store the values of the popup before closing
         self.data['instances'][self.instance_page_class.selected_instance_name]['advanced_arguments']['max_heap_size'] = self.advanced_options_popup.MAX_HEAP_SIZE.value()
@@ -537,4 +419,3 @@ class MainWindow(QMainWindow, MainWindowElements):
         self.data['instances'][self.instance_page_class.selected_instance_name]['advanced_arguments']['other_arguments'] = self.advanced_options_popup.OTHER_ARGUMENTS.toPlainText()
 
         self.data.save()
-
