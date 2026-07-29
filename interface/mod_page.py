@@ -34,6 +34,9 @@ class ModPageClass:
         self.parent: MainWindow = parent
         self.data = parent.data
 
+        # Create intern variables
+        self.selected_mod_name = ''
+
         self.mod_url_timer = QTimer(parent)  # Use a timer that is restarted on every text input, but the real function is only executed after the time has run out.
         self.mod_url_timer.setSingleShot(True)
         # noinspection PyUnresolvedReferences
@@ -65,10 +68,11 @@ class ModPageClass:
     def edit_mod(self, mod_name: str):
         """ This function is executed to show the edit page and configure the values for the given instance. """
         parent = self.parent
+
         parent.show_page(3, animation_direction=AnimationScrollDirection.HORIZONTAL)
 
         # Set the values for the edit page
-        parent.selected_mod_name = mod_name
+        self.selected_mod_name = mod_name
         mod_url: str = self.data['mods'][mod_name]['url']
 
         # Set the name without triggering the changed_instance_data function (which triggers on text change)
@@ -112,7 +116,7 @@ class ModPageClass:
 
     def _changed_mod_name(self):
         # Get the old and the new mod name
-        old_mod_name = self.parent.selected_mod_name
+        old_mod_name = self.selected_mod_name
         new_mod_name = self.parent.MOD_NAME.text().strip()
 
         # If the clean new name is empty then it means it was cleared, which is allowed since the user can rewrite the whole name.
