@@ -17,7 +17,7 @@ from .type_hinting import MainWindowElements, DataDictType
 from .dynamic_widgets import FieldType, ScrollableGrid, InstanceFieldFunctions, ModFieldFunctions
 from .utils import StoredDict, animate_transition, AnimationScrollDirection, create_buttons_in_scroll_area
 from .file_paths import INTERFACE_FILE_PATH, CUSTOM_STYLESHEET_FILE_PATH, DATA_FILE_PATH, PACKEDMC_MINECRAFT_DATA_DIRECTORY
-from .minecraft_launcher_integration import MinecraftLauncherIntegration
+from .minecraft_launcher_integration import save_options_file_of_last_used_instance
 from .popups import ImportProfilesHandler
 
 from minecraft_api.mod import get_mod_icon_path, InvalidModBaseUrl, ModNotExisting, get_download_url, NoModFileAvailable, APICooldown, TryAgainLater
@@ -63,9 +63,7 @@ class MainWindow(QMainWindow, MainWindowElements):
         self.application = application
         self.possible_stylesheet_file_names = list_themes()
 
-        # Create the official launcher integration, pages and popups from their respective classes
-        self.minecraft_launcher_integration = MinecraftLauncherIntegration(self)
-
+        # Create the pages and popups from their respective classes
         self.mods_page_class = ModPageClass(self)
         self.instance_page_class = InstancePageClass(self)
 
@@ -136,10 +134,10 @@ class MainWindow(QMainWindow, MainWindowElements):
         self.INSTANCES_PAGE.rebuild_grid()
 
         # Save the actual options file from the minecraft directory
-        self.minecraft_launcher_integration.save_options_file_of_last_used_instance()
+        last_played_instance = self.data['last_played_instance']
+        save_options_file_of_last_used_instance(last_played_instance, self.data['instances'][last_played_instance], self.instance_page_class.get_default_instance_name())
 
         # Update the mods of the last played instance in a thread
-        last_played_instance = self.data['last_played_instance']
         instance_mods = self.data['instances'][last_played_instance]['mods']
         instance_version = self.data['instances'][last_played_instance]['version']
         instance_type = self.data['instances'][last_played_instance]['type']

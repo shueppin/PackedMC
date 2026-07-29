@@ -4,7 +4,6 @@ import psutil
 import os
 import shutil
 from datetime import datetime
-import subprocess
 import traceback
 
 # noinspection PyPackageRequirements
@@ -12,7 +11,7 @@ from PyQt6.QtWidgets import QFileDialog, QMessageBox
 
 from .utils import AnimationScrollDirection
 from .file_paths import PACKEDMC_MINECRAFT_DATA_DIRECTORY, MINECRAFT_DIRECTORY, is_subdir_of_user_home
-from .minecraft_launcher_integration import MinecraftLauncherIntegration, MINECRAFT_LAUNCHER_APP
+from .minecraft_launcher_integration import save_options_file_of_last_used_instance, load_options_file_from_packedmc, write_instance_data_to_profiles_file, start_official_launcher
 from .popups import AdvancedOptionsHandler
 
 from minecraft_api.minecraft import ALL_RELEASE_VERSIONS, ALL_SNAPSHOT_VERSIONS, get_installed_versions
@@ -37,7 +36,6 @@ class InstancePageClass:
 
         # Create intern variables
         self.selected_instance_name = ''
-        self.minecraft_launcher_integration = MinecraftLauncherIntegration(parent)
 
         # Create the advanced options popup
         self.advanced_options_popup_handler = AdvancedOptionsHandler(parent)
@@ -62,23 +60,20 @@ class InstancePageClass:
                 return
 
         # Save the actual options file from the minecraft directory
-        self.minecraft_launcher_integration.save_options_file_of_last_used_instance()
+        last_played_instance = self.data['last_played_instance']
+        save_options_file_of_last_used_instance(last_played_instance, self.data['instances'][last_played_instance], self.get_default_instance_name())
 
         # Load the instance file from packedmc for the selected instance
-        self.minecraft_launcher_integration.load_options_file_from_packedmc(instance_name)
+        load_options_file_from_packedmc(instance_name, actual_instance_data, self.get_default_instance_name())
 
         # Set the last played instance
         self.data['last_played_instance'] = instance_name
         self.data.save()
 
-        # Create a profile in the official Minecraft Launcher with the correct data
-        self.minecraft_launcher_integration.write_instance_data_to_profiles_file(instance_name)
+        # Create a profile in the official Minecraft Launcher with the correct data and then start it
+        write_instance_data_to_profiles_file(instance_name, actual_instance_data)
 
-        # Launch the official Launcher from the Microsoft Store
-        try:
-            subprocess.run(rf'explorer.exe shell:AppsFolder\{MINECRAFT_LAUNCHER_APP}', shell=True)
-        except FileNotFoundError:
-            logger.error("Could not find the Minecraft Launcher executable.")
+        start_official_launcher()
 
         # Update the mods
         self.parent.update_mod_files(instance_name, actual_instance_data['mods'], actual_instance_data["version"], actual_instance_data['type'])
@@ -128,8 +123,11 @@ class InstancePageClass:
 
         # Close PackedMC if the setting is selected
         if self.data['settings']['close_packedmc']:
-            logger.info(f'Closing PackedMC')
-            exit()
+            try:
+                logger.info(f'Closing PackedMC')
+                exit()
+            except Exception:
+                traceback.print_exc()
 
         # TODO: Optionally: Periodically save the options file until the game is closed if packedmc stays open.
 
