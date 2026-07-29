@@ -5,10 +5,8 @@ from platform import platform
 import json
 import traceback
 import requests
-import validators
 import psutil
 from datetime import datetime
-import re
 import time
 import threading
 import subprocess
@@ -16,7 +14,7 @@ import subprocess
 # noinspection PyPackageRequirements
 from PyQt6 import uic
 # noinspection PyPackageRequirements
-from PyQt6.QtCore import QTimer, QObject, pyqtSignal, Qt
+from PyQt6.QtCore import Qt
 # noinspection PyPackageRequirements
 from PyQt6.QtWidgets import QMainWindow, QPushButton, QFileDialog, QMessageBox, QCheckBox, QVBoxLayout, QProgressDialog
 from qt_material import apply_stylesheet, list_themes, get_theme, opacity
@@ -27,8 +25,10 @@ from .utils import StoredDict, animate_transition, AnimationScrollDirection, cre
 from .popups import ImportProfilesPopup, AdvancedOptionsPopup
 
 from minecraft_api.minecraft import ALL_RELEASE_VERSIONS, ALL_SNAPSHOT_VERSIONS, get_installed_versions
-from minecraft_api.mod import get_mod_data, get_mod_icon_path, InvalidModBaseUrl, ModNotExisting, get_download_url, NoModFileAvailable, APICooldown, TryAgainLater
+from minecraft_api.mod import get_mod_icon_path, InvalidModBaseUrl, ModNotExisting, get_download_url, NoModFileAvailable, APICooldown, TryAgainLater
 from minecraft_api.fabric import install_version
+
+from .mod_page import ModPageClass
 
 
 logger = logging.getLogger(__name__)
@@ -75,19 +75,11 @@ SKIP_WHEN_LAST_CHECKED_BEFORE = 600
 os.makedirs(os.path.join(PACKEDMC_MINECRAFT_DATA_DIRECTORY, 'options_files'), exist_ok=True)  # creates all missing parents; no error if exists
 
 
-# Signal Emitter for when the data of a mod was loaded from the API
-class ModDataConnector(QObject):
-    updated = pyqtSignal(str, list, list, str, str)  # declared on class
-
-    def emit_updated(self, description: str, loaders: list[str], supported_versions: list[str], mod_name: str, mod_url: str):
-        # noinspection PyUnresolvedReferences
-        self.updated.emit(description, loaders, supported_versions, mod_name, mod_url)
-
-
 class MainWindow(QMainWindow, MainWindowElements):
     def __init__(self, application):
         super().__init__()
         uic.loadUi(INTERFACE_FILE_PATH, self)  # Load UI
+        self.setWindowTitle("PackedMC")
 
         # Non-UI elements
         self.data: DataDictType = StoredDict(DEFAULT_DATA_FILE_PATH, DEFAULT_DATA)  # Initialize using Default Data as base
@@ -98,9 +90,8 @@ class MainWindow(QMainWindow, MainWindowElements):
         self.imported_launcher_profiles_file_data = {}
         self.selected_mod_name = ''
 
-        # Set general, but more complex variables
-        instance_field_functions = InstanceFieldFunctions(self.play_instance, self.edit_instance, self.create_instance, self.import_profiles_from_launcher)
-        mod_field_functions = ModFieldFunctions(self.edit_mod, self.create_mod, self.clicked_displayed_mod)
+        # Create the pages and popups from their respective classes
+        self.mods_page_class = ModPageClass(self)
 
         self.import_profiles_popup = ImportProfilesPopup(self)
         self.import_profiles_popup.IMPORT_BUTTON.clicked.connect(self._import_selected_profiles)
@@ -108,13 +99,9 @@ class MainWindow(QMainWindow, MainWindowElements):
         self.advanced_options_popup = AdvancedOptionsPopup(self)
         self.advanced_options_popup.finished.connect(self.store_advanced_options_popup_values)
 
-        self.mod_url_timer = QTimer(self)  # Use a timer that is restarted on every text input, but the real function is only executed after the time has run out.
-        self.mod_url_timer.setSingleShot(True)
-        # noinspection PyUnresolvedReferences
-        self.mod_url_timer.timeout.connect(self._changed_mod_url)
-        self.mod_data_connector = ModDataConnector()
-        # noinspection PyUnresolvedReferences
-        self.mod_data_connector.updated.connect(lambda description, loaders, supported_versions, mod_name, mod_url: self.set_mod_values(description, loaders, supported_versions, mod_name, mod_url))
+        # "Collect" The functions for the clickable fields inside the scrollable grids
+        instance_field_functions = InstanceFieldFunctions(self.play_instance, self.edit_instance, self.create_instance, self.import_profiles_from_launcher)
+        mod_field_functions = ModFieldFunctions(self.mods_page_class.edit_mod, self.mods_page_class.create_mod, self.clicked_displayed_mod)
 
         # Bind the page selection buttons
         self.INSTANCES_PAGE_BUTTON.pressed.connect(lambda: self._page_selection_button_on_press(self.INSTANCES_PAGE_BUTTON, 0))
@@ -148,19 +135,13 @@ class MainWindow(QMainWindow, MainWindowElements):
         self.USE_STANDARD_OPTIONS.clicked.connect(self._changed_instance_use_default_options_file)
         self.ADVANCED_SETTINGS_BUTTON.clicked.connect(self.open_advanced_instance_popup)
 
-        # Add a layout to the Instances Mod Container and add the scrollable grid to it
+        # Add a layout to the Instances Mod Container in the instaces and add the scrollable grid to it
         layout = QVBoxLayout(self.INSTANCE_MODS_DISPLAY_CONTAINER)
         layout.setContentsMargins(0, 0, 0, 0)  # Remove padding around edges
         layout.setSpacing(0)  # Remove spacing between items
         self.INSTANCE_MODS_DISPLAY = ScrollableGrid(FieldType.MODS_DISPLAYED, mod_field_functions)
         layout.addWidget(self.INSTANCE_MODS_DISPLAY)
         self.INSTANCE_MODS_DISPLAY_CONTAINER.setLayout(layout)
-
-        # Create the mod edit page
-        self.MODS_BACK_BUTTON.clicked.connect(lambda: self.show_page(2, animation_direction=AnimationScrollDirection.HORIZONTAL))
-        self.MOD_NAME.textChanged.connect(self._changed_mod_name)
-        self.MOD_URL.textChanged.connect(lambda: self.mod_url_timer.start(500))
-        self.DELETE_MOD_BUTTON.clicked.connect(self._delete_mod)
 
         # If there are no instances, create the default one
         if not self.data['instances']:
@@ -193,6 +174,7 @@ class MainWindow(QMainWindow, MainWindowElements):
         self.INSTANCES_PAGE.rebuild_grid()
 
         # Save the actual options file from the minecraft directory
+        # TODO: Check inside the profiles.json if packedmc was the last played
         self.save_options_file_of_last_used_instance()
 
         # Update the mods of the last played instance in a thread
@@ -345,7 +327,7 @@ class MainWindow(QMainWindow, MainWindowElements):
             else:
                 original_instance_name = display_name.strip()
 
-            instance_name = self._make_name_unique(original_instance_name, list(self.data['instances'].keys()))
+            instance_name = self.make_name_unique(original_instance_name, list(self.data['instances'].keys()))
 
             # Find out what type of instance it is
             if profile_data['lastVersionId'].startswith('latest'):
@@ -582,7 +564,7 @@ class MainWindow(QMainWindow, MainWindowElements):
         # TODO: Optionally: Periodically save the options file until the game is closed if packedmc stays open.
 
     def create_instance(self, instance_name='New instance', is_default=False, edit_afterwards=True, instance_type='Release', instance_version='latest', minecraft_directory=MINECRAFT_DIRECTORY, advanced_arguments: dict = None):
-        instance_name = self._make_name_unique(instance_name, list(self.data['instances'].keys()))
+        instance_name = self.make_name_unique(instance_name, list(self.data['instances'].keys()))
         if advanced_arguments is None:
             advanced_arguments = {}
 
@@ -694,7 +676,7 @@ class MainWindow(QMainWindow, MainWindowElements):
         # First get the data and only then make the name unique, to avoid mistakes when the name already exists, because of itself
         instance_data = self.data['instances'].pop(old_instance_name)
 
-        new_instance_name = self._make_name_unique(new_instance_name, list(self.data['instances'].keys()))
+        new_instance_name = self.make_name_unique(new_instance_name, list(self.data['instances'].keys()))
 
         self.data['instances'][new_instance_name] = instance_data
         self.selected_instance_name = new_instance_name
@@ -735,7 +717,7 @@ class MainWindow(QMainWindow, MainWindowElements):
                 self.data.save()
 
                 # Make a unique name here already, to be able to rename the options file
-                new_instance_name = self._make_name_unique(DEFAULT_INSTANCE_NAME, list(self.data['instances'].keys()))
+                new_instance_name = self.make_name_unique(DEFAULT_INSTANCE_NAME, list(self.data['instances'].keys()))
 
                 # Rename the options file in PackedMC if it exists
                 packedmc_options_files_directory = os.path.join(PACKEDMC_MINECRAFT_DATA_DIRECTORY, 'options_files')
@@ -836,126 +818,6 @@ class MainWindow(QMainWindow, MainWindowElements):
     '''
     Mods Page
     '''
-    def create_mod(self, mod_name='New Mod', edit_afterwards=True):
-        mod_name = self._make_name_unique(mod_name, list(self.data['mods'].keys()))
-
-        # Set the data
-        self.data['mods'][mod_name] = {
-            'url': '',
-            'loaders': [],
-            'supported_versions': [],
-        }
-        self.data.save()
-
-        if edit_afterwards:
-            self.edit_mod(mod_name)  # Show it in edit mode
-
-    def edit_mod(self, mod_name: str):
-        """ This function is executed to show the edit page and configure the values for the given instance. """
-        self.show_page(3, animation_direction=AnimationScrollDirection.HORIZONTAL)
-
-        # Set the values for the edit page
-        self.selected_mod_name = mod_name
-        mod_url: str = self.data['mods'][mod_name]['url']
-
-        # Set the name without triggering the changed_instance_data function (which triggers on text change)
-        self.MOD_NAME.blockSignals(True)
-        self.MOD_NAME.setText(mod_name)
-        self.MOD_NAME.setFocus()  # Prevent highlighting
-        self.MOD_NAME.blockSignals(False)
-
-        self.MOD_URL.blockSignals(True)
-        self.MOD_URL.setText(mod_url)
-        self.MOD_URL.blockSignals(False)
-
-        # Set the fields depending on the URL and also refresh the stored data
-        try:
-            description, loaders, supported_versions = get_mod_data(mod_url, self.mod_data_connector.emit_updated, (mod_name, mod_url))
-            self.set_mod_values(description, loaders, supported_versions, mod_name, mod_url)
-        except ModNotExisting:
-            self.set_mod_values('', [], [], mod_name, mod_url)
-        except InvalidModBaseUrl:
-            self.set_mod_values('', [], [], mod_name, mod_url)
-        except Exception as e:
-            logger.error('Uncaught exception when changing editing mod', exc_info=e)
-
-    def set_mod_values(self, description: str, loaders: list[str], supported_versions: list[str], mod_name: str, mod_url: str):
-        """ If the URL of the given mod matches, then store the given values for said mod. Then display them, if it is the selected mod. """
-        if mod_name not in self.data['mods']:  # This means the mod was probably renamed. Then take the selected mod and check if it is this URL
-            mod_name = self.selected_mod_name
-
-        if self.data['mods'][mod_name]['url'] != mod_url:
-            logger.info("Mod URL changed in the meantime. Callback is discarded.")
-            return
-
-        self.data['mods'][mod_name]['loaders'] = loaders
-        self.data['mods'][mod_name]['supported_versions'] = supported_versions
-        self.data.save()
-
-        clean_description = re.sub(r'<img\b[^>]*>', '', description, flags=re.IGNORECASE)  # Remove the images from the HTML, so no need to load them.
-        self.MOD_DESCRIPTION.setHtml(clean_description)
-        self.MOD_LOADER.setText('\n'.join(loaders))
-        self.MOD_VERSIONS.setText('\n'.join(supported_versions))
-
-    def _changed_mod_name(self):
-        # Get the old and the new mod name
-        old_mod_name = self.selected_mod_name
-        new_mod_name = self.MOD_NAME.text().strip()
-
-        # If the clean new name is empty then it means it was cleared, which is allowed since the user can rewrite the whole name.
-        if new_mod_name == '':
-            new_mod_name = 'Mod Name'
-
-        # First get the data and only then make the name unique, to avoid mistakes when the name already exists, because of itself
-        mod_data = self.data['mods'].pop(old_mod_name)
-
-        new_mod_name = self._make_name_unique(new_mod_name, list(self.data['mods'].keys()))
-
-        # Update the mod name and data
-        self.data['mods'][new_mod_name] = mod_data
-        self.selected_mod_name = new_mod_name
-
-        # Update the mod name in every instance
-        for instance_name in self.data['instances']:
-            if old_mod_name in self.data['instances'][instance_name]['mods']:
-                mod_download_url = self.data['instances'][instance_name]['mods'].pop(old_mod_name)  # Load the old value and use it with the key of the new value
-                self.data['instances'][instance_name]['mods'][new_mod_name] = mod_download_url
-        self.data.save()
-
-    def _changed_mod_url(self):
-        # This function is only executed after a timer has run out, so after there were no keystrokes in 0.5 seconds.
-        new_url = self.MOD_URL.text().strip()
-        self.data['mods'][self.selected_mod_name]['url'] = new_url
-        self.data.save()
-        if validators.url(new_url):
-            try:
-                description, loaders, supported_versions = get_mod_data(new_url, self.mod_data_connector.emit_updated, (self.selected_mod_name, new_url))
-                self.set_mod_values(description, loaders, supported_versions, self.selected_mod_name, new_url)
-            except ModNotExisting:
-                pass
-            except InvalidModBaseUrl:
-                pass
-            except Exception as e:
-                logger.error('Uncaught exception when changing mod URL', exc_info=e)
-        else:
-            pass
-        # TODO: Change color of input field when it is an invalid URL
-
-    def _delete_mod(self):
-        # Ask to delete it
-        reply = QMessageBox.question(self, 'Confirm deletion', f'Do you really want to delete the mod "{self.selected_mod_name}"? \n\n(Enter = Yes, Escape = No)')
-
-        if reply == 16384:  # Yes
-            del self.data['mods'][self.selected_mod_name]
-            # Remove the mod from every instance
-            for instance_name in self.data['instances']:
-                if self.selected_mod_name in self.data['instances'][instance_name]['mods']:
-                    del self.data['instances'][instance_name]['mods'][self.selected_mod_name]
-            self.data.save()
-
-            # Go to the mods page
-            self.show_page(2, animation_direction=AnimationScrollDirection.HORIZONTAL)
-
     '''
     Settings Page
     '''
@@ -1026,7 +888,7 @@ class MainWindow(QMainWindow, MainWindowElements):
         self.data.save()
 
     @staticmethod
-    def _make_name_unique(name: str, already_existing_elements: list[str]):
+    def make_name_unique(name: str, already_existing_elements: list[str]):
         # Define the instance name
         original_name = name
         i = 2
