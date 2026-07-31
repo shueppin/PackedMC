@@ -56,8 +56,14 @@ class InstancePageClass:
         # Check if the Minecraft Launcher is already running
         for proc in psutil.process_iter(['name', 'exe']):
             if proc.info['name'] and "Minecraft" in proc.info['name']:
-                QMessageBox.information(self.parent, 'Could not play', f'Found "{proc.info['name']}" running. Please close the Minecraft Launcher and the open Minecraft Instances. \nOtherwise PackedMC can not launch the game correctly.')
+                QMessageBox.warning(self.parent, 'Could not play', f'Found "{proc.info['name']}" running. Please close the Minecraft Launcher and the open Minecraft Instances. \nOtherwise PackedMC can not launch the game correctly. \nIf you are unable to close the Launcher normally, try closing it via the Task Manager.')
                 return
+
+        # Check if the minecraft directory is valid
+        minecraft_directory = self.data['instances'][instance_name]['minecraft_directory']
+        if not is_subdir_of_user_home(minecraft_directory) or not os.path.isdir(minecraft_directory):
+            QMessageBox.warning(self.parent, 'Could not play', f'A correct Minecraft directory could not be found. \nPlease use a directory that exists and is inside your home folder.')
+            return
 
         # Save the actual options file from the minecraft directory
         last_played_instance = self.data['last_played_instance']
@@ -81,7 +87,9 @@ class InstancePageClass:
 
         # Get all the files in the mods directory which were not copied by PackedMC
         try:
-            mods_directory = os.path.join(self.data['instances'][instance_name]['minecraft_directory'], 'mods')
+            mods_directory = os.path.join(minecraft_directory, 'mods')
+            os.makedirs(mods_directory, exist_ok=True)  # Creates the mod folder if it does not already exist
+
             packedmc_copied_mods_file = os.path.join(mods_directory, 'packedmc.json')
             if os.path.exists(packedmc_copied_mods_file):
                 with open(packedmc_copied_mods_file, 'r') as f:
@@ -269,8 +277,8 @@ class InstancePageClass:
 
         new_path = QFileDialog.getExistingDirectory(self.parent, 'Select Minecraft Directory', actual_path)
 
-        # Allow only user data paths
-        if is_subdir_of_user_home(new_path):
+        # Allow only user data paths which actually exist
+        if is_subdir_of_user_home(new_path) and os.path.exists(new_path):
             self.data['instances'][self.selected_instance_name]['minecraft_directory'] = new_path
             self.data.save()
             self.parent.MINECRAFT_DIRECTORY_PATH.setText(new_path)  # Refresh the values
