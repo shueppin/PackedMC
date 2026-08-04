@@ -1,16 +1,11 @@
 import logging
 import os
-import traceback
-import requests
-import time
 import threading
 
 # noinspection PyPackageRequirements
 from PyQt6 import uic
 # noinspection PyPackageRequirements
-from PyQt6.QtCore import Qt
-# noinspection PyPackageRequirements
-from PyQt6.QtWidgets import QMainWindow, QPushButton, QMessageBox, QVBoxLayout, QProgressDialog
+from PyQt6.QtWidgets import QMainWindow, QPushButton, QVBoxLayout
 from qt_material import apply_stylesheet, list_themes, get_theme, opacity
 
 from .type_hinting import MainWindowElements, DataDictType
@@ -19,8 +14,9 @@ from .utils import StoredDict, animate_transition, AnimationScrollDirection, cre
 from .file_paths import INTERFACE_FILE_PATH, CUSTOM_STYLESHEET_FILE_PATH, DATA_FILE_PATH, PACKEDMC_MINECRAFT_DATA_DIRECTORY
 from .minecraft_launcher_integration import save_options_file_of_last_used_instance
 from .popups import ImportProfilesHandler
+from .mod_files_handler import update_mod_files
 
-from minecraft_api.mod import get_mod_icon_path, InvalidModBaseUrl, ModNotExisting, get_download_url, NoModFileAvailable, APICooldown, TryAgainLater
+from minecraft_api.mod import get_mod_icon_path, InvalidModBaseUrl, ModNotExisting
 
 from .mod_page import ModPageClass
 from .instance_page import InstancePageClass, DEFAULT_INSTANCE_NAME
@@ -43,9 +39,6 @@ DEFAULT_DATA = {
     'instances': {},
     'mods': {}
 }
-
-# This is the amount of seconds it should wait before checking something like the mod data or the mod download url again.
-SKIP_WHEN_LAST_CHECKED_BEFORE = 600
 
 
 # Ensure correct directories exist
@@ -141,7 +134,7 @@ class MainWindow(QMainWindow, MainWindowElements):
         instance_mods = self.data['instances'][last_played_instance]['mods']
         instance_version = self.data['instances'][last_played_instance]['version']
         instance_type = self.data['instances'][last_played_instance]['type']
-        mod_update_thread = threading.Thread(target=self.update_mod_files, args=(last_played_instance, instance_mods, instance_version, instance_type, False), daemon=True)
+        mod_update_thread = threading.Thread(target=update_mod_files, args=(self, last_played_instance, instance_mods, instance_version, instance_type, False), daemon=True)
         mod_update_thread.start()
 
         # TODO: Add a button to redownload/update a certain fabric version
@@ -307,98 +300,6 @@ class MainWindow(QMainWindow, MainWindowElements):
             i += 1
 
         return name
-
-    def update_mod_files(self, instance_name: str, mods_data: dict[str, tuple[str, str, int]], mc_version: str, loader: str, output=True):
-        """
-        Go through all mods and try to get their download links (if they were not just checked recently).
-        Then download the files if they don't already exist and remove the old mod versions.
-        """
-        if not output:
-            logger.info(f'Start updating mods in the background for {instance_name}.')
-
-        actual_time = round(time.time())
-
-        packedmc_mods_directory = os.path.join(PACKEDMC_MINECRAFT_DATA_DIRECTORY, 'mods', instance_name)
-        os.makedirs(packedmc_mods_directory, exist_ok=True)  # Ensure it exists
-        unneeded_files = os.listdir(packedmc_mods_directory)
-
-        mods_not_found_for_this_version = []
-
-        progress_dialog = None  # Define it
-        if output:
-            progress_dialog = QProgressDialog("Downloading mods...", "", 0, len(mods_data), self)  # empty cancel text
-            progress_dialog.setCancelButton(None)  # remove cancel button
-            progress_dialog.setWindowModality(Qt.WindowModality.ApplicationModal)
-            progress_dialog.setAutoClose(True)
-            progress_dialog.setWindowTitle("Downloading mods...")
-            progress_dialog.setAutoReset(True)
-            progress_dialog.setMinimumDuration(0)
-
-            progress_dialog.setFixedSize(300, 250)
-
-        # Go through every mod and download it if needed
-        for index, mod_name in enumerate(mods_data):
-            if output:
-                progress_dialog.setValue(index + 1)
-                progress_dialog.setLabelText("Downloading mod: \n" + mod_name)
-
-            try:
-                old_download_url, old_filename, last_checked = mods_data[mod_name]
-            except Exception:  # If there is a mistake in the data, then update it and use default values
-                self.data['instances'][instance_name]['mods'][mod_name] = ('', '', 0)
-                self.data.save()
-                old_download_url, old_filename, last_checked = ('', '', 0)
-
-            # Skip when it was last checked before our waiting interval
-            if actual_time < last_checked + SKIP_WHEN_LAST_CHECKED_BEFORE:
-                # Remove the old filename from the unneeded files, so it is not removed. Because it is just skipped.
-                if old_filename in unneeded_files:
-                    unneeded_files.remove(old_filename)
-                continue
-
-            try:
-                download_url, filename = get_download_url(self.data['mods'][mod_name]['url'], mc_version, loader)
-                self.data['instances'][instance_name]['mods'][mod_name] = (download_url, filename, actual_time)
-
-                # If the version is not already in the supported versions, then add it.
-                if mc_version not in self.data['mods'][mod_name]['supported_versions']:
-                    self.data['mods'][mod_name]['supported_versions'].append(mc_version)
-                self.data.save()
-
-                # If the download url has changed or the file does not exist, then download the file
-                file_path = os.path.join(packedmc_mods_directory, filename)
-                if not os.path.exists(file_path) or old_download_url != download_url:
-                    response = requests.get(download_url)
-                    file_data = response.content
-                    with open(file_path, 'wb') as f:
-                        f.write(file_data)
-
-                # Remove the filename from the unneeded files, so it is not removed.
-                if filename in unneeded_files:
-                    unneeded_files.remove(filename)
-            except (InvalidModBaseUrl, NoModFileAvailable):
-                # Mod unavailable, thus no possible download URL
-                mods_not_found_for_this_version.append(mod_name)
-                self.data['instances'][instance_name]['mods'][mod_name] = ('', '', last_checked)
-                self.data.save()
-            except (APICooldown, TryAgainLater):
-                # Just do nothing. It will be tried again when playing this instance again.
-                pass
-            except Exception:
-                traceback.print_exc()
-
-        if output:
-            progress_dialog.close()
-            # If not all mods could be updated, show a message
-            if len(mods_not_found_for_this_version) > 0:
-                QMessageBox.information(self, 'Could not find all mods', f'Could not find a file for the following mods for {loader} {mc_version}: \n - {"\n - ".join(mods_not_found_for_this_version)}')
-
-        # Delete all unneeded files (either from removed mods, or old versions of a mod)
-        for unneeded_filename in unneeded_files:
-            os.remove(os.path.join(packedmc_mods_directory, unneeded_filename))
-
-        if not output:
-            logger.info(f'Updated mods in the background for {instance_name}.')
 
     def close_packedmc_button_clicked(self, button_state: bool):
         self.data['settings']['close_packedmc'] = button_state
