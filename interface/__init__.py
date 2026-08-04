@@ -8,6 +8,7 @@ from PyQt6 import uic
 from PyQt6.QtWidgets import QMainWindow, QPushButton, QVBoxLayout
 from qt_material import apply_stylesheet, list_themes, get_theme, opacity
 
+from .data_file_helper import ensure_correct_data, get_default_data, get_default_instance_name
 from .type_hinting import MainWindowElements, DataDictType
 from .dynamic_widgets import FieldType, ScrollableGrid, InstanceFieldFunctions, ModFieldFunctions
 from .utils import StoredDict, animate_transition, AnimationScrollDirection, create_buttons_in_scroll_area
@@ -16,29 +17,16 @@ from .minecraft_launcher_integration import save_options_file_of_last_used_insta
 from .popups import ImportProfilesHandler
 from .mod_files_handler import update_mod_files
 
-from minecraft_api.mod import get_mod_icon_path, InvalidModBaseUrl, ModNotExisting
-
 from .mod_page import ModPageClass
-from .instance_page import InstancePageClass, DEFAULT_INSTANCE_NAME
+from .instance_page import InstancePageClass
+
+from minecraft_api.mod import get_mod_icon_path, InvalidModBaseUrl, ModNotExisting
 
 
 logger = logging.getLogger(__name__)
 
 
 WINDOW_DEFAULT_SCALE = 3
-
-DEFAULT_DATA = {
-    # For the style of the App
-    'settings': {
-        'theme': 'dark_lightgreen.xml',
-        'invert_secondary': False,
-        'scale': 0,
-        'close_packedmc': False
-    },
-    'last_played_instance': '',
-    'instances': {},
-    'mods': {}
-}
 
 
 # Ensure correct directories exist
@@ -52,7 +40,8 @@ class MainWindow(QMainWindow, MainWindowElements):
         self.setWindowTitle("PackedMC")
 
         # Define variables which are mainly needed in this file
-        self.data: DataDictType = StoredDict(DATA_FILE_PATH, DEFAULT_DATA)  # Initialize using Default Data as base
+        self.data: DataDictType = StoredDict(DATA_FILE_PATH, get_default_data())  # Initialize using Default Data as base
+        ensure_correct_data(self.data)
         self.application = application
         self.possible_stylesheet_file_names = list_themes()
 
@@ -98,8 +87,8 @@ class MainWindow(QMainWindow, MainWindowElements):
 
         # If there are no instances, create the default one
         if not self.data['instances']:
-            self.instance_page_class.create_instance(DEFAULT_INSTANCE_NAME, is_default=True, edit_afterwards=False)
-            self.data['last_played_instance'] = DEFAULT_INSTANCE_NAME
+            self.instance_page_class.create_instance(get_default_instance_name(), is_default=True, edit_afterwards=False)
+            self.data['last_played_instance'] = get_default_instance_name()
             self.data.save()
 
         # Create the settings page

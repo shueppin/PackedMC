@@ -7,6 +7,7 @@ from PyQt6.QtWidgets import QMessageBox
 # noinspection PyPackageRequirements
 from PyQt6.QtCore import QTimer, QObject, pyqtSignal
 
+from .data_file_helper import get_new_mod_data
 from .utils import AnimationScrollDirection
 
 from minecraft_api.mod import get_mod_data, InvalidModBaseUrl, ModNotExisting
@@ -55,11 +56,7 @@ class ModPageClass:
         mod_name = self.parent.make_name_unique(mod_name, list(self.data['mods'].keys()))
 
         # Set the data
-        self.data['mods'][mod_name] = {
-            'url': '',
-            'loaders': [],
-            'supported_versions': [],
-        }
+        self.data['mods'][mod_name] = get_new_mod_data()
         self.data.save()
 
         if edit_afterwards:
