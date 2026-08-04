@@ -15,6 +15,7 @@ from PyQt6.QtCore import Qt
 from .file_paths import PACKEDMC_MINECRAFT_DATA_DIRECTORY
 
 from minecraft_api.mod import InvalidModBaseUrl, get_download_url, NoModFileAvailable, APICooldown, TryAgainLater
+from minecraft_api.minecraft import LATEST_RELEASE
 
 # Import the MainWindow for Type Checking
 from typing import TYPE_CHECKING
@@ -34,6 +35,9 @@ def update_mod_files(main_window: MainWindow, instance_name: str, mods_data: dic
     Then download the files if they don't already exist and remove the old mod versions.
     """
     data = main_window.data
+
+    if mc_version == 'latest':
+        mc_version = LATEST_RELEASE
 
     if not output:
         logger.info(f'Start updating mods in the background for {instance_name}.')
