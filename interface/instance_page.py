@@ -13,7 +13,7 @@ from .utils import AnimationScrollDirection
 from .file_paths import PACKEDMC_MINECRAFT_DATA_DIRECTORY, MINECRAFT_DIRECTORY, is_subdir_of_user_home
 from .minecraft_launcher_integration import save_options_file_of_last_used_instance, load_options_file_from_packedmc, write_instance_data_to_profiles_file, start_official_launcher
 from .popups import AdvancedOptionsHandler
-from .mod_files_handler import update_mod_files
+from .mod_files_handler import update_mod_files, move_mods_from_packedmc_to_minecraft
 
 from minecraft_api.minecraft import ALL_RELEASE_VERSIONS, ALL_SNAPSHOT_VERSIONS, get_installed_versions
 from minecraft_api.mod import get_mod_icon_path, InvalidModBaseUrl, ModNotExisting
@@ -79,64 +79,21 @@ class InstancePageClass:
 
         # Create a profile in the official Minecraft Launcher with the correct data and then start it
         write_instance_data_to_profiles_file(instance_name, actual_instance_data)
-
         start_official_launcher()
 
-        # Update the mods
-        update_mod_files(self.parent, instance_name, actual_instance_data['mods'], actual_instance_data["version"], actual_instance_data['type'])
-        packedmc_mods_directory = os.path.join(PACKEDMC_MINECRAFT_DATA_DIRECTORY, 'mods', instance_name)
-
-        # Get all the files in the mods directory which were not copied by PackedMC
         try:
-            mods_directory = os.path.join(minecraft_directory, 'mods')
-            os.makedirs(mods_directory, exist_ok=True)  # Creates the mod folder if it does not already exist
+            # Update and download the mods
+            update_mod_files(self.parent, instance_name, actual_instance_data['mods'], actual_instance_data["version"], actual_instance_data['type'])
 
-            packedmc_copied_mods_file = os.path.join(mods_directory, 'packedmc.json')
-            if os.path.exists(packedmc_copied_mods_file):
-                with open(packedmc_copied_mods_file, 'r') as f:
-                    old_packedmc_copied_files: list[str] = json.load(f)
-            else:
-                old_packedmc_copied_files = []
-            old_packedmc_copied_files.append('packedmc.json')
+            # Move the mods to the minecraft folder
+            move_mods_from_packedmc_to_minecraft(instance_name, minecraft_directory)
 
-            with os.scandir(mods_directory) as it:
-                actual_mod_files = [entry.name for entry in it if entry.is_file()]
-
-            for filename in old_packedmc_copied_files:
-                if filename in actual_mod_files:
-                    actual_mod_files.remove(filename)
-
-            # Store all the mods which were not copied by PackedMC in a backup folder
-            if len(actual_mod_files) > 0:
-                backup_directory_name = 'packedmc_backup_' + datetime.now().isoformat(timespec='seconds').replace('T', '_').replace(':', '-')
-                backup_directory = os.path.join(mods_directory, backup_directory_name)
-                os.mkdir(backup_directory)
-                for filename in actual_mod_files:
-                    shutil.move(os.path.join(mods_directory, filename), backup_directory)
-
-            # Remove all the files which are not replaced soon with the files from the PackedMC mods directory
-            new_mod_files = os.listdir(packedmc_mods_directory)
-            for filename in old_packedmc_copied_files:
-                if filename not in new_mod_files:
-                    if os.path.exists(os.path.join(mods_directory, filename)):
-                        os.remove(os.path.join(mods_directory, filename))
-
-            # Copy all files from the packedmc mods folder to the minecraft mods folder and list them in the JSON file
-            for filename in new_mod_files:
-                shutil.copy2(os.path.join(packedmc_mods_directory, filename), mods_directory)
-
-            with open(packedmc_copied_mods_file, 'w') as f:
-                json.dump(new_mod_files, f)
-        except Exception:
-            traceback.print_exc()
-
-        # Close PackedMC if the setting is selected
-        if self.data['settings']['close_packedmc']:
-            try:
+            # Close PackedMC if the setting is selected
+            if self.data['settings']['close_packedmc']:
                 logger.info(f'Closing PackedMC')
                 exit()
-            except Exception:
-                traceback.print_exc()
+        except Exception:
+            traceback.print_exc()
 
         # TODO: Optionally: Periodically save the options file until the game is closed if packedmc stays open.
 
