@@ -9,6 +9,7 @@ from PyQt6.QtWidgets import QWidget, QDialog, QPushButton, QMainWindow, QTextEdi
 
 from .file_paths import MINECRAFT_LAUNCHER_PROFILES_PATH, MINECRAFT_DIRECTORY, UI_FILES_DIRECTORY
 from .utils import create_buttons_in_scroll_area, ScrollAreaButtonType
+from .minecraft_launcher_integration import DEFAULT_MAX_HEAP_SIZE, DEFAULT_START_HEAP_SIZE
 
 from minecraft_api.minecraft import ALL_RELEASE_VERSIONS, ALL_SNAPSHOT_VERSIONS
 
@@ -207,11 +208,11 @@ class AdvancedOptionsHandler:
         if 'start_heap_size' in arguments:
             self.advanced_options_popup.START_HEAP_SIZE.setValue(arguments['start_heap_size'])
         else:
-            self.advanced_options_popup.START_HEAP_SIZE.setValue(2)
+            self.advanced_options_popup.START_HEAP_SIZE.setValue(DEFAULT_START_HEAP_SIZE)
         if 'max_heap_size' in arguments:
             self.advanced_options_popup.MAX_HEAP_SIZE.setValue(arguments['max_heap_size'])
         else:
-            self.advanced_options_popup.MAX_HEAP_SIZE.setValue(2)
+            self.advanced_options_popup.MAX_HEAP_SIZE.setValue(DEFAULT_MAX_HEAP_SIZE)
         if 'other_arguments' in arguments:
             self.advanced_options_popup.OTHER_ARGUMENTS.setText(arguments['other_arguments'])
 

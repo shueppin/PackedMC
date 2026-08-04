@@ -19,6 +19,10 @@ MINECRAFT_LAUNCHER_PACKEDMC_PROFILE_ID = 'packedmc'
 
 MINECRAFT_LAUNCHER_APP = r"Microsoft.4297127D64EC6_8wekyb3d8bbwe!Minecraft"
 
+DEFAULT_START_HEAP_SIZE = 2
+DEFAULT_MAX_HEAP_SIZE = 2
+DEFAULT_OTHER_JVM_ARGS = "-XX:+UseCompactObjectHeaders -XX:+AlwaysPreTouch -XX:+UseStringDeduplication -XX:+UseZGC"
+
 
 def start_official_launcher():
     # Launch the official Launcher from the Microsoft Store
@@ -146,11 +150,11 @@ def write_instance_data_to_profiles_file(instance_name: str, actual_instance_dat
     if 'start_heap_size' in actual_instance_data['advanced_arguments']:
         java_args += " -Xms{}G".format(actual_instance_data['advanced_arguments']['start_heap_size'])
     else:
-        java_args += " -Xms2G"
+        java_args += f" -Xms{DEFAULT_START_HEAP_SIZE}G"
     if 'max_heap_size' in actual_instance_data['advanced_arguments']:
         java_args += " -Xmx{}G".format(actual_instance_data['advanced_arguments']['max_heap_size'])
     else:
-        java_args += " -Xmx2G"
+        java_args += f" -Xmx{DEFAULT_MAX_HEAP_SIZE}G"
     if 'other_arguments' in actual_instance_data['advanced_arguments']:
         java_args += " " + actual_instance_data['advanced_arguments']['other_arguments']
 

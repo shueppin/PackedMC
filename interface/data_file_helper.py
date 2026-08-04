@@ -3,6 +3,7 @@ This file will unify the data.json file and any changes / updates to the data wi
 """
 from .type_hinting import DataDictType
 from .file_paths import MINECRAFT_DIRECTORY
+from .minecraft_launcher_integration import DEFAULT_MAX_HEAP_SIZE, DEFAULT_START_HEAP_SIZE, DEFAULT_OTHER_JVM_ARGS
 
 
 # It is important that the following functions are not replaced by constants, so we do not accidentally pass something by reference.
@@ -43,6 +44,16 @@ def get_new_instance_data(instance_type: str, instance_version: str, is_default:
     return new_instance_data
 
 
+def get_default_advanced_arguments():
+    """ The advanced arguments for the instance """
+    default_advanced_arguments = {
+        "max_heap_size": DEFAULT_START_HEAP_SIZE,
+        "start_heap_size": DEFAULT_MAX_HEAP_SIZE,
+        "other_arguments": DEFAULT_OTHER_JVM_ARGS
+    }
+    return default_advanced_arguments
+
+
 def get_new_mod_data():
     """ The empty data when adding a new mod """
     new_mod_data = {
@@ -58,6 +69,17 @@ def _ensure_instances_data(data_dict: DataDictType):
         # Ensure that all instances contain a minecraft directory (Bugfix from Commit 3711122)
         if data_dict['instances'][instance_name]['minecraft_directory'] == '':
             data_dict['instances'][instance_name]['minecraft_directory'] = MINECRAFT_DIRECTORY
+
+        # Ensure that all instances contain at least the default advanced arguments
+        if data_dict['instances'][instance_name]['advanced_arguments'] == {}:
+            data_dict['instances'][instance_name]['advanced_arguments'] = get_default_advanced_arguments()
+        else:
+            if 'max_heap_size' not in data_dict['instances'][instance_name]['advanced_arguments']:
+                data_dict['instances'][instance_name]['advanced_arguments']['max_heap_size'] = DEFAULT_MAX_HEAP_SIZE
+            if 'start_heap_size' not in data_dict['instances'][instance_name]['advanced_arguments']:
+                data_dict['instances'][instance_name]['advanced_arguments']['start_heap_size'] = DEFAULT_START_HEAP_SIZE
+            if 'other_arguments' not in data_dict['instances'][instance_name]['advanced_arguments'] or data_dict['instances'][instance_name]['advanced_arguments']['other_arguments'] == '':
+                data_dict['instances'][instance_name]['advanced_arguments']['other_arguments'] = DEFAULT_OTHER_JVM_ARGS
 
 
 def ensure_correct_data(data_dict: DataDictType):
