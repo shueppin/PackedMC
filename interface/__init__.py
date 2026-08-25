@@ -26,7 +26,17 @@ from minecraft_api.mod import get_mod_icon_path, InvalidModBaseUrl, ModNotExisti
 logger = logging.getLogger(__name__)
 
 
-WINDOW_DEFAULT_SCALE = 3
+WINDOW_SCALE_MODIFIER = 3
+STYLE_THEMES = {  # Manually selected themes. First entry is light mode, second entry dark mode.
+    "amber": ["light_amber.xml", "dark_amber.xml"],
+    "blue": ["light_blue.xml", "dark_blue.xml"],
+    "cyan": ["light_cyan_500.xml", "dark_cyan.xml"],
+    "green": ["light_lightgreen_500.xml", "dark_lightgreen.xml"],
+    "pink": ["light_pink.xml", "dark_pink.xml"],
+    "purple": ["light_purple.xml", "dark_purple.xml"],
+    "red": ["light_red_500.xml", "dark_red.xml"],
+    "teal": ["light_teal.xml", "dark_teal.xml"]
+}
 
 
 # Ensure correct directories exist
@@ -92,26 +102,23 @@ class MainWindow(QMainWindow, MainWindowElements):
             self.data.save()
 
         # Create the settings page
-        available_stylesheet_filenames = self.possible_stylesheet_file_names
-        all_style_names = []
-        for filename in available_stylesheet_filenames:
-            style_name = filename.replace('.xml', '').replace('500', '2').replace('_', ' ').title()  # Changes the name from light_green_500.xml to Light Green 2
-            all_style_names.append(style_name)
+        all_theme_names = [theme_name.capitalize() for theme_name in STYLE_THEMES.keys()]
+        selected_theme = self.data['settings']['theme'].capitalize()
 
-        selected_style = self.data['settings']['theme'].replace('.xml', '').replace('500', '2').replace('_', ' ').title()
-
-        create_buttons_in_scroll_area(self.STYLES_SELECTION_LIST, all_style_names, selected_style, self._stylesheet_selection)
+        create_buttons_in_scroll_area(self.STYLES_SELECTION_LIST, all_theme_names, selected_theme, (lambda _button, theme_name: self.apply_stylesheet(theme_name=theme_name.lower())))
         self.SWITCH_SECONDARY_COLOR.setChecked(self.data['settings']['invert_secondary'])
-        self.SWITCH_SECONDARY_COLOR.clicked.connect(self._style_invert_button_clicked)
-        self.SCALE_SELECTION.setValue(self.data['settings']['scale']+WINDOW_DEFAULT_SCALE)
+        self.SWITCH_SECONDARY_COLOR.clicked.connect(lambda button_state: self.apply_stylesheet(invert_secondary=button_state))
+        self.SCALE_SELECTION.setValue(self.data['settings']['scale'] + WINDOW_SCALE_MODIFIER)
         self.SCALE_SELECTION.valueChanged.connect(self._style_scale_changed)
         self.CLOSE_PACKEDMC_BUTTON.setChecked(self.data['settings']['close_packedmc'])
         self.CLOSE_PACKEDMC_BUTTON.clicked.connect(self.close_packedmc_button_clicked)
+        self.USE_DARK_THEME.setChecked(self.data['settings']['use_dark_theme'])
+        self.USE_DARK_THEME.clicked.connect(lambda button_state: self.apply_stylesheet(use_dark_theme=button_state))
 
         # Show the initial page instantly and refresh whole window again
         self.show_page(0, show_instantly=True)
 
-        self._style_scale_changed(self.data['settings']['scale'] + WINDOW_DEFAULT_SCALE)  # Use this to also resize the fields
+        self._style_scale_changed(self.data['settings']['scale'] + WINDOW_SCALE_MODIFIER)  # Use this to also resize the fields
 
         self.INSTANCES_PAGE.rebuild_grid()
 
@@ -213,23 +220,13 @@ class MainWindow(QMainWindow, MainWindowElements):
     '''
     Settings Page
     '''
-    def _stylesheet_selection(self, _button, style_name):
-        # We don't need to fix the button here because we always have more than one stylesheet
-        filename = style_name.replace('2', '500').replace(' ', '_').lower()  # Changes the name from "Light Green 2" to "light_green_500.xml"
-        filename += '.xml'
-
-        self.apply_stylesheet(filename, invert_secondary=self.data['settings']['invert_secondary'], density_scale=self.data['settings']['scale'])
-
-    def _style_invert_button_clicked(self, button_state: bool):
-        self.apply_stylesheet(self.data['settings']['theme'], invert_secondary=button_state, density_scale=self.data['settings']['scale'])
-
     def _style_scale_changed(self, scale_value: int):
         # We calculate minus the default scale, so we can use values between 1 and 5 in the UI
-        self.apply_stylesheet(self.data['settings']['theme'], invert_secondary=self.data['settings']['invert_secondary'], density_scale=scale_value - WINDOW_DEFAULT_SCALE)
+        self.apply_stylesheet(density_scale=scale_value - WINDOW_SCALE_MODIFIER)
 
         # Change grid size
-        self.INSTANCES_PAGE.set_size(100+50*scale_value, 60+20*scale_value)
-        self.INSTANCES_PAGE.set_spacing(vertical_spacing=10*scale_value)
+        self.INSTANCES_PAGE.set_size(100 + 50 * scale_value, 60 + 20 * scale_value)
+        self.INSTANCES_PAGE.set_spacing(vertical_spacing=10 * scale_value)
 
         self.INSTANCE_MODS_DISPLAY.set_size(70 + 50 * scale_value, 60 + 20 * scale_value)
         self.INSTANCE_MODS_DISPLAY.set_spacing(vertical_spacing=10 * scale_value)
@@ -240,15 +237,36 @@ class MainWindow(QMainWindow, MainWindowElements):
     '''
     General functions
     '''
-    def apply_stylesheet(self, stylesheet_file_name: str, invert_secondary=False, density_scale=0):
+    def apply_stylesheet(self, *args, theme_name='', use_dark_theme: bool = None, invert_secondary: bool = None, density_scale: int = None):
         """
-        Add a custom stylesheet based on qt_material
+        Add a custom stylesheet based on qt_material.
+        Pass any changes as kwargs. Any empty fields will just use the old values from self.data.
         """
+        # Show a warning if used any args
+        if len(args) > 0:
+            logger.warning(f"Called apply_stylesheet with arguments, which will be ignored. Use the dedicated kwargs for changes. Ignored args: {args}")
+
+        # Use the default options
+        if theme_name == '':
+            theme_name = self.data['settings']['theme']
+        if invert_secondary is None:
+            invert_secondary = self.data['settings']['invert_secondary']
+        if density_scale is None:
+            density_scale = self.data['settings']['scale']
+        if use_dark_theme is None:
+            use_dark_theme = self.data['settings']['use_dark_theme']
+
+        # Get and check the filename
+        if use_dark_theme:
+            stylesheet_file_name = STYLE_THEMES[theme_name.lower()][1]  # Dark mode
+        else:
+            stylesheet_file_name = STYLE_THEMES[theme_name.lower()][0]  # Light mode
 
         if stylesheet_file_name not in self.possible_stylesheet_file_names:
             logger.error(f'Stylesheet called "{stylesheet_file_name}" does not exist. Possible themes are: {self.possible_stylesheet_file_names}')
             return
 
+        # Define some extra values
         extra = {
             # Button colors (use in designer with custom property called "class")
             'warning': '#dc3545',
@@ -273,7 +291,8 @@ class MainWindow(QMainWindow, MainWindowElements):
         apply_stylesheet(self.application, theme=stylesheet_file_name, css_file=CUSTOM_STYLESHEET_FILE_PATH, extra=extra, invert_secondary=invert_secondary, style='windows11')
 
         # Set the variables and save them
-        self.data['settings']['theme'] = stylesheet_file_name
+        self.data['settings']['theme'] = theme_name
+        self.data['settings']['use_dark_theme'] = use_dark_theme
         self.data['settings']['invert_secondary'] = invert_secondary
         self.data['settings']['scale'] = density_scale
         self.data.save()

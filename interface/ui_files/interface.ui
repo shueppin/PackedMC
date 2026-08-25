@@ -147,7 +147,7 @@
     <item>
      <widget class="QStackedWidget" name="PAGE_CONTAINER">
       <property name="currentIndex">
-       <number>0</number>
+       <number>4</number>
       </property>
       <widget class="QWidget" name="INSTANCES_PAGE_PLACEHOLDER">
        <widget class="QLabel" name="label">
@@ -690,8 +690,100 @@
           <property name="frameShadow">
            <enum>QFrame::Raised</enum>
           </property>
-          <layout class="QGridLayout" name="gridLayout_3" rowstretch="1,1,4" columnstretch="4,1,1">
-           <item row="0" column="0" rowspan="3">
+          <layout class="QGridLayout" name="gridLayout_3" rowstretch="1,1,4,0" columnstretch="4,1,1">
+           <item row="3" column="1">
+            <spacer name="verticalSpacer_3">
+             <property name="orientation">
+              <enum>Qt::Vertical</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>20</width>
+               <height>173</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+           <item row="1" column="1" colspan="2">
+            <widget class="QCheckBox" name="SWITCH_SECONDARY_COLOR">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="focusPolicy">
+              <enum>Qt::NoFocus</enum>
+             </property>
+             <property name="text">
+              <string>Switch background colors</string>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="2">
+            <widget class="QSpinBox" name="SCALE_SELECTION">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="focusPolicy">
+              <enum>Qt::NoFocus</enum>
+             </property>
+             <property name="inputMethodHints">
+              <set>Qt::ImhDigitsOnly</set>
+             </property>
+             <property name="readOnly">
+              <bool>false</bool>
+             </property>
+             <property name="buttonSymbols">
+              <enum>QAbstractSpinBox::UpDownArrows</enum>
+             </property>
+             <property name="keyboardTracking">
+              <bool>true</bool>
+             </property>
+             <property name="minimum">
+              <number>1</number>
+             </property>
+             <property name="maximum">
+              <number>5</number>
+             </property>
+             <property name="value">
+              <number>3</number>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="1">
+            <widget class="QLabel" name="label_5">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="text">
+              <string>Scale</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1" colspan="2">
+            <widget class="QCheckBox" name="USE_DARK_THEME">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="text">
+              <string>Dark Theme</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="0" rowspan="4">
             <widget class="QFrame" name="frame_2">
              <property name="frameShape">
               <enum>QFrame::StyledPanel</enum>
@@ -725,7 +817,7 @@
                  </font>
                 </property>
                 <property name="text">
-                 <string>Styles</string>
+                 <string>Color</string>
                 </property>
                 <property name="alignment">
                  <set>Qt::AlignCenter</set>
@@ -823,85 +915,6 @@
               </item>
              </layout>
             </widget>
-           </item>
-           <item row="0" column="1" colspan="2">
-            <widget class="QCheckBox" name="SWITCH_SECONDARY_COLOR">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="focusPolicy">
-              <enum>Qt::NoFocus</enum>
-             </property>
-             <property name="text">
-              <string>Switch background colors</string>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="1">
-            <widget class="QLabel" name="label_5">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="text">
-              <string>Scale</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="2">
-            <widget class="QSpinBox" name="SCALE_SELECTION">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="focusPolicy">
-              <enum>Qt::NoFocus</enum>
-             </property>
-             <property name="inputMethodHints">
-              <set>Qt::ImhDigitsOnly</set>
-             </property>
-             <property name="readOnly">
-              <bool>false</bool>
-             </property>
-             <property name="buttonSymbols">
-              <enum>QAbstractSpinBox::UpDownArrows</enum>
-             </property>
-             <property name="keyboardTracking">
-              <bool>true</bool>
-             </property>
-             <property name="minimum">
-              <number>1</number>
-             </property>
-             <property name="maximum">
-              <number>5</number>
-             </property>
-             <property name="value">
-              <number>3</number>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="1">
-            <spacer name="verticalSpacer_3">
-             <property name="orientation">
-              <enum>Qt::Vertical</enum>
-             </property>
-             <property name="sizeHint" stdset="0">
-              <size>
-               <width>20</width>
-               <height>173</height>
-              </size>
-             </property>
-            </spacer>
            </item>
           </layout>
          </widget>

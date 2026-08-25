@@ -46,8 +46,9 @@ class MainWindowElements:
     # Settings Page
     STYLES_SELECTION_LIST: QWidget
     SCALE_SELECTION: QSpinBox
-    SWITCH_SECONDARY_COLOR: QPushButton
-    CLOSE_PACKEDMC_BUTTON: QPushButton
+    SWITCH_SECONDARY_COLOR: QCheckBox
+    CLOSE_PACKEDMC_BUTTON: QCheckBox
+    USE_DARK_THEME: QCheckBox
 
 
 '''
@@ -62,9 +63,9 @@ class _SettingsDictType(Protocol):
     def __setitem__(self, key: Literal["theme"], value: str): ...
 
     @overload
-    def __getitem__(self, key: Literal["invert_secondary", "close_packedmc"]) -> bool: ...
+    def __getitem__(self, key: Literal["invert_secondary", "close_packedmc", "use_dark_theme"]) -> bool: ...
     @overload
-    def __setitem__(self, key: Literal["invert_secondary", "close_packedmc"], value: bool): ...
+    def __setitem__(self, key: Literal["invert_secondary", "close_packedmc", "use_dark_theme"], value: bool): ...
 
     @overload
     def __getitem__(self, key: Literal["scale"]) -> int: ...

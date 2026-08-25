@@ -12,8 +12,9 @@ def get_default_data():
     default_data = {
         # For the style of the App
         'settings': {
-            'theme': 'dark_lightgreen.xml',
+            'theme': 'green',
             'invert_secondary': False,
+            'use_dark_theme': False,
             'scale': 0,
             'close_packedmc': False
         },
@@ -82,6 +83,15 @@ def _ensure_instances_data(data_dict: DataDictType):
                 data_dict['instances'][instance_name]['advanced_arguments']['other_arguments'] = DEFAULT_OTHER_JVM_ARGS
 
 
+def _ensure_settings_data(data_dict: DataDictType):
+    # Ensure the correct theme values
+    if 'use_dark_theme' not in data_dict['settings']:
+        data_dict['settings']['use_dark_theme'] = True
+    if '.xml' in data_dict['settings']['theme']:
+        data_dict['settings']['theme'] = 'green'
+
+
 def ensure_correct_data(data_dict: DataDictType):
     """ This function ensures that every field of the data.json is up to date and correct. """
     _ensure_instances_data(data_dict)
+    _ensure_settings_data(data_dict)
