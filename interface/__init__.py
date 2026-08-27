@@ -105,6 +105,7 @@ class MainWindow(QMainWindow, MainWindowElements):
         all_theme_names = [theme_name.capitalize() for theme_name in STYLE_THEMES.keys()]
         selected_theme = self.data['settings']['theme'].capitalize()
 
+        # Creating the buttons will also apply the style to the window on startup.
         create_buttons_in_scroll_area(self.STYLES_SELECTION_LIST, all_theme_names, selected_theme, (lambda _button, theme_name: self.apply_stylesheet(theme_name=theme_name.lower())))
         self.SWITCH_SECONDARY_COLOR.setChecked(self.data['settings']['invert_secondary'])
         self.SWITCH_SECONDARY_COLOR.clicked.connect(lambda button_state: self.apply_stylesheet(invert_secondary=button_state))

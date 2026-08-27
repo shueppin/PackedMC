@@ -38,13 +38,14 @@ class InstancePageClass:
 
         # Create the instance edit page
         parent.INSTANCES_BACK_BUTTON.clicked.connect(lambda: self.parent.show_page(0, animation_direction=AnimationScrollDirection.HORIZONTAL))
-        parent.BROWSE_MINECRAFT_PATH_BUTTON.clicked.connect(self._set_minecraft_path)
+        parent.BROWSE_MINECRAFT_PATH_BUTTON.clicked.connect(self._browse_minecraft_path)
         parent.INSTANCE_NAME.textChanged.connect(self._changed_instance_name)
         parent.DELETE_INSTANCE_BUTTON.clicked.connect(self._delete_instance)
         parent.INSTANCE_TYPE_SELECTION.currentIndexChanged.connect(self._changed_instance_type)
         parent.INSTANCE_VERSION_SELECTION.currentIndexChanged.connect(self._changed_instance_version)
         parent.USE_STANDARD_OPTIONS.clicked.connect(self._changed_instance_use_default_options_file)
         parent.ADVANCED_SETTINGS_BUTTON.clicked.connect(self.advanced_options_popup_handler.open_popup)
+        parent.RESET_MINECRAFT_PATH_BUTTON.clicked.connect(self._reset_minecraft_path)
 
     def play_instance(self, instance_name: str):
         actual_instance_data = self.data['instances'][instance_name]
@@ -217,16 +218,24 @@ class InstancePageClass:
             os.rename(old_options_file_path, os.path.join(packedmc_options_files_directory, new_instance_name + '.txt'))
             logger.info(f'Renaming options file at "{old_options_file_path}" to new name "{new_instance_name}.txt"')
 
-    def _set_minecraft_path(self):
+    def _browse_minecraft_path(self):
         actual_path = self.data['instances'][self.selected_instance_name]['minecraft_directory']
 
-        new_path = QFileDialog.getExistingDirectory(self.parent, 'Select Minecraft Directory', actual_path)
+        new_path = QFileDialog.getExistingDirectory(self.parent, 'Select Minecraft Directory', actual_path).replace("/", "\\")
 
         # Allow only user data paths which actually exist
         if is_subdir_of_user_home(new_path) and os.path.exists(new_path):
             self.data['instances'][self.selected_instance_name]['minecraft_directory'] = new_path
             self.data.save()
             self.parent.MINECRAFT_DIRECTORY_PATH.setText(new_path)  # Refresh the values
+
+    def _reset_minecraft_path(self):
+        reply = QMessageBox.question(self.parent, 'Confirm resetting path', f'''Do you want to reset the minecraft directory path to: \n{MINECRAFT_DIRECTORY} \n\n(Enter = Yes, Escape = No)''')
+
+        if reply == 16384:  # Yes
+            self.data['instances'][self.selected_instance_name]['minecraft_directory'] = MINECRAFT_DIRECTORY
+            self.data.save()
+            self.edit_instance(self.selected_instance_name, True)
 
     def _delete_instance(self):
         selected_instance = self.selected_instance_name
