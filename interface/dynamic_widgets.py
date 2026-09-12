@@ -159,13 +159,15 @@ class ScrollableGrid(QWidget):
         self.current_columns = 0
         self.available_functions = available_functions
 
+        # TODO: Add dropdown for mod tags
+
         # Check if the functions match the field type
         if field_type == FieldType.INSTANCES:
             if not isinstance(available_functions, InstanceFieldFunctions):
                 logger.error(f'Field type "{field_type.name}" expected InstanceFieldFunctions, not {type(available_functions)}')
         elif field_type == FieldType.MODS_DISPLAYED or field_type == FieldType.MODS_EDITABLE:
             if not isinstance(available_functions, ModFieldFunctions):
-                logger.error(f'Field type "{field_type.name}" expected InstanceFieldFunctions, not {type(available_functions)}')
+                logger.error(f'Field type "{field_type.name}" expected ModFieldFunctions, not {type(available_functions)}')
         else:
             logger.error(f'Field type "{field_type}" is not supported.')
 

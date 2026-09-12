@@ -52,6 +52,8 @@ class ModPageClass:
         parent.MOD_URL.textChanged.connect(lambda: self.mod_url_timer.start(500))
         parent.DELETE_MOD_BUTTON.clicked.connect(self._delete_mod)
 
+        # TODO: Integrate tag system
+
     def create_mod(self, mod_name='New Mod', edit_afterwards=True):
         mod_name = self.parent.make_name_unique(mod_name, list(self.data['mods'].keys()))
 
@@ -81,6 +83,8 @@ class ModPageClass:
         parent.MOD_URL.blockSignals(True)
         parent.MOD_URL.setText(mod_url)
         parent.MOD_URL.blockSignals(False)
+
+        # TODO: Display tags
 
         # Set the fields depending on the URL and also refresh the stored data
         try:

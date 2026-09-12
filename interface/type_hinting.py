@@ -43,6 +43,8 @@ class MainWindowElements:
     DELETE_MOD_BUTTON: QPushButton
     MOD_VERSIONS: QTextBrowser
     MOD_LOADER: QTextBrowser
+    MOD_TAG_SELECTION_LIST: QWidget
+    MOD_EDIT_TAGS_BUTTON: QPushButton
 
     # Settings Page
     STYLES_SELECTION_LIST: QWidget
