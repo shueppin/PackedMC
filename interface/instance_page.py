@@ -6,10 +6,10 @@ import traceback
 # noinspection PyPackageRequirements
 from PyQt6.QtWidgets import QFileDialog, QMessageBox
 
-from .data_file_helper import get_default_instance_name, get_new_instance_data, get_default_advanced_arguments
+from data_file_helper import get_default_instance_name, get_new_instance_data, get_default_advanced_arguments
 from .utils import AnimationScrollDirection
-from .file_paths import PACKEDMC_MINECRAFT_DATA_DIRECTORY, MINECRAFT_DIRECTORY, is_subdir_of_user_home
-from .minecraft_launcher_integration import save_options_file_of_last_used_instance, load_options_file_from_packedmc, write_instance_data_to_profiles_file, start_official_launcher
+from file_paths import PACKEDMC_MINECRAFT_DATA_DIRECTORY, MINECRAFT_DIRECTORY, is_subdir_of_user_home
+from minecraft_launcher_integration import save_options_file_of_last_used_instance, load_options_file_from_packedmc, write_instance_data_to_profiles_file, start_official_launcher
 from .popups import AdvancedOptionsHandler
 from .mod_files_handler import update_mod_files, move_mods_from_packedmc_to_minecraft
 

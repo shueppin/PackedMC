@@ -7,9 +7,9 @@ from PyQt6 import uic
 # noinspection PyPackageRequirements
 from PyQt6.QtWidgets import QWidget, QDialog, QPushButton, QMainWindow, QTextEdit, QSpinBox, QCheckBox, QFileDialog
 
-from .file_paths import MINECRAFT_LAUNCHER_PROFILES_PATH, MINECRAFT_DIRECTORY, UI_FILES_DIRECTORY
+from file_paths import MINECRAFT_LAUNCHER_PROFILES_PATH, MINECRAFT_DIRECTORY, UI_FILES_DIRECTORY
 from .utils import create_buttons_in_scroll_area, ScrollAreaButtonType
-from .minecraft_launcher_integration import DEFAULT_MAX_HEAP_SIZE, DEFAULT_START_HEAP_SIZE
+from minecraft_launcher_integration import DEFAULT_MAX_HEAP_SIZE, DEFAULT_START_HEAP_SIZE
 
 from minecraft_api.minecraft import ALL_RELEASE_VERSIONS, ALL_SNAPSHOT_VERSIONS
 

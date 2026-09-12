@@ -5,8 +5,8 @@ import logging
 import shutil
 import subprocess
 
-from .file_paths import PACKEDMC_MINECRAFT_DATA_DIRECTORY, MINECRAFT_DIRECTORY, MINECRAFT_LAUNCHER_PROFILES_PATH, ICONS_FILE_PATH
-from .type_hinting import _SingleInstanceDictType
+from file_paths import PACKEDMC_MINECRAFT_DATA_DIRECTORY, MINECRAFT_DIRECTORY, MINECRAFT_LAUNCHER_PROFILES_PATH, ICONS_FILE_PATH
+from interface.type_hinting import _SingleInstanceDictType
 
 from minecraft_api.minecraft import ALL_RELEASE_VERSIONS
 from minecraft_api.fabric import install_version

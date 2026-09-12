@@ -7,7 +7,7 @@ from PyQt6.QtWidgets import QMessageBox
 # noinspection PyPackageRequirements
 from PyQt6.QtCore import QTimer, QObject, pyqtSignal
 
-from .data_file_helper import get_new_mod_data
+from data_file_helper import get_new_mod_data
 from .utils import AnimationScrollDirection
 
 from minecraft_api.mod import get_mod_data, InvalidModBaseUrl, ModNotExisting

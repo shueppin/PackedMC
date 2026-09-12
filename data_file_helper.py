@@ -1,9 +1,9 @@
 """
 This file will unify the data.json file and any changes / updates to the data will be ensured using this file.
 """
-from .type_hinting import DataDictType
-from .file_paths import MINECRAFT_DIRECTORY
-from .minecraft_launcher_integration import DEFAULT_MAX_HEAP_SIZE, DEFAULT_START_HEAP_SIZE, DEFAULT_OTHER_JVM_ARGS
+from interface.type_hinting import DataDictType
+from file_paths import MINECRAFT_DIRECTORY
+from minecraft_launcher_integration import DEFAULT_MAX_HEAP_SIZE, DEFAULT_START_HEAP_SIZE, DEFAULT_OTHER_JVM_ARGS
 
 
 # It is important that the following functions are not replaced by constants, so we do not accidentally pass something by reference.

@@ -8,12 +8,12 @@ from PyQt6 import uic
 from PyQt6.QtWidgets import QMainWindow, QPushButton, QVBoxLayout
 from qt_material import apply_stylesheet, list_themes, get_theme, opacity
 
-from .data_file_helper import ensure_correct_data, get_default_data, get_default_instance_name
+from data_file_helper import ensure_correct_data, get_default_data, get_default_instance_name
 from .type_hinting import MainWindowElements, DataDictType
 from .dynamic_widgets import FieldType, ScrollableGrid, InstanceFieldFunctions, ModFieldFunctions
 from .utils import StoredDict, animate_transition, AnimationScrollDirection, create_buttons_in_scroll_area
-from .file_paths import INTERFACE_FILE_PATH, CUSTOM_STYLESHEET_FILE_PATH, DATA_FILE_PATH, PACKEDMC_MINECRAFT_DATA_DIRECTORY
-from .minecraft_launcher_integration import save_options_file_of_last_used_instance
+from file_paths import INTERFACE_FILE_PATH, CUSTOM_STYLESHEET_FILE_PATH, DATA_FILE_PATH, PACKEDMC_MINECRAFT_DATA_DIRECTORY
+from minecraft_launcher_integration import save_options_file_of_last_used_instance
 from .popups import ImportProfilesHandler
 from .mod_files_handler import update_mod_files
 
