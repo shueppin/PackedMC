@@ -13,7 +13,7 @@ from minecraft_api.fabric import install_version
 # Import the MainWindow for Type Checking
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from data_file_helper import _SingleInstanceData
+    from data_file_helper import SingleInstanceData
 
 
 logger = logging.getLogger(__name__)
@@ -36,7 +36,7 @@ def start_official_launcher():
         logger.error("Could not find the Minecraft Launcher executable.")
 
 
-def save_options_file_of_last_used_instance(last_played_instance_name: str, last_played_instance_data: _SingleInstanceData, default_instance_name: str):
+def save_options_file_of_last_used_instance(last_played_instance_name: str, last_played_instance_data: SingleInstanceData, default_instance_name: str):
     """Copy the options file of the last used instance to the folder of the corresponding instance. """
     packedmc_options_files_directory = os.path.join(PACKEDMC_MINECRAFT_DATA_DIRECTORY, 'options_files')
 
@@ -79,7 +79,7 @@ def save_options_file_of_last_used_instance(last_played_instance_name: str, last
             logger.warning(f'Options file not found at {minecraft_options_file_path}')
 
 
-def load_options_file_from_packedmc(instance_name: str, actual_instance_data: _SingleInstanceData, default_instance_name: str):
+def load_options_file_from_packedmc(instance_name: str, actual_instance_data: SingleInstanceData, default_instance_name: str):
     # Copy the options file from PackedMC (either default or the actual instance) to the minecraft directory
     packedmc_options_files_directory = os.path.join(PACKEDMC_MINECRAFT_DATA_DIRECTORY, 'options_files')
     if actual_instance_data.use_default_options_file:
@@ -111,7 +111,7 @@ def load_options_file_from_packedmc(instance_name: str, actual_instance_data: _S
             logger.info("No default instance options file found.")
 
 
-def write_instance_data_to_profiles_file(instance_name: str, actual_instance_data: _SingleInstanceData):
+def write_instance_data_to_profiles_file(instance_name: str, actual_instance_data: SingleInstanceData):
     # Modify the launcher profiles file
     if not os.path.exists(MINECRAFT_LAUNCHER_PROFILES_PATH):
         logger.error("Could not find the Minecraft Launcher profiles file. Probably has the Minecraft Launcher never been started.")

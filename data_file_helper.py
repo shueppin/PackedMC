@@ -1,7 +1,7 @@
 """
 This file will unify the data.json file and any changes / updates to the data will be ensured using this file.
 """
-from typing import Any, ClassVar
+from typing import Any, ClassVar, Final
 import logging
 import json
 import os
@@ -14,63 +14,7 @@ from minecraft_launcher_integration import DEFAULT_MAX_HEAP_SIZE, DEFAULT_START_
 logger = logging.getLogger(__name__)
 
 
-# It is important that the following functions are not replaced by constants, so we do not accidentally pass something by reference.
-def get_default_data():
-    """ The data with which the data.json is initialized """
-    default_data = {
-        # For the style of the App
-        'settings': {
-            'theme': 'green',
-            'invert_secondary': False,
-            'use_dark_theme': False,
-            'scale': 0,
-            'close_packedmc': False
-        },
-        'last_played_instance': '',
-        'instances': {},
-        'mods': {}
-    }
-    return default_data
-
-
-def get_default_instance_name():
-    """ The PackedMC name of the default instance """
-    default_instance_name = 'Latest Release'
-    return default_instance_name
-
-
-def get_new_instance_data(instance_type: str, instance_version: str, is_default: bool, minecraft_directory: str, advanced_arguments: dict):
-    """ The data filled with values when creating a new instance """
-    new_instance_data = {
-        'type': instance_type,
-        'version': instance_version,
-        'is_default': is_default,
-        'minecraft_directory': minecraft_directory,
-        'use_default_options_file': is_default,  # Use default options file for default instance (obviously), otherwise don't
-        'advanced_arguments': advanced_arguments,
-        'mods': {}
-    }
-    return new_instance_data
-
-
-def get_default_advanced_arguments():
-    """ The advanced arguments for the instance """
-    default_advanced_arguments = {
-        "max_heap_size": DEFAULT_MAX_HEAP_SIZE,
-        "start_heap_size": DEFAULT_START_HEAP_SIZE,
-        "other_arguments": DEFAULT_OTHER_JVM_ARGS
-    }
-    return default_advanced_arguments
-
-
-def get_new_mod_data():
-    """ The empty data when adding a new mod """
-    new_mod_data = {
-        'url': '',
-        'loaders': [],
-        'supported_versions': [],
-    }
-    return new_mod_data
+DEFAULT_INSTANCE_NAME: Final = 'Latest Release'
 
 
 class _CompactListEncoder(json.JSONEncoder):
@@ -158,7 +102,7 @@ class _DataBase:
 
 
 @dataclass
-class _SettingsData(_DataBase):
+class SettingsData(_DataBase):
     theme: str = field(default='green')
     invert_secondary: bool = field(default=False)
     use_dark_theme: bool = field(default=True)
@@ -171,29 +115,29 @@ class _SettingsData(_DataBase):
 
 
 @dataclass
-class _SingleModData(_DataBase):
+class SingleModData(_DataBase):
     url: str = field(default='')
     loaders: list[str] = field(default_factory=list)
     supported_versions: list[str] = field(default_factory=list)
 
 
 @dataclass
-class _AdvancedArgumentsData(_DataBase):
+class AdvancedArgumentsData(_DataBase):
     start_heap_size: int = field(default=DEFAULT_START_HEAP_SIZE)
     max_heap_size: int = field(default=DEFAULT_MAX_HEAP_SIZE)
     other_arguments: str = field(default=DEFAULT_OTHER_JVM_ARGS)
 
 
 @dataclass
-class _SingleInstanceData(_DataBase):
-    _dataclass_attributes: ClassVar = {'advanced_arguments': _AdvancedArgumentsData}  # The attribute name and the corresponding dataclass
+class SingleInstanceData(_DataBase):
+    _dataclass_attributes: ClassVar = {'advanced_arguments': AdvancedArgumentsData}  # The attribute name and the corresponding dataclass
 
     type: str = field(default='')
     version: str = field(default='')
     is_default: bool = field(default=False)
     minecraft_directory: str = field(default=MINECRAFT_DIRECTORY)
     use_default_options_file: bool = field(default=False)
-    advanced_arguments: _AdvancedArgumentsData = field(default_factory=_AdvancedArgumentsData)
+    advanced_arguments: AdvancedArgumentsData = field(default_factory=AdvancedArgumentsData)
     mods: dict[str, tuple[str, str, int]] = field(default_factory=dict)
 
 
@@ -201,13 +145,13 @@ class _SingleInstanceData(_DataBase):
 class Data(_DataBase):
     filepath: InitVar[str]
 
-    _dataclass_attributes: ClassVar = {'settings': _SettingsData}  # The attribute name and the corresponding dataclass
-    _dictionary_dataclass_attributes: ClassVar = {'mods': _SingleModData, 'instances': _SingleInstanceData}  # The attribute name and the corresponding dataclass
+    _dataclass_attributes: ClassVar = {'settings': SettingsData}  # The attribute name and the corresponding dataclass
+    _dictionary_dataclass_attributes: ClassVar = {'mods': SingleModData, 'instances': SingleInstanceData}  # The attribute name and the corresponding dataclass
 
-    settings: _SettingsData = field(default_factory=_SettingsData)
+    settings: SettingsData = field(default_factory=SettingsData)
     last_played_instance: str = field(default='')
-    instances: dict[str, _SingleInstanceData] = field(default_factory=dict)
-    mods: dict[str, _SingleModData] = field(default_factory=dict)
+    instances: dict[str, SingleInstanceData] = field(default_factory=dict)
+    mods: dict[str, SingleModData] = field(default_factory=dict)
 
     # Special functionality to be able to save and load
     def __post_init__(self, filepath: str):  # This is run after the init from the dataclass
@@ -220,7 +164,6 @@ class Data(_DataBase):
             pass
 
         self.save()
-        print(asdict(self))
 
     def load(self):
         try:

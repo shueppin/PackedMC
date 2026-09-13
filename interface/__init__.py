@@ -8,7 +8,7 @@ from PyQt6 import uic
 from PyQt6.QtWidgets import QMainWindow, QPushButton, QVBoxLayout
 from qt_material import apply_stylesheet, list_themes, get_theme, opacity
 
-from data_file_helper import get_default_instance_name, Data
+from data_file_helper import DEFAULT_INSTANCE_NAME, Data
 from .type_hinting import MainWindowElements
 from .dynamic_widgets import FieldType, ScrollableGrid, InstanceFieldFunctions, ModFieldFunctions
 from .utils import animate_transition, AnimationScrollDirection, create_buttons_in_scroll_area
@@ -96,8 +96,8 @@ class MainWindow(QMainWindow, MainWindowElements):
 
         # If there are no instances, create the default one
         if not self.data.instances:
-            self.instance_page_class.create_instance(get_default_instance_name(), is_default=True, edit_afterwards=False)
-            self.data.last_played_instance = get_default_instance_name()
+            self.instance_page_class.create_instance(DEFAULT_INSTANCE_NAME, is_default=True, edit_afterwards=False)
+            self.data.last_played_instance = DEFAULT_INSTANCE_NAME
             self.data.save()
 
         # Create the settings page

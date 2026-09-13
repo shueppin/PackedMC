@@ -6,7 +6,7 @@ import traceback
 # noinspection PyPackageRequirements
 from PyQt6.QtWidgets import QFileDialog, QMessageBox
 
-from data_file_helper import get_default_instance_name, get_new_instance_data, get_default_advanced_arguments, Data
+from data_file_helper import Data, AdvancedArgumentsData, SingleInstanceData, DEFAULT_INSTANCE_NAME
 from .utils import AnimationScrollDirection
 from file_paths import PACKEDMC_MINECRAFT_DATA_DIRECTORY, MINECRAFT_DIRECTORY, is_subdir_of_user_home
 from minecraft_launcher_integration import save_options_file_of_last_used_instance, load_options_file_from_packedmc, write_instance_data_to_profiles_file, start_official_launcher
@@ -97,10 +97,10 @@ class InstancePageClass:
     def create_instance(self, instance_name='New instance', is_default=False, edit_afterwards=True, instance_type='Release', instance_version='latest', minecraft_directory=MINECRAFT_DIRECTORY, advanced_arguments: dict = None):
         instance_name = self.parent.make_name_unique(instance_name, list(self.data.instances.keys()))
         if advanced_arguments is None:
-            advanced_arguments = get_default_advanced_arguments()
+            advanced_arguments = AdvancedArgumentsData()
 
         # Set the data
-        self.data.instances[instance_name] = get_new_instance_data(instance_type, instance_version, is_default, minecraft_directory, advanced_arguments)
+        self.data.instances[instance_name] = SingleInstanceData(type=instance_type, version=instance_version, is_default=is_default, minecraft_directory=minecraft_directory, advanced_arguments=advanced_arguments)
         self.data.save()
 
         if edit_afterwards:
@@ -249,7 +249,7 @@ class InstancePageClass:
                 self.data.save()
 
                 # Make a unique name here already, to be able to rename the options file
-                new_instance_name = self.parent.make_name_unique(get_default_instance_name(), list(self.data.instances.keys()))
+                new_instance_name = self.parent.make_name_unique(DEFAULT_INSTANCE_NAME, list(self.data.instances.keys()))
 
                 # Rename the options file in PackedMC if it exists
                 packedmc_options_files_directory = os.path.join(PACKEDMC_MINECRAFT_DATA_DIRECTORY, 'options_files')
