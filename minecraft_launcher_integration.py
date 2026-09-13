@@ -6,10 +6,14 @@ import shutil
 import subprocess
 
 from file_paths import PACKEDMC_MINECRAFT_DATA_DIRECTORY, MINECRAFT_DIRECTORY, MINECRAFT_LAUNCHER_PROFILES_PATH, ICONS_FILE_PATH
-from interface.type_hinting import _SingleInstanceDictType
 
 from minecraft_api.minecraft import ALL_RELEASE_VERSIONS
 from minecraft_api.fabric import install_version
+
+# Import the MainWindow for Type Checking
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from data_file_helper import _SingleInstanceData
 
 
 logger = logging.getLogger(__name__)
@@ -32,7 +36,7 @@ def start_official_launcher():
         logger.error("Could not find the Minecraft Launcher executable.")
 
 
-def save_options_file_of_last_used_instance(last_played_instance_name: str, last_played_instance_data: _SingleInstanceDictType, default_instance_name: str):
+def save_options_file_of_last_used_instance(last_played_instance_name: str, last_played_instance_data: _SingleInstanceData, default_instance_name: str):
     """Copy the options file of the last used instance to the folder of the corresponding instance. """
     packedmc_options_files_directory = os.path.join(PACKEDMC_MINECRAFT_DATA_DIRECTORY, 'options_files')
 
@@ -42,13 +46,13 @@ def save_options_file_of_last_used_instance(last_played_instance_name: str, last
         last_played_instance = last_played_instance_name
 
         # Either use the default instance or the last played one
-        if last_played_instance_data['use_default_options_file']:
+        if last_played_instance_data.use_default_options_file:
             output_file_path = os.path.join(packedmc_options_files_directory, default_instance_name + '.txt')
         else:
             output_file_path = os.path.join(packedmc_options_files_directory, last_played_instance + '.txt')
 
         # Create the options file path based on the last profile's minecraft directory
-        minecraft_options_file_path = os.path.join(last_played_instance_data["minecraft_directory"], 'options.txt')
+        minecraft_options_file_path = os.path.join(last_played_instance_data.minecraft_directory, 'options.txt')
 
         try:
             shutil.copy2(minecraft_options_file_path, output_file_path)
@@ -75,16 +79,16 @@ def save_options_file_of_last_used_instance(last_played_instance_name: str, last
             logger.warning(f'Options file not found at {minecraft_options_file_path}')
 
 
-def load_options_file_from_packedmc(instance_name: str, actual_instance_data: _SingleInstanceDictType, default_instance_name: str):
+def load_options_file_from_packedmc(instance_name: str, actual_instance_data: _SingleInstanceData, default_instance_name: str):
     # Copy the options file from PackedMC (either default or the actual instance) to the minecraft directory
     packedmc_options_files_directory = os.path.join(PACKEDMC_MINECRAFT_DATA_DIRECTORY, 'options_files')
-    if actual_instance_data['use_default_options_file']:
+    if actual_instance_data.use_default_options_file:
         packedmc_options_file = os.path.join(packedmc_options_files_directory, default_instance_name + '.txt')
     else:
         packedmc_options_file = os.path.join(packedmc_options_files_directory, instance_name + '.txt')
 
     # Create the options file path based on the game location of the new instance
-    minecraft_options_file_path = os.path.join(actual_instance_data["minecraft_directory"], 'options.txt')
+    minecraft_options_file_path = os.path.join(actual_instance_data.minecraft_directory, 'options.txt')
 
     # Trying to copy the options file of the instance.
     if os.path.exists(packedmc_options_file):
@@ -107,7 +111,7 @@ def load_options_file_from_packedmc(instance_name: str, actual_instance_data: _S
             logger.info("No default instance options file found.")
 
 
-def write_instance_data_to_profiles_file(instance_name: str, actual_instance_data: _SingleInstanceDictType):
+def write_instance_data_to_profiles_file(instance_name: str, actual_instance_data: _SingleInstanceData):
     # Modify the launcher profiles file
     if not os.path.exists(MINECRAFT_LAUNCHER_PROFILES_PATH):
         logger.error("Could not find the Minecraft Launcher profiles file. Probably has the Minecraft Launcher never been started.")
@@ -124,13 +128,13 @@ def write_instance_data_to_profiles_file(instance_name: str, actual_instance_dat
         created_time = datetime.now().isoformat(timespec="milliseconds") + "Z"  # Time in this format: 2026-01-31T20:34:56.183Z
 
     # Set a default value for the version id
-    version_id = actual_instance_data["version"]
+    version_id = actual_instance_data.version
 
     if version_id == "latest":
         version_id = ALL_RELEASE_VERSIONS[0]
 
     # Replace the version id for special types like fabric or forge
-    if actual_instance_data['type'] == "Fabric":
+    if actual_instance_data.type == "Fabric":
         # Check what the newest fabric version for this Minecraft version is by looking at the directories
         versions_directory = os.path.join(MINECRAFT_DIRECTORY, 'versions')
         for directory_name in sorted(os.listdir(versions_directory), reverse=True):
@@ -138,7 +142,7 @@ def write_instance_data_to_profiles_file(instance_name: str, actual_instance_dat
                 continue
 
             split_name = directory_name.split('-')
-            if split_name[-1] == actual_instance_data["version"]:
+            if split_name[-1] == actual_instance_data.version:
                 version_id = directory_name
                 break
         else:  # The for loop did not break, thus the fabric version does not exist. Then it is installed.
@@ -147,16 +151,16 @@ def write_instance_data_to_profiles_file(instance_name: str, actual_instance_dat
 
     # Set the java args
     java_args = ""
-    if 'start_heap_size' in actual_instance_data['advanced_arguments']:
-        java_args += " -Xms{}G".format(actual_instance_data['advanced_arguments']['start_heap_size'])
+    if 'start_heap_size' in actual_instance_data.advanced_arguments:
+        java_args += " -Xms{}G".format(actual_instance_data.advanced_arguments.start_heap_size)
     else:
         java_args += f" -Xms{DEFAULT_START_HEAP_SIZE}G"
-    if 'max_heap_size' in actual_instance_data['advanced_arguments']:
-        java_args += " -Xmx{}G".format(actual_instance_data['advanced_arguments']['max_heap_size'])
+    if 'max_heap_size' in actual_instance_data.advanced_arguments:
+        java_args += " -Xmx{}G".format(actual_instance_data.advanced_arguments.max_heap_size)
     else:
         java_args += f" -Xmx{DEFAULT_MAX_HEAP_SIZE}G"
-    if 'other_arguments' in actual_instance_data['advanced_arguments']:
-        java_args += " " + actual_instance_data['advanced_arguments']['other_arguments']
+    if 'other_arguments' in actual_instance_data.advanced_arguments:
+        java_args += " " + actual_instance_data.advanced_arguments.other_arguments
 
     with open(os.path.join(ICONS_FILE_PATH, 'logo64.b64')) as f:
         base64_icon = f.read()
@@ -164,7 +168,7 @@ def write_instance_data_to_profiles_file(instance_name: str, actual_instance_dat
     # Overwrite or add the PackedMC profile with the most recent timestamp.
     profile_data["profiles"][MINECRAFT_LAUNCHER_PACKEDMC_PROFILE_ID] = {
         "created": created_time,
-        "gameDir": actual_instance_data["minecraft_directory"],
+        "gameDir": actual_instance_data.minecraft_directory,
         "icon": "data:image/png;base64," + base64_icon,
         "javaArgs": java_args,
         "lastUsed": datetime.now().isoformat(timespec="milliseconds") + "Z",  # Time in this format: 2026-01-31T20:34:56.183Z

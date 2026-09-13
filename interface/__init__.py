@@ -8,10 +8,10 @@ from PyQt6 import uic
 from PyQt6.QtWidgets import QMainWindow, QPushButton, QVBoxLayout
 from qt_material import apply_stylesheet, list_themes, get_theme, opacity
 
-from data_file_helper import ensure_correct_data, get_default_data, get_default_instance_name
-from .type_hinting import MainWindowElements, DataDictType
+from data_file_helper import get_default_instance_name, Data
+from .type_hinting import MainWindowElements
 from .dynamic_widgets import FieldType, ScrollableGrid, InstanceFieldFunctions, ModFieldFunctions
-from .utils import StoredDict, animate_transition, AnimationScrollDirection, create_buttons_in_scroll_area
+from .utils import animate_transition, AnimationScrollDirection, create_buttons_in_scroll_area
 from file_paths import INTERFACE_FILE_PATH, CUSTOM_STYLESHEET_FILE_PATH, DATA_FILE_PATH, PACKEDMC_MINECRAFT_DATA_DIRECTORY
 from minecraft_launcher_integration import save_options_file_of_last_used_instance
 from .popups import ImportProfilesHandler
@@ -50,8 +50,7 @@ class MainWindow(QMainWindow, MainWindowElements):
         self.setWindowTitle("PackedMC")
 
         # Define variables which are mainly needed in this file
-        self.data: DataDictType = StoredDict(DATA_FILE_PATH, get_default_data())  # Initialize using Default Data as base
-        ensure_correct_data(self.data)
+        self.data = Data(DATA_FILE_PATH)  # Initialize using Default Data as base
         self.application = application
         self.possible_stylesheet_file_names = list_themes()
 
@@ -96,41 +95,41 @@ class MainWindow(QMainWindow, MainWindowElements):
         self.INSTANCE_MODS_DISPLAY_CONTAINER.setLayout(layout)
 
         # If there are no instances, create the default one
-        if not self.data['instances']:
+        if not self.data.instances:
             self.instance_page_class.create_instance(get_default_instance_name(), is_default=True, edit_afterwards=False)
-            self.data['last_played_instance'] = get_default_instance_name()
+            self.data.last_played_instance = get_default_instance_name()
             self.data.save()
 
         # Create the settings page
         all_theme_names = [theme_name.capitalize() for theme_name in STYLE_THEMES.keys()]
-        selected_theme = self.data['settings']['theme'].capitalize()
+        selected_theme = self.data.settings.theme.capitalize()
 
         # Creating the buttons will also apply the style to the window on startup.
         create_buttons_in_scroll_area(self.STYLES_SELECTION_LIST, all_theme_names, selected_theme, (lambda _button, theme_name: self.apply_stylesheet(theme_name=theme_name.lower())))
-        self.SWITCH_SECONDARY_COLOR.setChecked(self.data['settings']['invert_secondary'])
+        self.SWITCH_SECONDARY_COLOR.setChecked(self.data.settings.invert_secondary)
         self.SWITCH_SECONDARY_COLOR.clicked.connect(lambda button_state: self.apply_stylesheet(invert_secondary=button_state))
-        self.SCALE_SELECTION.setValue(self.data['settings']['scale'] + WINDOW_SCALE_MODIFIER)
+        self.SCALE_SELECTION.setValue(self.data.settings.scale + WINDOW_SCALE_MODIFIER)
         self.SCALE_SELECTION.valueChanged.connect(self._style_scale_changed)
-        self.CLOSE_PACKEDMC_BUTTON.setChecked(self.data['settings']['close_packedmc'])
+        self.CLOSE_PACKEDMC_BUTTON.setChecked(self.data.settings.close_packedmc)
         self.CLOSE_PACKEDMC_BUTTON.clicked.connect(self.close_packedmc_button_clicked)
-        self.USE_DARK_THEME.setChecked(self.data['settings']['use_dark_theme'])
+        self.USE_DARK_THEME.setChecked(self.data.settings.use_dark_theme)
         self.USE_DARK_THEME.clicked.connect(lambda button_state: self.apply_stylesheet(use_dark_theme=button_state))
 
         # Show the initial page instantly and refresh whole window again
         self.show_page(0, show_instantly=True)
 
-        self._style_scale_changed(self.data['settings']['scale'] + WINDOW_SCALE_MODIFIER)  # Use this to also resize the fields
+        self._style_scale_changed(self.data.settings.scale + WINDOW_SCALE_MODIFIER)  # Use this to also resize the fields
 
         self.INSTANCES_PAGE.rebuild_grid()
 
         # Save the actual options file from the minecraft directory
-        last_played_instance = self.data['last_played_instance']
-        save_options_file_of_last_used_instance(last_played_instance, self.data['instances'][last_played_instance], self.instance_page_class.get_default_instance_name())
+        last_played_instance = self.data.last_played_instance
+        save_options_file_of_last_used_instance(last_played_instance, self.data.instances[last_played_instance], self.instance_page_class.get_default_instance_name())
 
         # Update the mods of the last played instance in a thread
-        instance_mods = self.data['instances'][last_played_instance]['mods']
-        instance_version = self.data['instances'][last_played_instance]['version']
-        instance_type = self.data['instances'][last_played_instance]['type']
+        instance_mods = self.data.instances[last_played_instance].mods
+        instance_version = self.data.instances[last_played_instance].version
+        instance_type = self.data.instances[last_played_instance].type
         mod_update_thread = threading.Thread(target=update_mod_files, args=(self, last_played_instance, instance_mods, instance_version, instance_type, False), daemon=True)
         mod_update_thread.start()
 
@@ -201,13 +200,13 @@ class MainWindow(QMainWindow, MainWindowElements):
 
         # Page specific functions
         if page_index == 0:
-            self.INSTANCES_PAGE.set_values(sorted(self.data['instances'].keys(), key=lambda x: x.lower()))
+            self.INSTANCES_PAGE.set_values(sorted(self.data.instances.keys(), key=lambda x: x.lower()))
         elif page_index == 2:
             mod_page_values = []
-            for mod_name in sorted(self.data['mods'].keys(), key=lambda x: x.lower()):
+            for mod_name in sorted(self.data.mods.keys(), key=lambda x: x.lower()):
                 icon_file_path = ''
                 try:
-                    icon_file_path = get_mod_icon_path(self.data['mods'][mod_name]['url'])
+                    icon_file_path = get_mod_icon_path(self.data.mods[mod_name].url)
                 except ModNotExisting:
                     pass
                 except InvalidModBaseUrl:
@@ -249,13 +248,13 @@ class MainWindow(QMainWindow, MainWindowElements):
 
         # Use the default options
         if theme_name == '':
-            theme_name = self.data['settings']['theme']
+            theme_name = self.data.settings.theme
         if invert_secondary is None:
-            invert_secondary = self.data['settings']['invert_secondary']
+            invert_secondary = self.data.settings.invert_secondary
         if density_scale is None:
-            density_scale = self.data['settings']['scale']
+            density_scale = self.data.settings.scale
         if use_dark_theme is None:
-            use_dark_theme = self.data['settings']['use_dark_theme']
+            use_dark_theme = self.data.settings.use_dark_theme
 
         # Get and check the filename
         if use_dark_theme:
@@ -292,10 +291,10 @@ class MainWindow(QMainWindow, MainWindowElements):
         apply_stylesheet(self.application, theme=stylesheet_file_name, css_file=CUSTOM_STYLESHEET_FILE_PATH, extra=extra, invert_secondary=invert_secondary, style='windows11')
 
         # Set the variables and save them
-        self.data['settings']['theme'] = theme_name
-        self.data['settings']['use_dark_theme'] = use_dark_theme
-        self.data['settings']['invert_secondary'] = invert_secondary
-        self.data['settings']['scale'] = density_scale
+        self.data.settings.theme = theme_name
+        self.data.settings.use_dark_theme = use_dark_theme
+        self.data.settings.invert_secondary = invert_secondary
+        self.data.settings.scale = density_scale
         self.data.save()
 
     @staticmethod
@@ -311,5 +310,5 @@ class MainWindow(QMainWindow, MainWindowElements):
         return name
 
     def close_packedmc_button_clicked(self, button_state: bool):
-        self.data['settings']['close_packedmc'] = button_state
+        self.data.settings.close_packedmc = button_state
         self.data.save()

@@ -1,7 +1,5 @@
 import logging
 from enum import Enum
-import os
-import json
 from typing import Callable
 
 # noinspection PyPackageRequirements
@@ -11,75 +9,6 @@ from PyQt6.QtWidgets import QMainWindow, QWidget, QRadioButton, QCheckBox, QStac
 
 
 logger = logging.getLogger(__name__)
-
-
-class _CompactListEncoder(json.JSONEncoder):
-    def iterencode(self, obj, _one_shot=False):
-        # Use custom separators for lists only
-        return self._iterencode(obj, 0)
-
-    def _iterencode(self, obj, level):
-        indent = self.indent
-        newline = "\n"
-        space = " "
-
-        if isinstance(obj, dict):
-            if not obj:
-                yield "{}"
-                return
-
-            yield "{"
-            items = list(obj.items())
-            for i, (key, value) in enumerate(items):
-                yield newline + space * (indent * (level + 1))
-                yield json.dumps(key)
-                yield ": "
-                yield from self._iterencode(value, level + 1)
-                if i < len(items) - 1:
-                    yield ","
-            yield newline + space * (indent * level) + "}"
-
-        elif isinstance(obj, list):
-            # ALWAYS compact lists
-            yield json.dumps(obj, separators=(", ", ":"), ensure_ascii=self.ensure_ascii)
-
-        else:
-            yield json.dumps(obj, ensure_ascii=self.ensure_ascii)
-
-
-class StoredDict(dict):
-    def __init__(self, filepath: str, *args, **kwargs):
-        # Initialize the base dictionary
-        super().__init__(*args, **kwargs)
-
-        # Store the filepath
-        self.filepath = filepath
-
-        # Load existing data if the file exists
-        if os.path.exists(filepath):
-            self.load()
-
-        self.save()
-
-    def save(self):
-        try:
-            with open(self.filepath, "w") as f:
-                json.dump(
-                    dict(self),
-                    f,
-                    cls=_CompactListEncoder,
-                    indent=4
-                )
-        except IOError as e:
-            logger.error(f"Error saving dictionary: {e}")
-
-    def load(self):
-        try:
-            with open(self.filepath, "r") as f:
-                loaded_data = json.load(f)
-                self.update(loaded_data)
-        except (IOError, json.JSONDecodeError) as e:
-            logger.error(f"Error loading dictionary: {e}")
 
 
 '''

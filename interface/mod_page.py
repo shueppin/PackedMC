@@ -7,7 +7,7 @@ from PyQt6.QtWidgets import QMessageBox
 # noinspection PyPackageRequirements
 from PyQt6.QtCore import QTimer, QObject, pyqtSignal
 
-from data_file_helper import get_new_mod_data
+from data_file_helper import get_new_mod_data, Data
 from .utils import AnimationScrollDirection
 
 from minecraft_api.mod import get_mod_data, InvalidModBaseUrl, ModNotExisting
@@ -33,7 +33,7 @@ class _ModDataConnector(QObject):
 class ModPageClass:
     def __init__(self, parent: MainWindow):
         self.parent: MainWindow = parent
-        self.data = parent.data
+        self.data: Data = parent.data
 
         # Create intern variables
         self.selected_mod_name = ''
@@ -55,10 +55,10 @@ class ModPageClass:
         # TODO: Integrate tag system
 
     def create_mod(self, mod_name='New Mod', edit_afterwards=True):
-        mod_name = self.parent.make_name_unique(mod_name, list(self.data['mods'].keys()))
+        mod_name = self.parent.make_name_unique(mod_name, list(self.data.mods.keys()))
 
         # Set the data
-        self.data['mods'][mod_name] = get_new_mod_data()
+        self.data.mods[mod_name] = get_new_mod_data()
         self.data.save()
 
         if edit_afterwards:
@@ -72,7 +72,7 @@ class ModPageClass:
 
         # Set the values for the edit page
         self.selected_mod_name = mod_name
-        mod_url: str = self.data['mods'][mod_name]['url']
+        mod_url: str = self.data.mods[mod_name].url
 
         # Set the name without triggering the changed_instance_data function (which triggers on text change)
         parent.MOD_NAME.blockSignals(True)
@@ -99,15 +99,15 @@ class ModPageClass:
 
     def set_mod_values(self, description: str, loaders: list[str], supported_versions: list[str], mod_name: str, mod_url: str):
         """ If the URL of the given mod matches, then store the given values for said mod. Then display them, if it is the selected mod. """
-        if mod_name not in self.data['mods']:  # This means the mod was probably renamed. Then take the selected mod and check if it is this URL
+        if mod_name not in self.data.mods:  # This means the mod was probably renamed. Then take the selected mod and check if it is this URL
             mod_name = self.selected_mod_name
 
-        if self.data['mods'][mod_name]['url'] != mod_url:
+        if self.data.mods[mod_name].url != mod_url:
             logger.info("Mod URL changed in the meantime. Callback is discarded.")
             return
 
-        self.data['mods'][mod_name]['loaders'] = loaders
-        self.data['mods'][mod_name]['supported_versions'] = supported_versions
+        self.data.mods[mod_name].loaders = loaders
+        self.data.mods[mod_name].supported_versions = supported_versions
         self.data.save()
 
         clean_description = re.sub(r'<img\b[^>]*>', '', description, flags=re.IGNORECASE)  # Remove the images from the HTML, so no need to load them.
@@ -125,25 +125,25 @@ class ModPageClass:
             new_mod_name = 'Mod Name'
 
         # First get the data and only then make the name unique, to avoid mistakes when the name already exists, because of itself
-        mod_data = self.data['mods'].pop(old_mod_name)
+        mod_data = self.data.mods.pop(old_mod_name)
 
-        new_mod_name = self.parent.make_name_unique(new_mod_name, list(self.data['mods'].keys()))
+        new_mod_name = self.parent.make_name_unique(new_mod_name, list(self.data.mods.keys()))
 
         # Update the mod name and data
-        self.data['mods'][new_mod_name] = mod_data
+        self.data.mods[new_mod_name] = mod_data
         self.selected_mod_name = new_mod_name
 
         # Update the mod name in every instance
-        for instance_name in self.data['instances']:
-            if old_mod_name in self.data['instances'][instance_name]['mods']:
-                mod_download_url = self.data['instances'][instance_name]['mods'].pop(old_mod_name)  # Load the old value and use it with the key of the new value
-                self.data['instances'][instance_name]['mods'][new_mod_name] = mod_download_url
+        for instance_name in self.data.instances:
+            if old_mod_name in self.data.instances[instance_name].mods:
+                mod_download_url = self.data.instances[instance_name].mods.pop(old_mod_name)  # Load the old value and use it with the key of the new value
+                self.data.instances[instance_name].mods[new_mod_name] = mod_download_url
         self.data.save()
 
     def _changed_mod_url(self):
         # This function is only executed after a timer has run out, so after there were no keystrokes in 0.5 seconds.
         new_url = self.parent.MOD_URL.text().strip()
-        self.data['mods'][self.selected_mod_name]['url'] = new_url
+        self.data.mods[self.selected_mod_name].url = new_url
         self.data.save()
         if validators.url(new_url):
             try:
@@ -164,11 +164,11 @@ class ModPageClass:
         reply = QMessageBox.question(self.parent, 'Confirm deletion', f'Do you really want to delete the mod "{self.selected_mod_name}"? \n\n(Enter = Yes, Escape = No)')
 
         if reply == 16384:  # Yes
-            del self.data['mods'][self.selected_mod_name]
+            del self.data.mods[self.selected_mod_name]
             # Remove the mod from every instance
-            for instance_name in self.data['instances']:
-                if self.selected_mod_name in self.data['instances'][instance_name]['mods']:
-                    del self.data['instances'][instance_name]['mods'][self.selected_mod_name]
+            for instance_name in self.data.instances:
+                if self.selected_mod_name in self.data.instances[instance_name].mods:
+                    del self.data.instances[instance_name].mods[self.selected_mod_name]
             self.data.save()
 
             # Go to the mods page

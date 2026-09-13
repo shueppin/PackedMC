@@ -13,6 +13,7 @@ from PyQt6.QtWidgets import QMessageBox, QProgressDialog
 from PyQt6.QtCore import Qt
 
 from file_paths import PACKEDMC_MINECRAFT_DATA_DIRECTORY
+from data_file_helper import Data
 
 from minecraft_api.mod import InvalidModBaseUrl, get_download_url, NoModFileAvailable, APICooldown, TryAgainLater
 from minecraft_api.minecraft import LATEST_RELEASE
@@ -34,7 +35,7 @@ def update_mod_files(main_window: MainWindow, instance_name: str, mods_data: dic
     Go through all mods and try to get their download links (if they were not just checked recently).
     Then download the files if they don't already exist and remove the old mod versions.
     """
-    data = main_window.data
+    data: Data = main_window.data
 
     if mc_version == 'latest':
         mc_version = LATEST_RELEASE
@@ -71,7 +72,7 @@ def update_mod_files(main_window: MainWindow, instance_name: str, mods_data: dic
         try:
             old_download_url, old_filename, last_checked = mods_data[mod_name]
         except Exception:  # If there is a mistake in the data, then update it and use default values
-            data['instances'][instance_name]['mods'][mod_name] = ('', '', 0)
+            data.instances[instance_name].mods[mod_name] = ('', '', 0)
             data.save()
             old_download_url, old_filename, last_checked = ('', '', 0)
 
@@ -83,12 +84,12 @@ def update_mod_files(main_window: MainWindow, instance_name: str, mods_data: dic
             continue
 
         try:
-            download_url, filename = get_download_url(data['mods'][mod_name]['url'], mc_version, loader)
-            data['instances'][instance_name]['mods'][mod_name] = (download_url, filename, actual_time)
+            download_url, filename = get_download_url(data.mods[mod_name].url, mc_version, loader)
+            data.instances[instance_name].mods[mod_name] = (download_url, filename, actual_time)
 
             # If the version is not already in the supported versions, then add it.
-            if mc_version not in data['mods'][mod_name]['supported_versions']:
-                data['mods'][mod_name]['supported_versions'].append(mc_version)
+            if mc_version not in data.mods[mod_name].supported_versions:
+                data.mods[mod_name].supported_versions.append(mc_version)
             data.save()
 
             # If the download url has changed or the file does not exist, then download the file
@@ -105,7 +106,7 @@ def update_mod_files(main_window: MainWindow, instance_name: str, mods_data: dic
         except (InvalidModBaseUrl, NoModFileAvailable):
             # Mod unavailable, thus no possible download URL
             mods_not_found_for_this_version.append(mod_name)
-            data['instances'][instance_name]['mods'][mod_name] = ('', '', last_checked)
+            data.instances[instance_name].mods[mod_name] = ('', '', last_checked)
             data.save()
         except (APICooldown, TryAgainLater):
             # Just do nothing. It will be tried again when playing this instance again.
