@@ -119,6 +119,7 @@ class SingleModData(_DataBase):
     url: str = field(default='')
     loaders: list[str] = field(default_factory=list)
     supported_versions: list[str] = field(default_factory=list)
+    tags: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -152,6 +153,7 @@ class Data(_DataBase):
     last_played_instance: str = field(default='')
     instances: dict[str, SingleInstanceData] = field(default_factory=dict)
     mods: dict[str, SingleModData] = field(default_factory=dict)
+    tags: list[str] = field(default_factory=list)
 
     # Special functionality to be able to save and load
     def __post_init__(self, filepath: str):  # This is run after the init from the dataclass

@@ -8,7 +8,8 @@ from PyQt6.QtWidgets import QMessageBox
 from PyQt6.QtCore import QTimer, QObject, pyqtSignal
 
 from data_file_helper import Data, SingleModData
-from .utils import AnimationScrollDirection
+from .popups import ModTagPopup
+from .utils import AnimationScrollDirection, create_buttons_in_scroll_area, ScrollAreaButtonType
 
 from minecraft_api.mod import get_mod_data, InvalidModBaseUrl, ModNotExisting
 
@@ -46,12 +47,14 @@ class ModPageClass:
         # noinspection PyUnresolvedReferences
         self.mod_data_connector.updated.connect(lambda description, loaders, supported_versions, mod_name, mod_url: self.set_mod_values(description, loaders, supported_versions, mod_name, mod_url))
 
+        self.mod_tag_popup = ModTagPopup(self.parent)
+
         # Connect the widgets
         parent.MODS_BACK_BUTTON.clicked.connect(lambda: parent.show_page(2, animation_direction=AnimationScrollDirection.HORIZONTAL))
         parent.MOD_NAME.textChanged.connect(self._changed_mod_name)
         parent.MOD_URL.textChanged.connect(lambda: self.mod_url_timer.start(500))
         parent.DELETE_MOD_BUTTON.clicked.connect(self._delete_mod)
-
+        parent.MOD_EDIT_TAGS_BUTTON.clicked.connect(self._show_mod_tag_popup)
         # TODO: Integrate tag system
 
     def create_mod(self, mod_name='New Mod', edit_afterwards=True):
@@ -84,7 +87,7 @@ class ModPageClass:
         parent.MOD_URL.setText(mod_url)
         parent.MOD_URL.blockSignals(False)
 
-        # TODO: Display tags
+        self._create_tag_buttons()
 
         # Set the fields depending on the URL and also refresh the stored data
         try:
@@ -173,3 +176,20 @@ class ModPageClass:
 
             # Go to the mods page
             self.parent.show_page(2, animation_direction=AnimationScrollDirection.HORIZONTAL)
+
+    def _create_tag_buttons(self):
+        # Create the tag buttons as checkboxes
+        create_buttons_in_scroll_area(self.parent.MOD_TAG_SELECTION_LIST, self.data.tags, self.data.mods[self.selected_mod_name].tags, self._changed_mod_tags, button_type=ScrollAreaButtonType.CHECKBOX)
+
+    def _show_mod_tag_popup(self):
+        self.mod_tag_popup.display()
+        self._create_tag_buttons()  # To update them
+
+    def _changed_mod_tags(self, state, tag_name):
+        if state:
+            if tag_name not in self.data.mods[self.selected_mod_name].tags:
+                self.data.mods[self.selected_mod_name].tags.append(tag_name)
+        else:
+            if tag_name in self.data.mods[self.selected_mod_name].tags:
+                self.data.mods[self.selected_mod_name].tags.remove(tag_name)
+        self.data.save()

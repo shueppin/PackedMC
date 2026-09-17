@@ -5,11 +5,13 @@ import json
 # noinspection PyPackageRequirements
 from PyQt6 import uic
 # noinspection PyPackageRequirements
-from PyQt6.QtWidgets import QWidget, QDialog, QPushButton, QMainWindow, QTextEdit, QSpinBox, QCheckBox, QFileDialog
+from PyQt6.QtCore import Qt
+# noinspection PyPackageRequirements
+from PyQt6.QtWidgets import QWidget, QDialog, QPushButton, QMainWindow, QTextEdit, QSpinBox, QCheckBox, QFileDialog, QVBoxLayout, QListWidget, QLabel, QListWidgetItem, QInputDialog, QHBoxLayout, QMessageBox
 
+from data_file_helper import Data
 from file_paths import MINECRAFT_LAUNCHER_PROFILES_PATH, MINECRAFT_DIRECTORY, UI_FILES_DIRECTORY
 from .utils import create_buttons_in_scroll_area, ScrollAreaButtonType
-from minecraft_launcher_integration import DEFAULT_MAX_HEAP_SIZE, DEFAULT_START_HEAP_SIZE
 
 from minecraft_api.minecraft import ALL_RELEASE_VERSIONS, ALL_SNAPSHOT_VERSIONS
 
@@ -20,6 +22,11 @@ if TYPE_CHECKING:
 
 
 logger = logging.getLogger(__name__)
+
+
+'''
+Popups using .ui files
+'''
 
 
 class _PopupTemplate(QDialog):
@@ -100,7 +107,7 @@ class ImportProfilesHandler:
                         continue
 
             # If there was no error opening the file, create the checkboxes and display the popup
-            create_buttons_in_scroll_area(self.import_profiles_popup.PROFILES_SELECTION_LIST, sorted(self.all_imported_launcher_profiles.keys()), [], lambda *args: None, button_type=ScrollAreaButtonType.CHECKBOX)
+            create_buttons_in_scroll_area(self.import_profiles_popup.PROFILES_SELECTION_LIST, sorted(self.all_imported_launcher_profiles.keys()), [], lambda _s, _n: None, button_type=ScrollAreaButtonType.CHECKBOX)
             self.import_profiles_popup.display()
 
         except FileNotFoundError:
@@ -196,32 +203,150 @@ class ImportProfilesHandler:
 class AdvancedOptionsHandler:
     def __init__(self, parent: MainWindow):
         self.parent = parent
-        self.data = parent.data
+        self.data: Data = parent.data
 
         # Create the popup and connect the widgets
         self.advanced_options_popup = _AdvancedOptionsPopupWindow(parent)
         self.advanced_options_popup.finished.connect(self._store_popup_values)
 
     def open_popup(self):
+        print('open')
         # Set the values from the saved data when opening the popup
-        arguments = self.data['instances'][self.parent.instance_page_class.selected_instance_name]['advanced_arguments']
-        if 'start_heap_size' in arguments:
-            self.advanced_options_popup.START_HEAP_SIZE.setValue(arguments['start_heap_size'])
-        else:
-            self.advanced_options_popup.START_HEAP_SIZE.setValue(DEFAULT_START_HEAP_SIZE)
-        if 'max_heap_size' in arguments:
-            self.advanced_options_popup.MAX_HEAP_SIZE.setValue(arguments['max_heap_size'])
-        else:
-            self.advanced_options_popup.MAX_HEAP_SIZE.setValue(DEFAULT_MAX_HEAP_SIZE)
-        if 'other_arguments' in arguments:
-            self.advanced_options_popup.OTHER_ARGUMENTS.setText(arguments['other_arguments'])
+        arguments = self.data.instances[self.parent.instance_page_class.selected_instance_name].advanced_arguments
+        self.advanced_options_popup.START_HEAP_SIZE.setValue(arguments.start_heap_size)
+        self.advanced_options_popup.MAX_HEAP_SIZE.setValue(arguments.max_heap_size)
+        self.advanced_options_popup.OTHER_ARGUMENTS.setText(arguments.other_arguments)
 
         self.advanced_options_popup.display(True)
 
     def _store_popup_values(self):
         # Store the values of the popup before closing
-        self.data['instances'][self.parent.instance_page_class.selected_instance_name]['advanced_arguments']['max_heap_size'] = self.advanced_options_popup.MAX_HEAP_SIZE.value()
-        self.data['instances'][self.parent.instance_page_class.selected_instance_name]['advanced_arguments']['start_heap_size'] = self.advanced_options_popup.START_HEAP_SIZE.value()
-        self.data['instances'][self.parent.instance_page_class.selected_instance_name]['advanced_arguments']['other_arguments'] = self.advanced_options_popup.OTHER_ARGUMENTS.toPlainText()
+        self.data.instances[self.parent.instance_page_class.selected_instance_name].advanced_arguments.max_heap_size = self.advanced_options_popup.MAX_HEAP_SIZE.value()
+        self.data.instances[self.parent.instance_page_class.selected_instance_name].advanced_arguments.start_heap_size = self.advanced_options_popup.START_HEAP_SIZE.value()
+        self.data.instances[self.parent.instance_page_class.selected_instance_name].advanced_arguments.other_arguments = self.advanced_options_popup.OTHER_ARGUMENTS.toPlainText()
 
         self.data.save()
+
+
+'''
+Popups not using .ui file. They are dynamically created.
+'''
+
+
+class ModTagPopup(QDialog):
+    def __init__(self, parent: MainWindow):
+        super().__init__(parent)
+
+        self.data: Data = parent.data
+
+        self.setWindowTitle("Edit Mod Tags")
+        self.setMinimumSize(400, 450)
+
+        # Setup UI
+        layout = QVBoxLayout(self)
+
+        # Header
+        title = QLabel("Mod Tags")
+        title.setProperty('class', 'bigger_text colored_text')
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(title)
+
+        # List
+        self.tag_list = QListWidget()
+        self.tag_list.setSpacing(4)
+        layout.addWidget(self.tag_list)
+
+        # Add button
+        add_button = QPushButton("Add Tag")
+        add_button.setMinimumHeight(38)
+        add_button.clicked.connect(self._add_tag)
+
+        layout.addWidget(add_button)
+
+    def _refresh_tags(self):
+        """Rebuild the list from self.tags."""
+        self.tag_list.clear()
+
+        for tag in self.data.tags:
+            item = QListWidgetItem()
+            self.tag_list.addItem(item)
+
+            widget = self._create_tag_widget(tag)
+            item.setSizeHint(widget.sizeHint())
+
+            self.tag_list.setItemWidget(item, widget)
+
+    def _create_tag_widget(self, tag):
+        widget = QWidget()
+
+        layout = QHBoxLayout(widget)
+        layout.setContentsMargins(8, 5, 8, 5)
+
+        # Tag name
+        label = QLabel(tag)
+
+        layout.addWidget(label)
+        layout.addStretch()
+
+        # Rename button
+        rename_button = QPushButton("Rename")
+        rename_button.clicked.connect(lambda: self._rename_tag(tag))
+
+        # Delete button
+        delete_button = QPushButton("Delete")
+        delete_button.clicked.connect(lambda: self._delete_tag(tag))
+
+        layout.addWidget(rename_button)
+        layout.addWidget(delete_button)
+
+        return widget
+
+    def _add_tag(self):
+        tag, ok = QInputDialog.getText(self, "Add Tag", "Tag name:")
+
+        if ok and tag.strip():
+            tag = tag.strip()
+
+            if tag not in self.data.tags:
+                self.data.tags.append(tag)
+                self.data.save()
+                self._refresh_tags()
+
+    def _rename_tag(self, old_tag):
+        new_tag, ok = QInputDialog.getText(self, "Rename Tag", "New name:", text=old_tag)
+
+        if ok and new_tag.strip():
+            new_tag = new_tag.strip()
+
+            if new_tag != old_tag and new_tag not in self.data.tags:
+                # Replace it in the tags
+                index = self.data.tags.index(old_tag)
+                self.data.tags[index] = new_tag
+
+                # Replace the tag for every mod
+                for mod_name in self.data.mods:
+                    if old_tag in self.data.mods[mod_name].tags:
+                        index = self.data.mods[mod_name].tags.index(old_tag)
+                        self.data.mods[mod_name].tags[index] = new_tag
+
+                self.data.save()
+                self._refresh_tags()
+
+    def _delete_tag(self, tag):
+        reply = QMessageBox.question(self, 'Confirm deletion', f'Do you really want to delete the tag "{tag}"? \n\n(Enter = Yes, Escape = No)')
+
+        if reply == 16384:  # Yes
+            self.data.tags.remove(tag)
+
+            # Delete the tag for every mod
+            for mod_name in self.data.mods:
+                if tag in self.data.mods[mod_name].tags:
+                    self.data.mods[mod_name].tags.remove(tag)
+
+            self.data.save()
+            self._refresh_tags()
+
+    def display(self):
+        self._refresh_tags()
+        # Show the dialog while blocking the main application
+        self.exec()

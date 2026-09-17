@@ -110,7 +110,7 @@ class ScrollAreaButtonType(Enum):
     CHECKBOX = 'Checkbox'
 
 
-def create_buttons_in_scroll_area(scroll_area_content_widget: QWidget, button_name_list: list | tuple, selected_buttons: str | int | list | tuple, button_on_click_function: Callable, button_type=ScrollAreaButtonType.RADIOBUTTON):
+def create_buttons_in_scroll_area(scroll_area_content_widget: QWidget, button_name_list: list | tuple, selected_buttons: str | int | list | tuple, button_on_click_function: Callable[[bool, str], None] | Callable[[QRadioButton, str], None], button_type=ScrollAreaButtonType.RADIOBUTTON):
     """
     This function modifies the content of a scroll area and inserts buttons or a placeholder into it. It also binds the passed function to the click of the button
 
