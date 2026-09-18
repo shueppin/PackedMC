@@ -20,20 +20,27 @@ class FieldType(Enum):
     MODS_DISPLAYED = "Mods Displayed"  # For the instances page, to just display. When clicked they execute "display_function".
 
 
-class InstanceFieldFunctions:
-    def __init__(self, play_function: Callable[[str], None], edit_function: Callable[[str], None], create_new_function: Callable[[], None], import_profiles_function: Callable[[], None]):
-        """ Object to keep track of the functions to execute. Every function gets the instance name as the first argument. """
-        self.play_function = play_function
-        self.edit_function = edit_function
-        self.create_new_function = create_new_function
-        self.import_profiles_function = import_profiles_function
+class DynamicInstanceFieldHelper:
+    """ Object to keep track of the functions to execute. """
+    play_function: Callable[[str], None]
+    edit_function: Callable[[str], None]
+    create_new_function: Callable[[], None]
+    import_profiles_function: Callable[[], None]
 
 
-class ModFieldFunctions:
-    def __init__(self, edit_function: Callable[[str], None], create_new_function: Callable[[], None], display_function: Callable[[str, bool], None]):
-        self.edit_function = edit_function
-        self.create_new_function = create_new_function
-        self.display_function = display_function
+class DynamicModFieldHelper:
+    """ Object to keep track of the functions to execute and the values that are needed. """
+    edit_function: Callable[[str], None]
+    create_new_function: Callable[[], None]
+    display_function: Callable[[str, bool], None]
+    available_tags: list[str]
+    tag_check_function: Callable[[str], bool]  # Function to check whether the mod should be displayed based on the actual selected tag
+
+
+def _check_if_all_attributes_defined(cls: type[DynamicInstanceFieldHelper | DynamicModFieldHelper]):
+    for name in cls.__annotations__:  # Go through all attributes
+        if not name.startswith("_") and not hasattr(cls, name):
+            logger.error(f"Helper class {cls.__name__} has no attribute '{name}'. Please set this before creating the dynamic widget.")
 
 
 class _CreateNewElementButton(QPushButton):
@@ -51,7 +58,7 @@ class _CreateNewElementButton(QPushButton):
 
 
 class _InstanceField(QFrame):
-    def __init__(self, instance_name: str, instance_field_functions: InstanceFieldFunctions, width=200, height=100):
+    def __init__(self, instance_name: str, width=200, height=100):
         super().__init__()
         self.setFixedSize(width, height)
 
@@ -69,12 +76,12 @@ class _InstanceField(QFrame):
         play_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         play_button.setCursor(Qt.CursorShape.PointingHandCursor)
         # noinspection PyUnresolvedReferences
-        play_button.clicked.connect(lambda: instance_field_functions.play_function(instance_name))
+        play_button.clicked.connect(lambda: DynamicInstanceFieldHelper.play_function(instance_name))
         edit_button = QPushButton("Edit")
         edit_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         edit_button.setCursor(Qt.CursorShape.PointingHandCursor)
         # noinspection PyUnresolvedReferences
-        edit_button.clicked.connect(lambda: instance_field_functions.edit_function(instance_name))
+        edit_button.clicked.connect(lambda: DynamicInstanceFieldHelper.edit_function(instance_name))
         button_layout.addWidget(play_button)
         button_layout.addWidget(edit_button)
 
@@ -84,10 +91,9 @@ class _InstanceField(QFrame):
 
 
 class _ModField(QFrame):
-    def __init__(self, mod_name: str, mod_icon_path: str, mod_field_functions: ModFieldFunctions, only_displayed=False, is_selected=False, width=200, height=100):
+    def __init__(self, mod_name: str, mod_icon_path: str, only_displayed=False, is_selected=False, width=200, height=100):
         super().__init__()
         self.mod_name = mod_name
-        self.mod_field_functions = mod_field_functions
         self.only_displayed = only_displayed
         self.is_selected = is_selected
 
@@ -141,14 +147,14 @@ class _ModField(QFrame):
             if self.only_displayed:
                 self.is_selected = not self.is_selected
                 self._set_correct_properties()
-                self.mod_field_functions.display_function(self.mod_name, self.is_selected)
+                DynamicModFieldHelper.display_function(self.mod_name, self.is_selected)
             else:
-                self.mod_field_functions.edit_function(self.mod_name)
+                DynamicModFieldHelper.edit_function(self.mod_name)
         super().mousePressEvent(event)
 
 
 class ScrollableGrid(QWidget):
-    def __init__(self, field_type: FieldType, available_functions: InstanceFieldFunctions | ModFieldFunctions, card_width=200, card_height=100):
+    def __init__(self, field_type: FieldType, card_width=200, card_height=100):
         """ Create a scrollable grid which changes number of columns on resize. Either it contains instances or mods (field_type). """
         super().__init__()
         self.field_type = field_type
@@ -157,17 +163,14 @@ class ScrollableGrid(QWidget):
         self.fields = []
         self.values = []
         self.current_columns = 0
-        self.available_functions = available_functions
 
         # TODO: Add dropdown for mod tags
 
         # Check if the functions match the field type
         if field_type == FieldType.INSTANCES:
-            if not isinstance(available_functions, InstanceFieldFunctions):
-                logger.error(f'Field type "{field_type.name}" expected InstanceFieldFunctions, not {type(available_functions)}')
+            _check_if_all_attributes_defined(DynamicInstanceFieldHelper)
         elif field_type == FieldType.MODS_DISPLAYED or field_type == FieldType.MODS_EDITABLE:
-            if not isinstance(available_functions, ModFieldFunctions):
-                logger.error(f'Field type "{field_type.name}" expected ModFieldFunctions, not {type(available_functions)}')
+            _check_if_all_attributes_defined(DynamicModFieldHelper)
         else:
             logger.error(f'Field type "{field_type}" is not supported.')
 
@@ -217,18 +220,18 @@ class ScrollableGrid(QWidget):
 
         if self.field_type == FieldType.INSTANCES:
             for name in self.values:
-                field = _InstanceField(name, self.available_functions, width=self.card_width, height=self.card_height)
+                field = _InstanceField(name, width=self.card_width, height=self.card_height)
                 self.fields.append(field)
-            create_new_instance_button = _CreateNewElementButton(self.available_functions.create_new_function, 'Create new\ninstance', self.card_width, self.card_height)
+            create_new_instance_button = _CreateNewElementButton(DynamicInstanceFieldHelper.create_new_function, 'Create new\ninstance', self.card_width, self.card_height)
             self.fields.append(create_new_instance_button)
-            import_profiles_button = _CreateNewElementButton(self.available_functions.import_profiles_function, 'Import profiles\nfrom Launcher', self.card_width, self.card_height)
+            import_profiles_button = _CreateNewElementButton(DynamicInstanceFieldHelper.import_profiles_function, 'Import profiles\nfrom Launcher', self.card_width, self.card_height)
             self.fields.append(import_profiles_button)
 
         elif self.field_type == FieldType.MODS_DISPLAYED:
             for i in range(len(values)):
                 try:
                     name, mod_icon_path, is_selected = values[i]
-                    field = _ModField(name, mod_icon_path, self.available_functions, only_displayed=True, is_selected=is_selected, width=self.card_width, height=self.card_height)
+                    field = _ModField(name, mod_icon_path, only_displayed=True, is_selected=is_selected, width=self.card_width, height=self.card_height)
                     self.fields.append(field)
                 except ValueError:
                     logger.warning(f'{FieldType.MODS_DISPLAYED.name} expects values like "(name, icon_path, is_selected)", but got {values[i]} instead')
@@ -237,11 +240,11 @@ class ScrollableGrid(QWidget):
             for i in range(len(values)):
                 try:
                     name, mod_icon_path = values[i]
-                    field = _ModField(name, mod_icon_path, self.available_functions, width=self.card_width, height=self.card_height)
+                    field = _ModField(name, mod_icon_path, width=self.card_width, height=self.card_height)
                     self.fields.append(field)
                 except ValueError:
                     logger.warning(f'{FieldType.MODS_EDITABLE.name} expects values like "(name, icon_path)", but got {values[i]} instead')
-            create_new_mod_button = _CreateNewElementButton(self.available_functions.create_new_function, 'Create new\nmod', self.card_width, self.card_height)
+            create_new_mod_button = _CreateNewElementButton(DynamicModFieldHelper.create_new_function, 'Create new\nmod', self.card_width, self.card_height)
             self.fields.append(create_new_mod_button)
 
         self.rebuild_grid(force=True)

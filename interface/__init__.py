@@ -10,7 +10,7 @@ from qt_material import apply_stylesheet, list_themes, get_theme, opacity
 
 from data_file_helper import DEFAULT_INSTANCE_NAME, Data
 from .type_hinting import MainWindowElements
-from .dynamic_widgets import FieldType, ScrollableGrid, InstanceFieldFunctions, ModFieldFunctions
+from .dynamic_widgets import FieldType, ScrollableGrid, DynamicInstanceFieldHelper, DynamicModFieldHelper
 from .utils import animate_transition, AnimationScrollDirection, create_buttons_in_scroll_area
 from file_paths import INTERFACE_FILE_PATH, CUSTOM_STYLESHEET_FILE_PATH, DATA_FILE_PATH, PACKEDMC_MINECRAFT_DATA_DIRECTORY
 from minecraft_launcher_integration import save_options_file_of_last_used_instance
@@ -60,9 +60,15 @@ class MainWindow(QMainWindow, MainWindowElements):
 
         self.import_profiles_popup_handler = ImportProfilesHandler(self)
 
-        # "Collect" the functions for the clickable fields inside the scrollable grids
-        instance_field_functions = InstanceFieldFunctions(self.instance_page_class.play_instance, self.instance_page_class.edit_instance, self.instance_page_class.create_instance, self.import_profiles_popup_handler.open_popup)
-        mod_field_functions = ModFieldFunctions(self.mods_page_class.edit_mod, self.mods_page_class.create_mod, self.instance_page_class.clicked_displayed_mod)
+        # "Collect" the functions and values for the clickable fields inside the scrollable grids
+        DynamicInstanceFieldHelper.play_function = self.instance_page_class.play_instance
+        DynamicInstanceFieldHelper.edit_function = self.instance_page_class.edit_instance
+        DynamicInstanceFieldHelper.create_new_function = self.instance_page_class.create_instance
+        DynamicInstanceFieldHelper.import_profiles_function = self.import_profiles_popup_handler.open_popup
+
+        DynamicModFieldHelper.edit_function = self.mods_page_class.edit_mod
+        DynamicModFieldHelper.create_new_function = self.mods_page_class.create_mod
+        DynamicModFieldHelper.display_function = self.instance_page_class.clicked_displayed_mod
 
         # Bind the page selection buttons
         self.INSTANCES_PAGE_BUTTON.pressed.connect(lambda: self._page_selection_button_on_press(self.INSTANCES_PAGE_BUTTON, 0))
@@ -73,14 +79,14 @@ class MainWindow(QMainWindow, MainWindowElements):
         self.SETTINGS_PAGE_BUTTON.released.connect(lambda: self._page_selection_button_on_release(self.SETTINGS_PAGE_BUTTON))
 
         # Create the scrollable grid for the instance selection and insert it where the placeholder was
-        self.INSTANCES_PAGE = ScrollableGrid(FieldType.INSTANCES, instance_field_functions)
+        self.INSTANCES_PAGE = ScrollableGrid(FieldType.INSTANCES)
         index = self.PAGE_CONTAINER.indexOf(self.INSTANCES_PAGE_PLACEHOLDER)
         self.PAGE_CONTAINER.removeWidget(self.INSTANCES_PAGE_PLACEHOLDER)  # remove placeholder
         self.PAGE_CONTAINER.insertWidget(index, self.INSTANCES_PAGE)  # insert new page at same position
         self.INSTANCES_PAGE_PLACEHOLDER.deleteLater()  # Cleanup
 
         # Create the scrollable grid for the mod selection and insert it where the placeholder was
-        self.MODS_PAGE = ScrollableGrid(FieldType.MODS_EDITABLE, mod_field_functions)
+        self.MODS_PAGE = ScrollableGrid(FieldType.MODS_EDITABLE)
         index = self.PAGE_CONTAINER.indexOf(self.MODS_PAGE_PLACEHOLDER)
         self.PAGE_CONTAINER.removeWidget(self.MODS_PAGE_PLACEHOLDER)  # remove placeholder
         self.PAGE_CONTAINER.insertWidget(index, self.MODS_PAGE)  # insert new page at same position
@@ -90,7 +96,7 @@ class MainWindow(QMainWindow, MainWindowElements):
         layout = QVBoxLayout(self.INSTANCE_MODS_DISPLAY_CONTAINER)
         layout.setContentsMargins(0, 0, 0, 0)  # Remove padding around edges
         layout.setSpacing(0)  # Remove spacing between items
-        self.INSTANCE_MODS_DISPLAY = ScrollableGrid(FieldType.MODS_DISPLAYED, mod_field_functions)
+        self.INSTANCE_MODS_DISPLAY = ScrollableGrid(FieldType.MODS_DISPLAYED)
         layout.addWidget(self.INSTANCE_MODS_DISPLAY)
         self.INSTANCE_MODS_DISPLAY_CONTAINER.setLayout(layout)
 

@@ -24,6 +24,9 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+DEFAULT_ALL_TAG = "all"  # Needs to be in lowercase to not allow any variants of this name
+
+
 '''
 Popups using .ui files
 '''
@@ -307,7 +310,7 @@ class ModTagPopup(QDialog):
         if ok and tag.strip():
             tag = tag.strip()
 
-            if tag not in self.data.tags:
+            if tag not in self.data.tags and tag.lower() != DEFAULT_ALL_TAG:
                 self.data.tags.append(tag)
                 self.data.save()
                 self._refresh_tags()
@@ -318,7 +321,7 @@ class ModTagPopup(QDialog):
         if ok and new_tag.strip():
             new_tag = new_tag.strip()
 
-            if new_tag != old_tag and new_tag not in self.data.tags:
+            if new_tag != old_tag and new_tag not in self.data.tags and new_tag.lower() != DEFAULT_ALL_TAG:
                 # Replace it in the tags
                 index = self.data.tags.index(old_tag)
                 self.data.tags[index] = new_tag
