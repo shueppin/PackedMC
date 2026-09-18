@@ -16,8 +16,9 @@ from interface import MainWindow
 
 
 # TODO: Maybe change the whole mods file system, to have less duplicate files
-# TODO: Add tags to the mods. They can be set in the mod edit view using CheckButtons. You can sort for them with a dropdown menu inside the dynamic widget.
+# TODO: Allow mod adding via modrinth API via a search bar
 # TODO: Allow manual mod file adding: Instead of using a link for the mod, we add a file (via the explorer). Then we specify the version (using checkboxes) and the loader.
+# TODO: Add a button to redownload/update a certain fabric version
 
 # TODO: Eventually add modpack support
 # TODO: Eventually add Forge support

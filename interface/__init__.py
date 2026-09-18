@@ -69,6 +69,8 @@ class MainWindow(QMainWindow, MainWindowElements):
         DynamicModFieldHelper.edit_function = self.mods_page_class.edit_mod
         DynamicModFieldHelper.create_new_function = self.mods_page_class.create_mod
         DynamicModFieldHelper.display_function = self.instance_page_class.clicked_displayed_mod
+        DynamicModFieldHelper.available_tags = self.data.tags
+        DynamicModFieldHelper.tag_check_function = lambda name, tag: tag in self.data.mods[name].tags
 
         # Bind the page selection buttons
         self.INSTANCES_PAGE_BUTTON.pressed.connect(lambda: self._page_selection_button_on_press(self.INSTANCES_PAGE_BUTTON, 0))
@@ -138,8 +140,6 @@ class MainWindow(QMainWindow, MainWindowElements):
         instance_type = self.data.instances[last_played_instance].type
         mod_update_thread = threading.Thread(target=update_mod_files, args=(self, last_played_instance, instance_mods, instance_version, instance_type, False), daemon=True)
         mod_update_thread.start()
-
-        # TODO: Add a button to redownload/update a certain fabric version
 
     '''
     Main Page

@@ -4,7 +4,7 @@ from typing import Callable
 import os
 
 # noinspection PyPackageRequirements
-from PyQt6.QtWidgets import QWidget, QGridLayout, QScrollArea, QVBoxLayout, QLabel, QPushButton, QHBoxLayout, QFrame
+from PyQt6.QtWidgets import QWidget, QGridLayout, QScrollArea, QVBoxLayout, QLabel, QPushButton, QHBoxLayout, QFrame, QComboBox
 # noinspection PyPackageRequirements
 from PyQt6.QtGui import QPixmap
 # noinspection PyPackageRequirements
@@ -34,7 +34,7 @@ class DynamicModFieldHelper:
     create_new_function: Callable[[], None]
     display_function: Callable[[str, bool], None]
     available_tags: list[str]
-    tag_check_function: Callable[[str], bool]  # Function to check whether the mod should be displayed based on the actual selected tag
+    tag_check_function: Callable[[str, str], bool]  # Function to check whether the mod should be displayed based on the mod name and the actual selected tag
 
 
 def _check_if_all_attributes_defined(cls: type[DynamicInstanceFieldHelper | DynamicModFieldHelper]):
@@ -163,8 +163,7 @@ class ScrollableGrid(QWidget):
         self.fields = []
         self.values = []
         self.current_columns = 0
-
-        # TODO: Add dropdown for mod tags
+        self.selected_tag = "All tags"
 
         # Check if the functions match the field type
         if field_type == FieldType.INSTANCES:
@@ -174,22 +173,37 @@ class ScrollableGrid(QWidget):
         else:
             logger.error(f'Field type "{field_type}" is not supported.')
 
+        # Tag selector
+        self.tags_combo_box = QComboBox()
+        self.tags_combo_box.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
+        self.tags_combo_box.setMinimumWidth(self.tags_combo_box.sizeHint().width() + 30)
+        self.tags_combo_box.currentTextChanged.connect(self._selected_tag_changed)
+
+        # Only show tag selector for mods
+        if self.field_type in (FieldType.MODS_DISPLAYED, FieldType.MODS_EDITABLE):
+            self.tags_combo_box.show()
+        else:
+            self.tags_combo_box.hide()
+
         # Scroll area
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
         self.content_widget = QWidget()
         self.scroll_area.setWidget(self.content_widget)
 
-        # Main layout
-        main_layout = QVBoxLayout()
-        main_layout.addWidget(self.scroll_area)
-        self.setLayout(main_layout)
-
-        # Initial layout
+        # Grid
         self.grid_layout = QGridLayout()
         self.set_spacing()
         self.grid_layout.setContentsMargins(10, 10, 10, 10)
         self.content_widget.setLayout(self.grid_layout)
+
+        # Main layout
+        main_layout = QVBoxLayout()
+        main_layout.addWidget(self.tags_combo_box, alignment=Qt.AlignmentFlag.AlignLeft)
+        main_layout.addWidget(self.scroll_area)
+        self.setLayout(main_layout)
+
+        # Initial layout (also rebuilds grid)
         self.rebuild_grid()
 
     def set_spacing(self, horizontal_spacing=10, vertical_spacing=30):
@@ -215,6 +229,19 @@ class ScrollableGrid(QWidget):
 
         self.fields.clear()
 
+        # Refresh the tag list
+        self.tags_combo_box.blockSignals(True)
+        self.tags_combo_box.clear()
+        self.tags_combo_box.addItem("All tags")
+        self.tags_combo_box.addItems(DynamicModFieldHelper.available_tags)
+
+        index = self.tags_combo_box.findText(self.selected_tag)
+        if index >= 0:
+            self.tags_combo_box.setCurrentIndex(index)
+        else:
+            self.selected_tag = 'All tags'  # If the actual tag is not found, use the default one
+        self.tags_combo_box.blockSignals(False)
+
         # Add the new values
         self.values = values
 
@@ -231,22 +258,29 @@ class ScrollableGrid(QWidget):
             for i in range(len(values)):
                 try:
                     name, mod_icon_path, is_selected = values[i]
-                    field = _ModField(name, mod_icon_path, only_displayed=True, is_selected=is_selected, width=self.card_width, height=self.card_height)
-                    self.fields.append(field)
+                    if self.selected_tag == 'All tags' or DynamicModFieldHelper.tag_check_function(name, self.selected_tag):
+                        field = _ModField(name, mod_icon_path, only_displayed=True, is_selected=is_selected, width=self.card_width, height=self.card_height)
+                        self.fields.append(field)
                 except ValueError:
                     logger.warning(f'{FieldType.MODS_DISPLAYED.name} expects values like "(name, icon_path, is_selected)", but got {values[i]} instead')
+                except Exception as e:
+                    print(type(e), e)
 
         elif self.field_type == FieldType.MODS_EDITABLE:
             for i in range(len(values)):
                 try:
                     name, mod_icon_path = values[i]
-                    field = _ModField(name, mod_icon_path, width=self.card_width, height=self.card_height)
-                    self.fields.append(field)
+                    if self.selected_tag == 'All tags' or DynamicModFieldHelper.tag_check_function(name, self.selected_tag):
+                        field = _ModField(name, mod_icon_path, width=self.card_width, height=self.card_height)
+                        self.fields.append(field)
                 except ValueError:
                     logger.warning(f'{FieldType.MODS_EDITABLE.name} expects values like "(name, icon_path)", but got {values[i]} instead')
+                except Exception as e:
+                    print(type(e), e)
             create_new_mod_button = _CreateNewElementButton(DynamicModFieldHelper.create_new_function, 'Create new\nmod', self.card_width, self.card_height)
             self.fields.append(create_new_mod_button)
 
+        # Rebuild the layout of the fields
         self.rebuild_grid(force=True)
 
     def rebuild_grid(self, force=False):
@@ -255,6 +289,7 @@ class ScrollableGrid(QWidget):
 
         if columns == self.current_columns and not force:  # If nothing changes then return
             return
+
         self.current_columns = columns
 
         while self.grid_layout.count():
@@ -270,3 +305,7 @@ class ScrollableGrid(QWidget):
     def resizeEvent(self, event):  # On resize check whether to rebuild the grid
         super().resizeEvent(event)
         self.rebuild_grid()
+
+    def _selected_tag_changed(self, tag: str):
+        self.selected_tag = tag
+        self.set_values(self.values)  # This is used to display the right fields and rebuild the grid
