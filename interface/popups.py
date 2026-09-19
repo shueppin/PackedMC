@@ -12,6 +12,7 @@ from PyQt6.QtWidgets import QWidget, QDialog, QPushButton, QMainWindow, QTextEdi
 from data_file_helper import Data
 from file_paths import MINECRAFT_LAUNCHER_PROFILES_PATH, MINECRAFT_DIRECTORY, UI_FILES_DIRECTORY
 from .utils import create_buttons_in_scroll_area, ScrollAreaButtonType
+from .dynamic_widgets import DEFAULT_ALL_TAGS_NAME, DEFAULT_NO_TAGS_NAME
 
 from minecraft_api.minecraft import ALL_RELEASE_VERSIONS, ALL_SNAPSHOT_VERSIONS
 
@@ -307,7 +308,7 @@ class ModTagPopup(QDialog):
         if ok and tag.strip():
             tag = tag.strip()
 
-            if tag not in self.data.tags and tag.lower() != "all tags":
+            if tag not in self.data.tags and tag.lower() != DEFAULT_ALL_TAGS_NAME.lower() and tag.lower() != DEFAULT_NO_TAGS_NAME.lower():
                 self.data.tags.append(tag)
                 self.data.tags.sort()
                 self.data.save()
@@ -319,7 +320,7 @@ class ModTagPopup(QDialog):
         if ok and new_tag.strip():
             new_tag = new_tag.strip()
 
-            if new_tag != old_tag and new_tag not in self.data.tags and new_tag.lower() != "all tags":
+            if new_tag != old_tag and new_tag not in self.data.tags and new_tag.lower() != DEFAULT_ALL_TAGS_NAME.lower() and new_tag.lower() != DEFAULT_NO_TAGS_NAME.lower():
                 # Replace it in the tags
                 index = self.data.tags.index(old_tag)
                 self.data.tags[index] = new_tag

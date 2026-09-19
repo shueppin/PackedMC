@@ -11,6 +11,10 @@ from PyQt6.QtGui import QPixmap
 from PyQt6.QtCore import Qt
 
 
+DEFAULT_ALL_TAGS_NAME = 'All tags'
+DEFAULT_NO_TAGS_NAME = 'Mods without tag'
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -163,7 +167,7 @@ class ScrollableGrid(QWidget):
         self.fields = []
         self.values = []
         self.current_columns = 0
-        self.selected_tag = "All tags"
+        self.selected_tag = DEFAULT_ALL_TAGS_NAME
 
         # Check if the functions match the field type
         if field_type == FieldType.INSTANCES:
@@ -175,8 +179,6 @@ class ScrollableGrid(QWidget):
 
         # Tag selector
         self.tags_combo_box = QComboBox()
-        self.tags_combo_box.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
-        self.tags_combo_box.setMinimumWidth(self.tags_combo_box.sizeHint().width() + 30)
         self.tags_combo_box.currentTextChanged.connect(self._selected_tag_changed)
 
         # Only show tag selector for mods
@@ -229,17 +231,20 @@ class ScrollableGrid(QWidget):
 
         self.fields.clear()
 
-        # Refresh the tag list
+        # Refresh the tag list and resize it if needed
         self.tags_combo_box.blockSignals(True)
         self.tags_combo_box.clear()
-        self.tags_combo_box.addItem("All tags")
+        self.tags_combo_box.addItem(DEFAULT_ALL_TAGS_NAME)
+        self.tags_combo_box.addItem(DEFAULT_NO_TAGS_NAME)
         self.tags_combo_box.addItems(DynamicModFieldHelper.available_tags)
+        self.tags_combo_box.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
+        self.tags_combo_box.setMinimumWidth(self.tags_combo_box.sizeHint().width() + 20)
 
         index = self.tags_combo_box.findText(self.selected_tag)
         if index >= 0:
             self.tags_combo_box.setCurrentIndex(index)
         else:
-            self.selected_tag = 'All tags'  # If the actual tag is not found, use the default one
+            self.selected_tag = DEFAULT_ALL_TAGS_NAME  # If the actual tag is not found, use the default one
         self.tags_combo_box.blockSignals(False)
 
         # Add the new values
@@ -258,7 +263,7 @@ class ScrollableGrid(QWidget):
             for i in range(len(values)):
                 try:
                     name, mod_icon_path, is_selected = values[i]
-                    if self.selected_tag == 'All tags' or DynamicModFieldHelper.tag_check_function(name, self.selected_tag):
+                    if self.selected_tag == DEFAULT_ALL_TAGS_NAME or DynamicModFieldHelper.tag_check_function(name, self.selected_tag):
                         field = _ModField(name, mod_icon_path, only_displayed=True, is_selected=is_selected, width=self.card_width, height=self.card_height)
                         self.fields.append(field)
                 except ValueError:
@@ -270,7 +275,7 @@ class ScrollableGrid(QWidget):
             for i in range(len(values)):
                 try:
                     name, mod_icon_path = values[i]
-                    if self.selected_tag == 'All tags' or DynamicModFieldHelper.tag_check_function(name, self.selected_tag):
+                    if self.selected_tag == DEFAULT_ALL_TAGS_NAME or DynamicModFieldHelper.tag_check_function(name, self.selected_tag):
                         field = _ModField(name, mod_icon_path, width=self.card_width, height=self.card_height)
                         self.fields.append(field)
                 except ValueError:

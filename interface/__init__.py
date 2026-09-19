@@ -10,7 +10,7 @@ from qt_material import apply_stylesheet, list_themes, get_theme, opacity
 
 from data_file_helper import DEFAULT_INSTANCE_NAME, Data
 from .type_hinting import MainWindowElements
-from .dynamic_widgets import FieldType, ScrollableGrid, DynamicInstanceFieldHelper, DynamicModFieldHelper
+from .dynamic_widgets import FieldType, ScrollableGrid, DynamicInstanceFieldHelper, DynamicModFieldHelper, DEFAULT_NO_TAGS_NAME
 from .utils import animate_transition, AnimationScrollDirection, create_buttons_in_scroll_area
 from file_paths import INTERFACE_FILE_PATH, CUSTOM_STYLESHEET_FILE_PATH, DATA_FILE_PATH, PACKEDMC_MINECRAFT_DATA_DIRECTORY
 from minecraft_launcher_integration import save_options_file_of_last_used_instance
@@ -70,7 +70,8 @@ class MainWindow(QMainWindow, MainWindowElements):
         DynamicModFieldHelper.create_new_function = self.mods_page_class.create_mod
         DynamicModFieldHelper.display_function = self.instance_page_class.clicked_displayed_mod
         DynamicModFieldHelper.available_tags = self.data.tags
-        DynamicModFieldHelper.tag_check_function = lambda name, tag: tag in self.data.mods[name].tags
+        # The following returns true if either wanted tag is in mod's tags, or we want mods without ttags and the mod has no tags.
+        DynamicModFieldHelper.tag_check_function = lambda name, tag: (tag in self.data.mods[name].tags) or (tag == DEFAULT_NO_TAGS_NAME and not self.data.mods[name].tags)
 
         # Bind the page selection buttons
         self.INSTANCES_PAGE_BUTTON.pressed.connect(lambda: self._page_selection_button_on_press(self.INSTANCES_PAGE_BUTTON, 0))
