@@ -57,11 +57,14 @@ class ModPageClass:
         parent.MOD_EDIT_TAGS_BUTTON.clicked.connect(self._show_mod_tag_popup)
         # TODO: Integrate tag system
 
-    def create_mod(self, mod_name='New Mod', edit_afterwards=True):
+    def create_mod(self, mod_name='New Mod', edit_afterwards=True, url=""):
         mod_name = self.parent.make_name_unique(mod_name, list(self.data.mods.keys()))
 
         # Set the data
-        self.data.mods[mod_name] = SingleModData()
+        if url:
+            self.data.mods[mod_name] = SingleModData(url=url)
+        else:
+            self.data.mods[mod_name] = SingleModData()
         self.data.save()
 
         if edit_afterwards:
