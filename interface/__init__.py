@@ -70,7 +70,7 @@ class MainWindow(QMainWindow, MainWindowElements):
         DynamicModFieldHelper.create_new_function = self.mods_page_class.create_mod
         DynamicModFieldHelper.display_function = self.instance_page_class.clicked_displayed_mod
         DynamicModFieldHelper.available_tags = self.data.tags
-        # The following returns true if either wanted tag is in mod's tags, or we want mods without ttags and the mod has no tags.
+        # The following returns true if either wanted tag is in mod's tags, or we want mods without tags and the mod has no tags.
         DynamicModFieldHelper.tag_check_function = lambda name, tag: (tag in self.data.mods[name].tags) or (tag == DEFAULT_NO_TAGS_NAME and not self.data.mods[name].tags)
 
         # Bind the page selection buttons

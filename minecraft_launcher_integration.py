@@ -151,16 +151,9 @@ def write_instance_data_to_profiles_file(instance_name: str, actual_instance_dat
 
     # Set the java args
     java_args = ""
-    if 'start_heap_size' in actual_instance_data.advanced_arguments:
-        java_args += " -Xms{}G".format(actual_instance_data.advanced_arguments.start_heap_size)
-    else:
-        java_args += f" -Xms{DEFAULT_START_HEAP_SIZE}G"
-    if 'max_heap_size' in actual_instance_data.advanced_arguments:
-        java_args += " -Xmx{}G".format(actual_instance_data.advanced_arguments.max_heap_size)
-    else:
-        java_args += f" -Xmx{DEFAULT_MAX_HEAP_SIZE}G"
-    if 'other_arguments' in actual_instance_data.advanced_arguments:
-        java_args += " " + actual_instance_data.advanced_arguments.other_arguments
+    java_args += " -Xms{}G".format(actual_instance_data.advanced_arguments.start_heap_size)
+    java_args += " -Xmx{}G".format(actual_instance_data.advanced_arguments.max_heap_size)
+    java_args += " " + actual_instance_data.advanced_arguments.other_arguments
 
     with open(os.path.join(ICONS_FILE_PATH, 'logo64.b64')) as f:
         base64_icon = f.read()
