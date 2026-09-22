@@ -55,7 +55,6 @@ class ModPageClass:
         parent.MOD_URL.textChanged.connect(lambda: self.mod_url_timer.start(500))
         parent.DELETE_MOD_BUTTON.clicked.connect(self._delete_mod)
         parent.MOD_EDIT_TAGS_BUTTON.clicked.connect(self._show_mod_tag_popup)
-        # TODO: Integrate tag system
 
     def create_mod(self, mod_name='New Mod', edit_afterwards=True, url=""):
         mod_name = self.parent.make_name_unique(mod_name, list(self.data.mods.keys()))

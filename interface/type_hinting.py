@@ -3,7 +3,7 @@ from PyQt6.QtWidgets import QStackedWidget, QPushButton, QWidget, QSpinBox, QLin
 
 
 ''' 
-Type hints for interrace.ui
+Type hints for interface.ui
 '''
 
 

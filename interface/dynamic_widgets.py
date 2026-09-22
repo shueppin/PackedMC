@@ -12,6 +12,7 @@ from PyQt6.QtCore import Qt, QPoint, QEvent
 
 from modrinth_search import ModrinthSearcher, ModrinthIconLoader, MODRINTH_BASE_MOD_URL
 
+
 DEFAULT_ALL_TAGS_NAME = 'All tags'
 DEFAULT_NO_TAGS_NAME = 'Mods without tag'
 
@@ -257,11 +258,14 @@ class ScrollableGrid(QWidget):
 
         # Tag selector
         self.tags_combo_box = QComboBox()
+        # noinspection PyUnresolvedReferences
         self.tags_combo_box.currentTextChanged.connect(self._selected_tag_changed)
 
         self.search_line_edit = QLineEdit()
         self.search_line_edit.setPlaceholderText("Search local / Modrinth mods...")
+        # noinspection PyUnresolvedReferences
         self.search_line_edit.textChanged.connect(self._search_text_changed)
+        # noinspection PyUnresolvedReferences
         self.search_line_edit.returnPressed.connect(self._search_enter_pressed)
         self.search_line_edit.setClearButtonEnabled(True)
 
@@ -312,6 +316,7 @@ class ScrollableGrid(QWidget):
         overlay_layout.addWidget(self.modrinth_status_label)
 
         self.modrinth_results_list = QListWidget()
+        # noinspection PyUnresolvedReferences
         self.modrinth_results_list.itemClicked.connect(self._modrinth_result_clicked)
         overlay_layout.addWidget(self.modrinth_results_list, 1)
 

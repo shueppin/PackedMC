@@ -17,12 +17,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from interface import MainWindow
 
 
-# TODO: Maybe change the whole mods file system, to have less duplicate files
+# TODO: Change the whole mods file system, to have less duplicate files
 # TODO: Allow manual mod file adding: Instead of using a link for the mod, we add a file (via the explorer). Then we specify the version (using checkboxes) and the loader.
 # TODO: Add a button to redownload/update a certain fabric version
-
-# TODO: Eventually add modpack support
-# TODO: Eventually add Forge support
+# TODO: Add modpack support
+# TODO: Add Forge support
 
 
 ACTUAL_FILE_DIRECTORY = os.path.dirname(__file__)

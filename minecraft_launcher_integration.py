@@ -6,7 +6,6 @@ import shutil
 import subprocess
 
 from file_paths import PACKEDMC_MINECRAFT_DATA_DIRECTORY, MINECRAFT_DIRECTORY, MINECRAFT_LAUNCHER_PROFILES_PATH, ICONS_FILE_PATH
-
 from minecraft_api.minecraft import ALL_RELEASE_VERSIONS
 from minecraft_api.fabric import install_version
 
@@ -61,7 +60,7 @@ def save_options_file_of_last_used_instance(last_played_instance_name: str, last
             logger.warning(f'Options file not found at {minecraft_options_file_path}')
 
     else:
-        # TODO: Maybe prompt the user whether he wants to replace the options file of the last played instance with this
+        # TODO: Prompt the user whether he wants to replace the options file of the last played instance with this
         logger.warning('PackedMC was not the last played profile, thus only a backup of the newest options file was made.')
         backup_file_path = os.path.join(PACKEDMC_MINECRAFT_DATA_DIRECTORY, 'backup_options.txt')
 

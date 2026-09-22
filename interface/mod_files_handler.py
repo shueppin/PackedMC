@@ -14,7 +14,6 @@ from PyQt6.QtCore import Qt
 
 from file_paths import PACKEDMC_MINECRAFT_DATA_DIRECTORY
 from data_file_helper import Data
-
 from minecraft_api.mod import InvalidModBaseUrl, get_download_url, NoModFileAvailable, APICooldown, TryAgainLater
 from minecraft_api.minecraft import LATEST_RELEASE
 

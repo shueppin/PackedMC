@@ -9,11 +9,11 @@ from PyQt6.QtCore import Qt
 # noinspection PyPackageRequirements
 from PyQt6.QtWidgets import QWidget, QDialog, QPushButton, QMainWindow, QTextEdit, QSpinBox, QCheckBox, QFileDialog, QVBoxLayout, QListWidget, QLabel, QListWidgetItem, QInputDialog, QHBoxLayout, QMessageBox
 
-from data_file_helper import Data
-from file_paths import MINECRAFT_LAUNCHER_PROFILES_PATH, MINECRAFT_DIRECTORY, UI_FILES_DIRECTORY
 from .utils import create_buttons_in_scroll_area, ScrollAreaButtonType
 from .dynamic_widgets import DEFAULT_ALL_TAGS_NAME, DEFAULT_NO_TAGS_NAME
 
+from data_file_helper import Data
+from file_paths import MINECRAFT_LAUNCHER_PROFILES_PATH, MINECRAFT_DIRECTORY, UI_FILES_DIRECTORY
 from minecraft_api.minecraft import ALL_RELEASE_VERSIONS, ALL_SNAPSHOT_VERSIONS
 
 # Import the MainWindow for Type Checking
@@ -260,6 +260,7 @@ class ModTagPopup(QDialog):
         # Add button
         add_button = QPushButton("Add Tag")
         add_button.setMinimumHeight(38)
+        # noinspection PyUnresolvedReferences
         add_button.clicked.connect(self._add_tag)
 
         layout.addWidget(add_button)
@@ -291,10 +292,12 @@ class ModTagPopup(QDialog):
 
         # Rename button
         rename_button = QPushButton("Rename")
+        # noinspection PyUnresolvedReferences
         rename_button.clicked.connect(lambda: self._rename_tag(tag))
 
         # Delete button
         delete_button = QPushButton("Delete")
+        # noinspection PyUnresolvedReferences
         delete_button.clicked.connect(lambda: self._delete_tag(tag))
 
         layout.addWidget(rename_button)
