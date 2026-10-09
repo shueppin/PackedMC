@@ -19,9 +19,10 @@ from interface import MainWindow
 
 # TODO: Change the whole mods file system, to have less duplicate files
 # TODO: Allow manual mod file adding: Instead of using a link for the mod, we add a file (via the explorer). Then we specify the version (using checkboxes) and the loader.
-# TODO: Add a button to redownload/update a certain fabric version
 # TODO: Add modpack support
 # TODO: Add Forge support
+# TODO: Add system to allow marking instances as favourite
+# TODO: Show which mods have been updated
 
 
 ACTUAL_FILE_DIRECTORY = os.path.dirname(__file__)

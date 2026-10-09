@@ -44,7 +44,7 @@ class InstancePageClass:
         parent.INSTANCE_TYPE_SELECTION.currentIndexChanged.connect(self._changed_instance_type)
         parent.INSTANCE_VERSION_SELECTION.currentIndexChanged.connect(self._changed_instance_version)
         parent.USE_STANDARD_OPTIONS.clicked.connect(self._changed_instance_use_default_options_file)
-        parent.ADVANCED_SETTINGS_BUTTON.clicked.connect(self.advanced_options_popup_handler.open_popup)
+        parent.ADVANCED_SETTINGS_BUTTON.clicked.connect(lambda: self.advanced_options_popup_handler.open_popup(self.selected_instance_name))
         parent.RESET_MINECRAFT_PATH_BUTTON.clicked.connect(self._reset_minecraft_path)
 
     def play_instance(self, instance_name: str):

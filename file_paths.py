@@ -20,9 +20,9 @@ if 'windows' in platform().lower():
     ROAMING_DIRECTORY = os.getenv('Appdata')
     MINECRAFT_DIRECTORY = os.path.join(ROAMING_DIRECTORY, '.minecraft')
     MINECRAFT_LAUNCHER_PROFILES_PATH = os.path.join(MINECRAFT_DIRECTORY, 'launcher_profiles.json')
+    VERSIONS_DIRECTORY = os.path.join(MINECRAFT_DIRECTORY, 'versions')
 else:
-    # TODO: Show a message here and exit
-    MINECRAFT_DIRECTORY = 'UNKNOWN'
+    raise OSError(f'This OS/platform ({platform()}) is not supported by PackedMC.')
 
 
 def is_subdir_of_user_home(path: str) -> bool:

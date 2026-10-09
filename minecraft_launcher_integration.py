@@ -5,7 +5,7 @@ import logging
 import shutil
 import subprocess
 
-from file_paths import PACKEDMC_MINECRAFT_DATA_DIRECTORY, MINECRAFT_DIRECTORY, MINECRAFT_LAUNCHER_PROFILES_PATH, ICONS_FILE_PATH
+from file_paths import PACKEDMC_MINECRAFT_DATA_DIRECTORY, VERSIONS_DIRECTORY, MINECRAFT_LAUNCHER_PROFILES_PATH, ICONS_FILE_PATH
 from minecraft_api.minecraft import ALL_RELEASE_VERSIONS
 from minecraft_api.fabric import install_version
 
@@ -121,7 +121,6 @@ def write_instance_data_to_profiles_file(instance_name: str, actual_instance_dat
 
     # Get the time for when the PackedMC profile was created. Either keep the existing value or set it to right now
     if MINECRAFT_LAUNCHER_PACKEDMC_PROFILE_ID in profile_data["profiles"] and profile_data["profiles"][MINECRAFT_LAUNCHER_PACKEDMC_PROFILE_ID].get("created"):
-
         created_time = profile_data["profiles"][MINECRAFT_LAUNCHER_PACKEDMC_PROFILE_ID]["created"]
     else:
         created_time = datetime.now().isoformat(timespec="milliseconds") + "Z"  # Time in this format: 2026-01-31T20:34:56.183Z
@@ -135,8 +134,7 @@ def write_instance_data_to_profiles_file(instance_name: str, actual_instance_dat
     # Replace the version id for special types like fabric or forge
     if actual_instance_data.type == "Fabric":
         # Check what the newest fabric version for this Minecraft version is by looking at the directories
-        versions_directory = os.path.join(MINECRAFT_DIRECTORY, 'versions')
-        for directory_name in sorted(os.listdir(versions_directory), reverse=True):
+        for directory_name in sorted(os.listdir(VERSIONS_DIRECTORY), reverse=True):
             if not directory_name.startswith('fabric-loader'):
                 continue
 
@@ -145,7 +143,7 @@ def write_instance_data_to_profiles_file(instance_name: str, actual_instance_dat
                 version_id = directory_name
                 break
         else:  # The for loop did not break, thus the fabric version does not exist. Then it is installed.
-            version_id = install_version(versions_directory, minecraft_version=version_id)
+            version_id = install_version(VERSIONS_DIRECTORY, minecraft_version=version_id)
             logger.info(f'Installed fabric "{version_id}"')
 
     # Set the java args

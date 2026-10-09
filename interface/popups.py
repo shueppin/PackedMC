@@ -13,7 +13,8 @@ from .utils import create_buttons_in_scroll_area, ScrollAreaButtonType
 from .dynamic_widgets import DEFAULT_ALL_TAGS_NAME, DEFAULT_NO_TAGS_NAME
 
 from data_file_helper import Data
-from file_paths import MINECRAFT_LAUNCHER_PROFILES_PATH, MINECRAFT_DIRECTORY, UI_FILES_DIRECTORY
+from file_paths import MINECRAFT_LAUNCHER_PROFILES_PATH, MINECRAFT_DIRECTORY, UI_FILES_DIRECTORY, VERSIONS_DIRECTORY
+from minecraft_api.fabric import install_version
 from minecraft_api.minecraft import ALL_RELEASE_VERSIONS, ALL_SNAPSHOT_VERSIONS
 
 # Import the MainWindow for Type Checking
@@ -62,6 +63,7 @@ class _AdvancedOptionsPopupWindow(_PopupTemplate):
     START_HEAP_SIZE: QSpinBox
     MAX_HEAP_SIZE: QSpinBox
     OTHER_ARGUMENTS: QTextEdit
+    UPDATE_FABRIC_VERSION_BUTTON: QPushButton
 
     def __init__(self, parent: QMainWindow):
         file_path = os.path.join(UI_FILES_DIRECTORY, 'advanced_options_popup.ui')
@@ -205,18 +207,30 @@ class AdvancedOptionsHandler:
     def __init__(self, parent: MainWindow):
         self.parent = parent
         self.data: Data = parent.data
+        self.selected_instance_name = ''
 
         # Create the popup and connect the widgets
         self.advanced_options_popup = _AdvancedOptionsPopupWindow(parent)
+
+        self.advanced_options_popup.UPDATE_FABRIC_VERSION_BUTTON.clicked.connect(self._update_fabric_version)
+
         self.advanced_options_popup.finished.connect(self._store_popup_values)
 
-    def open_popup(self):
-        print('open')
+    def open_popup(self, selected_instance_name: str):
+        self.selected_instance_name = selected_instance_name
+
         # Set the values from the saved data when opening the popup
         arguments = self.data.instances[self.parent.instance_page_class.selected_instance_name].advanced_arguments
         self.advanced_options_popup.START_HEAP_SIZE.setValue(arguments.start_heap_size)
         self.advanced_options_popup.MAX_HEAP_SIZE.setValue(arguments.max_heap_size)
         self.advanced_options_popup.OTHER_ARGUMENTS.setText(arguments.other_arguments)
+
+        self.advanced_options_popup.UPDATE_FABRIC_VERSION_BUTTON.setText("Update to newest Fabric version")
+
+        if self.data.instances[selected_instance_name].type == 'Fabric':
+            self.advanced_options_popup.UPDATE_FABRIC_VERSION_BUTTON.setEnabled(True)
+        else:
+            self.advanced_options_popup.UPDATE_FABRIC_VERSION_BUTTON.setEnabled(False)
 
         self.advanced_options_popup.display(True)
 
@@ -228,9 +242,15 @@ class AdvancedOptionsHandler:
 
         self.data.save()
 
+    def _update_fabric_version(self):
+        minecraft_version_id = self.data.instances[self.selected_instance_name].version
+        full_version_id = install_version(VERSIONS_DIRECTORY, minecraft_version=minecraft_version_id)
+        logger.info(f'Installed fabric "{full_version_id}"')
+        self.advanced_options_popup.UPDATE_FABRIC_VERSION_BUTTON.setText(f"Installed Fabric version {full_version_id}")
+
 
 '''
-Popups not using .ui file. They are dynamically created.
+Popups that don't use a .ui file. They are dynamically created.
 '''
 
 

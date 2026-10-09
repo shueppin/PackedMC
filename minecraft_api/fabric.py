@@ -14,7 +14,7 @@ class VersionException(Exception):
         super().__init__(message)
 
 
-def get_newest_fabric_version() -> str:  # Get the newest stable fabric.py version
+def get_newest_fabric_version() -> str:  # Get the newest stable fabric version
     response = requests.get(FABRIC_VERSIONS_URL)
     for version_json in response.json():
         if version_json['stable']:
