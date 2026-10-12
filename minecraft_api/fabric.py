@@ -1,5 +1,6 @@
 import os
 import requests
+from pathlib import Path
 
 from .minecraft import LATEST_RELEASE
 
@@ -45,7 +46,7 @@ def get_jar_file(fabric_version: str):
     return jar_file_content
 
 
-def install_version(versions_directory: str, minecraft_version='', fabric_version='') -> str:
+def install_version(versions_directory: Path, minecraft_version='', fabric_version='') -> str:
     """ Install the fabric in the version directory and return the full name of the installed version. """
     if not minecraft_version:
         minecraft_version = LATEST_RELEASE
@@ -59,15 +60,15 @@ def install_version(versions_directory: str, minecraft_version='', fabric_versio
 
     # Save the content
     full_instance_name = f'fabric-loader-{fabric_version}-{minecraft_version}'
-    directory_path = os.path.join(versions_directory, full_instance_name)
+    directory_path = versions_directory / full_instance_name
 
     try:
         os.mkdir(directory_path)
     except FileExistsError:
         pass
 
-    jar_file_path = os.path.join(directory_path, full_instance_name + '.jar')
-    json_file_path = os.path.join(directory_path, full_instance_name + '.json')
+    jar_file_path = directory_path / (full_instance_name + '.jar')
+    json_file_path = directory_path / (full_instance_name + '.json')
 
     try:
         with open(jar_file_path, 'wb') as file:

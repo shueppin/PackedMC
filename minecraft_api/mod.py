@@ -9,11 +9,11 @@ import logging
 
 from .minecraft import ALL_RELEASE_VERSIONS
 
+from utils.file_paths import CACHE_DIRECTORY
+
 
 logger = logging.getLogger(__name__)
 
-
-ACTUAL_FILE_DIRECTORY = os.path.dirname(__file__)
 
 CURSEFORGE_BASE_URL = 'https://www.curseforge.com/minecraft/mc-mods/'
 CURSEFORGE_API_BASE_URL = 'https://api.cfwidget.com/minecraft/mc-mods/'  # This is not the official API but instead an alternative which doesn't need an API key
@@ -28,9 +28,12 @@ PROJECT_OWN_HEADERS = {
 }
 
 
+_CURSEFORGE_CACHE_DIRECTORY = CACHE_DIRECTORY / 'curseforge_mods'
+_MODRINTH_CACHE_DIRECTORY = CACHE_DIRECTORY / 'modrinth_mods'
+
 # Ensure correct directories exist
-os.makedirs(os.path.join(ACTUAL_FILE_DIRECTORY, 'cache', 'curseforge_mods'), exist_ok=True)
-os.makedirs(os.path.join(ACTUAL_FILE_DIRECTORY, 'cache', 'modrinth_mods'), exist_ok=True)
+os.makedirs(_CURSEFORGE_CACHE_DIRECTORY, exist_ok=True)
+os.makedirs(_MODRINTH_CACHE_DIRECTORY, exist_ok=True)
 
 
 class InvalidModBaseUrl(Exception):
@@ -154,10 +157,10 @@ def _get_modrinth_download_url(modrinth_url: str, game_version: str, mod_loader:
 def get_mod_icon_path(mod_url: str) -> str:
     if CURSEFORGE_BASE_URL in mod_url:
         mod_name = mod_url[len(CURSEFORGE_BASE_URL):]
-        icon_path = os.path.join(ACTUAL_FILE_DIRECTORY, 'cache', 'curseforge_mods', mod_name + '.png')
+        icon_path = _CURSEFORGE_CACHE_DIRECTORY / (mod_name + '.png')
     elif MODRINTH_BASE_URL in mod_url:
         mod_name = mod_url[len(MODRINTH_BASE_URL):]
-        icon_path = os.path.join(ACTUAL_FILE_DIRECTORY, 'cache', 'modrinth_mods', mod_name + '.png')
+        icon_path = _MODRINTH_CACHE_DIRECTORY / (mod_name + '.png')
     else:
         raise InvalidModBaseUrl(mod_url)
 
@@ -178,11 +181,11 @@ def get_mod_data(mod_url: str, callback_function: Callable[[str, list[str], list
     """
     if CURSEFORGE_BASE_URL in mod_url:
         mod_name = mod_url[len(CURSEFORGE_BASE_URL):]
-        file_path = os.path.join(ACTUAL_FILE_DIRECTORY, 'cache', 'curseforge_mods', mod_name + '.json')
+        file_path = _CURSEFORGE_CACHE_DIRECTORY / (mod_name + '.json')
         data_update_function = _update_curseforge_mod_data
     elif MODRINTH_BASE_URL in mod_url:
         mod_name = mod_url[len(MODRINTH_BASE_URL):]
-        file_path = os.path.join(ACTUAL_FILE_DIRECTORY, 'cache', 'modrinth_mods', mod_name + '.json')
+        file_path = _MODRINTH_CACHE_DIRECTORY / (mod_name + '.json')
         data_update_function = _update_modrinth_mod_data
     else:
         raise InvalidModBaseUrl(mod_url)
@@ -236,7 +239,7 @@ def _update_curseforge_mod_data(mod_name: str, callback_function: Callable[[str,
             loaders.append(version)
 
     # Update the data
-    data_file_path = os.path.join(ACTUAL_FILE_DIRECTORY, 'cache', 'curseforge_mods', mod_name + '.json')
+    data_file_path = _CURSEFORGE_CACHE_DIRECTORY / (mod_name + '.json')
     html_description = mod_data['description']
     with open(data_file_path, 'w') as f:
         json_data = {
@@ -248,7 +251,7 @@ def _update_curseforge_mod_data(mod_name: str, callback_function: Callable[[str,
 
     # Download the icon
     icon_url = mod_data['thumbnail']
-    icon_file_path = os.path.join(ACTUAL_FILE_DIRECTORY, 'cache', 'curseforge_mods', mod_name + '.png')
+    icon_file_path = _CURSEFORGE_CACHE_DIRECTORY / (mod_name + '.png')
 
     response = requests.get(icon_url)
     with open(icon_file_path, 'wb') as file:
@@ -297,7 +300,7 @@ def _update_modrinth_mod_data(mod_name: str, callback_function: Callable[[str, l
     loaders = [loader.capitalize() for loader in mod_data['loaders']]
 
     # Update the data
-    data_file_path = os.path.join(ACTUAL_FILE_DIRECTORY, 'cache', 'modrinth_mods', mod_name + '.json')
+    data_file_path = _MODRINTH_CACHE_DIRECTORY / (mod_name + '.json')
     clean_body = _remove_unnecessary_html_tags(mod_data['body'])
     html_description = markdown(clean_body, extensions=["extra", "attr_list"])
 
@@ -311,7 +314,7 @@ def _update_modrinth_mod_data(mod_name: str, callback_function: Callable[[str, l
 
     # Download the icon
     icon_url = mod_data['icon_url']
-    icon_file_path = os.path.join(ACTUAL_FILE_DIRECTORY, 'cache', 'modrinth_mods', mod_name + '.png')
+    icon_file_path = _MODRINTH_CACHE_DIRECTORY / (mod_name + '.png')
 
     if icon_url:
         response = requests.get(icon_url)

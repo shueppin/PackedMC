@@ -2,6 +2,7 @@ import logging
 from enum import Enum
 from typing import Callable
 import os
+from pathlib import Path
 
 # noinspection PyPackageRequirements
 from PyQt6.QtWidgets import QWidget, QGridLayout, QScrollArea, QVBoxLayout, QLabel, QPushButton, QHBoxLayout, QFrame, QComboBox, QListWidget, QLineEdit, QListWidgetItem, QApplication
@@ -102,7 +103,7 @@ class _InstanceField(QFrame):
 
 
 class _ModField(QFrame):
-    def __init__(self, mod_name: str, mod_icon_path: str, only_displayed=False, is_selected=False, width=200, height=100):
+    def __init__(self, mod_name: str, mod_icon_path: Path, only_displayed=False, is_selected=False, width=200, height=100):
         super().__init__()
         self.mod_name = mod_name
         self.only_displayed = only_displayed
@@ -123,7 +124,8 @@ class _ModField(QFrame):
             if os.path.exists(mod_icon_path):
                 # Icon
                 icon_label = QLabel()
-                pixmap = QPixmap(mod_icon_path).scaled(round(0.6*height), round(0.8*width), Qt.AspectRatioMode.KeepAspectRatio)
+                str_path = str(mod_icon_path.resolve())
+                pixmap = QPixmap(str_path).scaled(round(0.6*height), round(0.8*width), Qt.AspectRatioMode.KeepAspectRatio)
                 icon_label.setPixmap(pixmap)
                 icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
                 layout.addWidget(icon_label)

@@ -41,7 +41,7 @@ STYLE_THEMES = {  # Manually selected themes. First entry is light mode, second 
 
 
 # Ensure correct directories exist
-os.makedirs(os.path.join(PACKEDMC_MINECRAFT_DATA_DIRECTORY, 'options_files'), exist_ok=True)  # creates all missing parents; no error if exists
+os.makedirs(PACKEDMC_MINECRAFT_DATA_DIRECTORY / 'options_files', exist_ok=True)  # creates all missing parents; no error if exists
 
 
 class MainWindow(QMainWindow, MainWindowElements):

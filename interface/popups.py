@@ -1,4 +1,3 @@
-import os
 import logging
 import json
 
@@ -55,7 +54,7 @@ class _ImportProfilesPopupWindow(_PopupTemplate):
     IMPORT_BUTTON: QPushButton
 
     def __init__(self, parent: QMainWindow):
-        file_path = os.path.join(UI_FILES_DIRECTORY, 'import_profiles_popup.ui')
+        file_path = UI_FILES_DIRECTORY / 'import_profiles_popup.ui'
         super().__init__(file_path, parent)
 
 
@@ -66,7 +65,7 @@ class _AdvancedOptionsPopupWindow(_PopupTemplate):
     UPDATE_FABRIC_VERSION_BUTTON: QPushButton
 
     def __init__(self, parent: QMainWindow):
-        file_path = os.path.join(UI_FILES_DIRECTORY, 'advanced_options_popup.ui')
+        file_path = UI_FILES_DIRECTORY / 'advanced_options_popup.ui'
         super().__init__(file_path, parent)
 
 

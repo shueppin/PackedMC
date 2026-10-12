@@ -2,7 +2,6 @@ import sys
 import logging
 import subprocess
 from pathlib import Path
-import os
 import traceback
 from datetime import datetime
 
@@ -15,6 +14,7 @@ from PyQt6.QtWidgets import QApplication
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from interface import MainWindow
+from utils.file_paths import UPDATER_FILE_PATH, ICONS_FILE_PATH
 
 
 # TODO: Change the whole mods file system, to have less duplicate files
@@ -23,10 +23,7 @@ from interface import MainWindow
 # TODO: Add Forge support
 # TODO: Add system to allow marking instances as favourite
 # TODO: Show which mods have been updated
-
-
-ACTUAL_FILE_DIRECTORY = os.path.dirname(__file__)
-ICONS_FILE_PATH = os.path.join(ACTUAL_FILE_DIRECTORY, 'icons')
+# TODO: Download and enable mod dependencies after showing a popup
 
 
 logging.basicConfig(format="%(levelname)s %(name)s: %(message)s", level=logging.INFO)
@@ -61,11 +58,12 @@ def launch_background(script_path, args=None):
     )
 
 
-launch_background("updater.py")
+launch_background(UPDATER_FILE_PATH)
 
 
 app = QApplication(sys.argv)
-app.setWindowIcon(QIcon(os.path.join(ICONS_FILE_PATH, 'logo.png')))
+icon_path = str((ICONS_FILE_PATH / 'logo.png').resolve())
+app.setWindowIcon(QIcon(icon_path))
 window = MainWindow(app)
 window.show()
 window.INSTANCES_PAGE.rebuild_grid()

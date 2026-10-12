@@ -3,13 +3,15 @@ import requests
 import json
 import threading
 import logging
+from pathlib import Path
+
+from utils.file_paths import CACHE_DIRECTORY
 
 
 logger = logging.getLogger(__name__)
 
 
-_ACTUAL_FILE_DIRECTORY = os.path.dirname(__file__)
-_CACHE_FILE = os.path.join(_ACTUAL_FILE_DIRECTORY, 'cache/minecraft_versions.json')
+_MINECRAFT_VERSIONS_CACHE_FILE = CACHE_DIRECTORY / 'minecraft_versions.json'
 _MINECRAFT_VERSIONS_URL = 'https://launchermeta.mojang.com/mc/game/version_manifest.json'
 
 
@@ -20,7 +22,7 @@ ALL_SNAPSHOT_VERSIONS = []
 
 
 # Ensure correct directories exist
-os.makedirs(os.path.join(_ACTUAL_FILE_DIRECTORY, 'cache'), exist_ok=True)
+os.makedirs(CACHE_DIRECTORY, exist_ok=True)
 
 
 def _reload_data():
@@ -46,7 +48,7 @@ def _reload_data():
             ALL_SNAPSHOT_VERSIONS.append(version['id'])
 
     # Set the cache
-    with open(_CACHE_FILE, 'w') as file:
+    with open(_MINECRAFT_VERSIONS_CACHE_FILE, 'w') as file:
         cached_data = {
             'latest_release': LATEST_RELEASE,
             'latest_snapshot': LATEST_SNAPSHOT,
@@ -66,8 +68,8 @@ def initialize_versions():
     # Load cached data first (fast startup)
     cached_data = {}
 
-    if os.path.exists(_CACHE_FILE):
-        with open(_CACHE_FILE, 'r') as file:
+    if os.path.exists(_MINECRAFT_VERSIONS_CACHE_FILE):
+        with open(_MINECRAFT_VERSIONS_CACHE_FILE, 'r') as file:
             cached_data = json.load(file)
 
     try:
@@ -84,13 +86,14 @@ def initialize_versions():
 
 
 def get_installed_versions(minecraft_directory: str) -> list[str]:
+    minecraft_path = Path(minecraft_directory)
     try:
-        versions_path = os.path.join(minecraft_directory, 'versions')
+        versions_path = minecraft_path / 'versions'
         content = os.listdir(versions_path)
 
         all_dirs = []
         for file_or_dir in content:
-            if os.path.isdir(os.path.join(versions_path, file_or_dir)):
+            if os.path.isdir(versions_path / file_or_dir):
                 all_dirs.append(file_or_dir)
 
         return sorted(all_dirs, reverse=True)

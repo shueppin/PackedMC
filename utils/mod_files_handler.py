@@ -44,7 +44,7 @@ def update_mod_files(main_window: MainWindow, instance_name: str, mods_data: dic
 
     actual_time = round(time.time())
 
-    packedmc_mods_directory = os.path.join(PACKEDMC_MINECRAFT_DATA_DIRECTORY, 'mods', instance_name)
+    packedmc_mods_directory = PACKEDMC_MINECRAFT_DATA_DIRECTORY / 'mods' / instance_name
     os.makedirs(packedmc_mods_directory, exist_ok=True)  # Ensure it exists
     unneeded_files = os.listdir(packedmc_mods_directory)
 
@@ -129,7 +129,7 @@ def update_mod_files(main_window: MainWindow, instance_name: str, mods_data: dic
 
 def move_mods_from_packedmc_to_minecraft(instance_name: str, minecraft_directory: str):
     # Update the mods
-    packedmc_mods_directory = os.path.join(PACKEDMC_MINECRAFT_DATA_DIRECTORY, 'mods', instance_name)
+    packedmc_mods_directory = PACKEDMC_MINECRAFT_DATA_DIRECTORY / 'mods' / instance_name
 
     # Get all the files in the mods directory which were not copied by PackedMC
     try:

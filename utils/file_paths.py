@@ -4,25 +4,30 @@ from pathlib import Path
 import sys
 
 
-# PackedMC Paths
+# Most important file paths
 MAIN_DIRECTORY = Path(sys.argv[0]).resolve().parent
-INTERFACE_FILES_DIRECTORY = os.path.join(MAIN_DIRECTORY, 'interface')
-UI_FILES_DIRECTORY = os.path.join(INTERFACE_FILES_DIRECTORY, 'ui_files')
+UPDATER_FILE_PATH = MAIN_DIRECTORY / 'updater.py'
+CACHE_DIRECTORY = MAIN_DIRECTORY / '.cache'
 
-INTERFACE_FILE_PATH = os.path.join(UI_FILES_DIRECTORY, 'interface.ui')
-CUSTOM_STYLESHEET_FILE_PATH = os.path.join(INTERFACE_FILES_DIRECTORY, 'special_properties.cqss')
-ICONS_FILE_PATH = os.path.join(MAIN_DIRECTORY, 'icons')
+# Interface paths
+INTERFACE_FILES_DIRECTORY = MAIN_DIRECTORY / 'interface'
+UI_FILES_DIRECTORY = INTERFACE_FILES_DIRECTORY / 'ui_files'
+INTERFACE_FILE_PATH = UI_FILES_DIRECTORY / 'interface.ui'
+CUSTOM_STYLESHEET_FILE_PATH = INTERFACE_FILES_DIRECTORY / 'special_properties.cqss'
+ICONS_FILE_PATH = MAIN_DIRECTORY / 'icons'
 
-DATA_FILE_PATH = os.path.join(MAIN_DIRECTORY, r'data.json')
-PACKEDMC_MINECRAFT_DATA_DIRECTORY = os.path.abspath(os.path.join(MAIN_DIRECTORY, 'minecraft_data'))
+# User data file paths
+DATA_FILE_PATH = MAIN_DIRECTORY / r'data.json'
+PACKEDMC_MINECRAFT_DATA_DIRECTORY = (MAIN_DIRECTORY / 'minecraft_data').resolve()
+PACKEDMC_OPTIONS_FILES_DIRECTORY = PACKEDMC_MINECRAFT_DATA_DIRECTORY / 'options_files'
 
 
 # Minecraft Paths
 if 'windows' in platform().lower():
-    ROAMING_DIRECTORY = os.getenv('Appdata')
-    MINECRAFT_DIRECTORY = os.path.join(ROAMING_DIRECTORY, '.minecraft')
-    MINECRAFT_LAUNCHER_PROFILES_PATH = os.path.join(MINECRAFT_DIRECTORY, 'launcher_profiles.json')
-    VERSIONS_DIRECTORY = os.path.join(MINECRAFT_DIRECTORY, 'versions')
+    ROAMING_DIRECTORY = Path(os.getenv('Appdata'))
+    MINECRAFT_DIRECTORY = ROAMING_DIRECTORY / '.minecraft'
+    MINECRAFT_LAUNCHER_PROFILES_PATH = MINECRAFT_DIRECTORY / 'launcher_profiles.json'
+    VERSIONS_DIRECTORY = MINECRAFT_DIRECTORY / 'versions'
 else:
     raise OSError(f'This OS/platform ({platform()}) is not supported by PackedMC.')
 

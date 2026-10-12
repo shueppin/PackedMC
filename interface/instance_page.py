@@ -12,7 +12,7 @@ from pyqt_utils.animation import AnimationScrollDirection
 
 from utils.mod_files_handler import update_mod_files, move_mods_from_packedmc_to_minecraft
 from utils.data_file_helper import Data, AdvancedArgumentsData, SingleInstanceData, DEFAULT_INSTANCE_NAME
-from utils.file_paths import PACKEDMC_MINECRAFT_DATA_DIRECTORY, MINECRAFT_DIRECTORY, is_subdir_of_user_home
+from utils.file_paths import MINECRAFT_DIRECTORY, is_subdir_of_user_home, PACKEDMC_OPTIONS_FILES_DIRECTORY
 from minecraft_api.minecraft_launcher_integration import save_options_file_of_last_used_instance, load_options_file_from_packedmc, write_instance_data_to_profiles_file, start_official_launcher
 from minecraft_api.minecraft import ALL_RELEASE_VERSIONS, ALL_SNAPSHOT_VERSIONS, get_installed_versions
 from minecraft_api.mod import get_mod_icon_path, InvalidModBaseUrl, ModNotExisting
@@ -213,10 +213,10 @@ class InstancePageClass:
         self.data.save()
 
         # Rename the options file in PackedMC if it exists
-        packedmc_options_files_directory = os.path.join(PACKEDMC_MINECRAFT_DATA_DIRECTORY, 'options_files')
-        old_options_file_path = os.path.join(packedmc_options_files_directory, old_instance_name + '.txt')
+        old_options_file_path = PACKEDMC_OPTIONS_FILES_DIRECTORY / (old_instance_name + '.txt')
         if os.path.exists(old_options_file_path):
-            os.rename(old_options_file_path, os.path.join(packedmc_options_files_directory, new_instance_name + '.txt'))
+            new_options_file_path = PACKEDMC_OPTIONS_FILES_DIRECTORY / (new_instance_name + '.txt')
+            os.rename(old_options_file_path, new_options_file_path)
             logger.info(f'Renaming options file at "{old_options_file_path}" to new name "{new_instance_name}.txt"')
 
     def _browse_minecraft_path(self):
@@ -253,10 +253,10 @@ class InstancePageClass:
                 new_instance_name = self.parent.make_name_unique(DEFAULT_INSTANCE_NAME, list(self.data.instances.keys()))
 
                 # Rename the options file in PackedMC if it exists
-                packedmc_options_files_directory = os.path.join(PACKEDMC_MINECRAFT_DATA_DIRECTORY, 'options_files')
-                old_options_file_path = os.path.join(packedmc_options_files_directory, selected_instance + '.txt')
+                old_options_file_path = PACKEDMC_OPTIONS_FILES_DIRECTORY / (selected_instance + '.txt')
                 if os.path.exists(old_options_file_path):
-                    os.rename(old_options_file_path, os.path.join(packedmc_options_files_directory, new_instance_name + '.txt'))
+                    new_options_file_path = PACKEDMC_OPTIONS_FILES_DIRECTORY / (new_instance_name + '.txt')
+                    os.rename(old_options_file_path, new_options_file_path)
                     logger.info(f'Renaming options file at "{old_options_file_path}" to new name "{new_instance_name}.txt"')
 
                 # Create a default instance under the default name
