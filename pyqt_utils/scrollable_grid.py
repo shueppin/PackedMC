@@ -10,7 +10,7 @@ from PyQt6.QtGui import QPixmap
 # noinspection PyPackageRequirements
 from PyQt6.QtCore import Qt, QPoint, QEvent
 
-from modrinth_search import ModrinthSearcher, ModrinthIconLoader, MODRINTH_BASE_MOD_URL
+from .modrinth_search_handler import ModrinthSearcher, ModrinthIconLoader, MODRINTH_BASE_MOD_URL
 
 
 DEFAULT_ALL_TAGS_NAME = 'All tags'
@@ -18,6 +18,11 @@ DEFAULT_NO_TAGS_NAME = 'Mods without tag'
 
 
 logger = logging.getLogger(__name__)
+
+
+'''
+Scrollable grid for instances and mods, including modrinth search overlay
+'''
 
 
 class FieldType(Enum):

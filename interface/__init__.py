@@ -9,17 +9,18 @@ from PyQt6.QtWidgets import QMainWindow, QPushButton, QVBoxLayout
 from qt_material import apply_stylesheet, list_themes, get_theme, opacity
 
 from .type_hinting import MainWindowElements
-from .dynamic_widgets import FieldType, ScrollableGrid, DynamicInstanceFieldHelper, DynamicModFieldHelper, DEFAULT_NO_TAGS_NAME
-from .utils import animate_transition, AnimationScrollDirection, create_buttons_in_scroll_area
 from .popups import ImportProfilesHandler
-from .mod_files_handler import update_mod_files
-
 from .mod_page import ModPageClass
 from .instance_page import InstancePageClass
 
-from data_file_helper import DEFAULT_INSTANCE_NAME, Data
-from file_paths import INTERFACE_FILE_PATH, CUSTOM_STYLESHEET_FILE_PATH, DATA_FILE_PATH, PACKEDMC_MINECRAFT_DATA_DIRECTORY
-from minecraft_launcher_integration import save_options_file_of_last_used_instance
+from pyqt_utils.scrollable_grid import FieldType, ScrollableGrid, DynamicInstanceFieldHelper, DynamicModFieldHelper, DEFAULT_NO_TAGS_NAME
+from pyqt_utils.scrollarea_buttons import create_buttons_in_scroll_area
+from pyqt_utils.animation import animate_transition, AnimationScrollDirection
+
+from utils.mod_files_handler import update_mod_files
+from utils.data_file_helper import DEFAULT_INSTANCE_NAME, Data
+from utils.file_paths import INTERFACE_FILE_PATH, CUSTOM_STYLESHEET_FILE_PATH, DATA_FILE_PATH, PACKEDMC_MINECRAFT_DATA_DIRECTORY
+from minecraft_api.minecraft_launcher_integration import save_options_file_of_last_used_instance
 from minecraft_api.mod import get_mod_icon_path, InvalidModBaseUrl, ModNotExisting
 
 

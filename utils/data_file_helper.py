@@ -7,8 +7,8 @@ import json
 import os
 from dataclasses import dataclass, field, fields, asdict, InitVar
 
-from file_paths import MINECRAFT_DIRECTORY
-from minecraft_launcher_integration import DEFAULT_MAX_HEAP_SIZE, DEFAULT_START_HEAP_SIZE, DEFAULT_OTHER_JVM_ARGS
+from utils.file_paths import MINECRAFT_DIRECTORY
+from minecraft_api.minecraft_launcher_integration import DEFAULT_MAX_HEAP_SIZE, DEFAULT_START_HEAP_SIZE, DEFAULT_OTHER_JVM_ARGS
 
 
 logger = logging.getLogger(__name__)

@@ -7,10 +7,12 @@ from PyQt6.QtWidgets import QMessageBox
 # noinspection PyPackageRequirements
 from PyQt6.QtCore import QTimer, QObject, pyqtSignal
 
-from data_file_helper import Data, SingleModData
 from .popups import ModTagPopup
-from .utils import AnimationScrollDirection, create_buttons_in_scroll_area, ScrollAreaButtonType
 
+from pyqt_utils.animation import AnimationScrollDirection
+from pyqt_utils.scrollarea_buttons import create_buttons_in_scroll_area, ScrollAreaButtonType
+
+from utils.data_file_helper import Data, SingleModData
 from minecraft_api.mod import get_mod_data, InvalidModBaseUrl, ModNotExisting
 
 # Import the MainWindow for Type Checking

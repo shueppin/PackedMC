@@ -9,11 +9,11 @@ from PyQt6.QtCore import Qt
 # noinspection PyPackageRequirements
 from PyQt6.QtWidgets import QWidget, QDialog, QPushButton, QMainWindow, QTextEdit, QSpinBox, QCheckBox, QFileDialog, QVBoxLayout, QListWidget, QLabel, QListWidgetItem, QInputDialog, QHBoxLayout, QMessageBox
 
-from .utils import create_buttons_in_scroll_area, ScrollAreaButtonType
-from .dynamic_widgets import DEFAULT_ALL_TAGS_NAME, DEFAULT_NO_TAGS_NAME
+from pyqt_utils.scrollable_grid import DEFAULT_ALL_TAGS_NAME, DEFAULT_NO_TAGS_NAME
+from pyqt_utils.scrollarea_buttons import create_buttons_in_scroll_area, ScrollAreaButtonType
 
-from data_file_helper import Data
-from file_paths import MINECRAFT_LAUNCHER_PROFILES_PATH, MINECRAFT_DIRECTORY, UI_FILES_DIRECTORY, VERSIONS_DIRECTORY
+from utils.data_file_helper import Data
+from utils.file_paths import MINECRAFT_LAUNCHER_PROFILES_PATH, MINECRAFT_DIRECTORY, UI_FILES_DIRECTORY, VERSIONS_DIRECTORY
 from minecraft_api.fabric import install_version
 from minecraft_api.minecraft import ALL_RELEASE_VERSIONS, ALL_SNAPSHOT_VERSIONS
 

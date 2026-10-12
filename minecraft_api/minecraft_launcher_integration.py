@@ -5,14 +5,14 @@ import logging
 import shutil
 import subprocess
 
-from file_paths import PACKEDMC_MINECRAFT_DATA_DIRECTORY, VERSIONS_DIRECTORY, MINECRAFT_LAUNCHER_PROFILES_PATH, ICONS_FILE_PATH
+from utils.file_paths import PACKEDMC_MINECRAFT_DATA_DIRECTORY, VERSIONS_DIRECTORY, MINECRAFT_LAUNCHER_PROFILES_PATH, ICONS_FILE_PATH
 from minecraft_api.minecraft import ALL_RELEASE_VERSIONS
 from minecraft_api.fabric import install_version
 
 # Import the MainWindow for Type Checking
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from data_file_helper import SingleInstanceData
+    from utils.data_file_helper import SingleInstanceData
 
 
 logger = logging.getLogger(__name__)

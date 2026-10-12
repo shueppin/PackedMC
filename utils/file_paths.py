@@ -1,18 +1,20 @@
 import os
 from platform import platform
+from pathlib import Path
+import sys
 
 
 # PackedMC Paths
-_ACTUAL_FILE_DIRECTORY = os.path.dirname(__file__)
-INTERFACE_FILES_DIRECTORY = os.path.join(_ACTUAL_FILE_DIRECTORY, 'interface')
+MAIN_DIRECTORY = Path(sys.argv[0]).resolve().parent
+INTERFACE_FILES_DIRECTORY = os.path.join(MAIN_DIRECTORY, 'interface')
 UI_FILES_DIRECTORY = os.path.join(INTERFACE_FILES_DIRECTORY, 'ui_files')
 
 INTERFACE_FILE_PATH = os.path.join(UI_FILES_DIRECTORY, 'interface.ui')
 CUSTOM_STYLESHEET_FILE_PATH = os.path.join(INTERFACE_FILES_DIRECTORY, 'special_properties.cqss')
-ICONS_FILE_PATH = os.path.join(_ACTUAL_FILE_DIRECTORY, 'icons')
+ICONS_FILE_PATH = os.path.join(MAIN_DIRECTORY, 'icons')
 
-DATA_FILE_PATH = os.path.join(_ACTUAL_FILE_DIRECTORY, r'data.json')
-PACKEDMC_MINECRAFT_DATA_DIRECTORY = os.path.abspath(os.path.join(_ACTUAL_FILE_DIRECTORY, 'minecraft_data'))
+DATA_FILE_PATH = os.path.join(MAIN_DIRECTORY, r'data.json')
+PACKEDMC_MINECRAFT_DATA_DIRECTORY = os.path.abspath(os.path.join(MAIN_DIRECTORY, 'minecraft_data'))
 
 
 # Minecraft Paths
