@@ -280,6 +280,13 @@ class ScrollableGrid(QWidget):
         if field_type not in (FieldType.MODS_DISPLAYED, FieldType.MODS_EDITABLE):
             self.controls_widget.hide()
 
+        # Add the text at the bottom of the mod display page to explain why not all mods might be displayed
+        mods_hidden_label = QLabel('If not all mods are displayed, these mods are not compatible with the current type of instance. \nCreate or change to a new instance with the correct type.')
+        mods_hidden_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        if field_type != FieldType.MODS_DISPLAYED:
+            mods_hidden_label.hide()
+
         # Scroll area
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
@@ -297,6 +304,7 @@ class ScrollableGrid(QWidget):
         main_layout.setContentsMargins(0, 10, 0, 0)
         main_layout.addWidget(self.controls_widget)
         main_layout.addWidget(self.scroll_area)
+        main_layout.addWidget(mods_hidden_label)
         self.setLayout(main_layout)
 
         # Modrinth search overlay
@@ -344,7 +352,7 @@ class ScrollableGrid(QWidget):
     def set_size(self, width=200, height=100):
         self.card_width = width
         self.card_height = height
-        self.set_values(self.values)  # Refresh the values, to recreate the fields
+        self._refresh_visible_fields()  # Recreate the fields
 
     def set_values(self, values: list[str | tuple[str, str] | tuple[str, str, bool]]):
         """
