@@ -44,9 +44,9 @@ def save_options_file_of_last_used_instance(last_played_instance_name: str, last
 
         # Either use the default instance or the last played one
         if last_played_instance_data.use_default_options_file:
-            output_file_path = PACKEDMC_OPTIONS_FILES_DIRECTORY / (default_instance_name + '.txt')
+            output_file_path = PACKEDMC_OPTIONS_FILES_DIRECTORY / f'{default_instance_name}.txt'
         else:
-            output_file_path = PACKEDMC_OPTIONS_FILES_DIRECTORY / (last_played_instance + '.txt')
+            output_file_path = PACKEDMC_OPTIONS_FILES_DIRECTORY / f'{last_played_instance}.txt'
 
         # Create the options file path based on the last profile's minecraft directory
         minecraft_options_file_path = os.path.join(last_played_instance_data.minecraft_directory, 'options.txt')
@@ -79,9 +79,9 @@ def save_options_file_of_last_used_instance(last_played_instance_name: str, last
 def load_options_file_from_packedmc(instance_name: str, actual_instance_data: SingleInstanceData, default_instance_name: str):
     # Copy the options file from PackedMC (either default or the actual instance) to the minecraft directory
     if actual_instance_data.use_default_options_file:
-        packedmc_options_file = PACKEDMC_OPTIONS_FILES_DIRECTORY / (default_instance_name + '.txt')
+        packedmc_options_file = PACKEDMC_OPTIONS_FILES_DIRECTORY / f'{default_instance_name}.txt'
     else:
-        packedmc_options_file = PACKEDMC_OPTIONS_FILES_DIRECTORY / (instance_name + '.txt')
+        packedmc_options_file = PACKEDMC_OPTIONS_FILES_DIRECTORY / f'{instance_name}.txt'
 
     # Create the options file path based on the game location of the new instance
     minecraft_options_file_path = os.path.join(actual_instance_data.minecraft_directory, 'options.txt')
@@ -96,7 +96,7 @@ def load_options_file_from_packedmc(instance_name: str, actual_instance_data: Si
     # Trying to copy the options file of the default instance.
     else:
         logger.warning(f'Options file not found at "{packedmc_options_file}". Trying to load from the options file from the default PackedMC instance.')
-        packedmc_options_file = PACKEDMC_OPTIONS_FILES_DIRECTORY / (default_instance_name + '.txt')
+        packedmc_options_file = PACKEDMC_OPTIONS_FILES_DIRECTORY / f'{default_instance_name}.txt'
         if os.path.exists(packedmc_options_file):
             if not os.path.exists(minecraft_options_file_path):
                 logger.info("Options file to replace does not exist. Creating new one.")

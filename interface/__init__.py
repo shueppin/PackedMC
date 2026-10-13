@@ -213,8 +213,7 @@ class MainWindow(QMainWindow, MainWindowElements):
             normal_instances = []
             for instance in sorted(self.data.instances.keys(), key=lambda x: x.lower()):
                 if self.data.instances[instance].is_favourite:
-                    # TODO: Add a star to the name to display it as favourite
-                    favourite_instances.append(instance)
+                    favourite_instances.append(f"★ {instance}")
                 else:
                     normal_instances.append(instance)
             self.INSTANCES_PAGE.set_values(favourite_instances + normal_instances)

@@ -2,6 +2,7 @@ import logging
 import psutil
 import os
 import traceback
+import re
 
 # noinspection PyPackageRequirements
 from PyQt6.QtWidgets import QFileDialog, QMessageBox
@@ -26,6 +27,11 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+def _cleanup_name(instance_name: str) -> str:
+    # Remove special characters (e.g. ★ or any disallowed by the explorer like \ or ?)
+    return re.sub(r'[^A-Za-z0-9 _.-]', '', instance_name).strip()
+
+
 class InstancePageClass:
     def __init__(self, parent: MainWindow):
         self.parent: MainWindow = parent
@@ -47,9 +53,11 @@ class InstancePageClass:
         parent.USE_STANDARD_OPTIONS.clicked.connect(self._changed_instance_use_default_options_file)
         parent.ADVANCED_SETTINGS_BUTTON.clicked.connect(lambda: self.advanced_options_popup_handler.open_popup(self.selected_instance_name))
         parent.RESET_MINECRAFT_PATH_BUTTON.clicked.connect(self._reset_minecraft_path)
-        parent.INSTANCE_FAVOURITE_BUTTON.clicked.connect(self.toggle_favourite)
+        parent.INSTANCE_FAVOURITE_BUTTON.clicked.connect(self._toggle_favourite)
 
     def play_instance(self, instance_name: str):
+        instance_name = _cleanup_name(instance_name)  # This is to remove ★ from the favourites
+
         actual_instance_data = self.data.instances[instance_name]
 
         # Check if the Minecraft Launcher is already running
@@ -110,6 +118,8 @@ class InstancePageClass:
 
     def edit_instance(self, instance_name: str, only_refresh_values=False):
         """ This function is executed to show the edit page and configure the values for the given instance. """
+        instance_name = _cleanup_name(instance_name)
+
         parent = self.parent
 
         if not only_refresh_values:
@@ -199,7 +209,7 @@ class InstancePageClass:
     def _changed_instance_name(self):
         # Get the old and the new instance name
         old_instance_name = self.selected_instance_name
-        new_instance_name = self.parent.INSTANCE_NAME.text().strip()
+        new_instance_name = _cleanup_name(self.parent.INSTANCE_NAME.text())
 
         # If the clean new name is empty then it means it was cleared, which is allowed since the user can rewrite the whole name.
         if new_instance_name == '':
@@ -219,10 +229,13 @@ class InstancePageClass:
 
         self.data.save()
 
-        # Rename the options file in PackedMC if it exists
-        old_options_file_path = PACKEDMC_OPTIONS_FILES_DIRECTORY / (old_instance_name + '.txt')
+        # Rename the options file in PackedMC if it exists and the name has changed
+        if old_instance_name == new_instance_name:
+            return
+
+        old_options_file_path = PACKEDMC_OPTIONS_FILES_DIRECTORY / f'{old_instance_name}.txt'
         if os.path.exists(old_options_file_path):
-            new_options_file_path = PACKEDMC_OPTIONS_FILES_DIRECTORY / (new_instance_name + '.txt')
+            new_options_file_path = PACKEDMC_OPTIONS_FILES_DIRECTORY / f'{new_instance_name}.txt'
             os.rename(old_options_file_path, new_options_file_path)
             logger.info(f'Renaming options file at "{old_options_file_path}" to new name "{new_instance_name}.txt"')
 
@@ -260,9 +273,9 @@ class InstancePageClass:
                 new_instance_name = self.parent.make_name_unique(DEFAULT_INSTANCE_NAME, list(self.data.instances.keys()))
 
                 # Rename the options file in PackedMC if it exists
-                old_options_file_path = PACKEDMC_OPTIONS_FILES_DIRECTORY / (selected_instance + '.txt')
+                old_options_file_path = PACKEDMC_OPTIONS_FILES_DIRECTORY / f'{selected_instance}.txt'
                 if os.path.exists(old_options_file_path):
-                    new_options_file_path = PACKEDMC_OPTIONS_FILES_DIRECTORY / (new_instance_name + '.txt')
+                    new_options_file_path = PACKEDMC_OPTIONS_FILES_DIRECTORY / f'{new_instance_name}.txt'
                     os.rename(old_options_file_path, new_options_file_path)
                     logger.info(f'Renaming options file at "{old_options_file_path}" to new name "{new_instance_name}.txt"')
 
@@ -339,5 +352,5 @@ class InstancePageClass:
 
         return ''
 
-    def toggle_favourite(self):
+    def _toggle_favourite(self):
         self.data.instances[self.selected_instance_name].is_favourite = not self.data.instances[self.selected_instance_name].is_favourite
