@@ -354,3 +354,4 @@ class InstancePageClass:
 
     def _toggle_favourite(self):
         self.data.instances[self.selected_instance_name].is_favourite = not self.data.instances[self.selected_instance_name].is_favourite
+        self.data.save()
