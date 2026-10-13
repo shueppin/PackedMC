@@ -29,6 +29,7 @@ class MainWindowElements:
     ADVANCED_SETTINGS_BUTTON: QPushButton
     USE_STANDARD_OPTIONS: QCheckBox
     RESET_MINECRAFT_PATH_BUTTON: QPushButton
+    INSTANCE_FAVOURITE_BUTTON: QPushButton
 
     # Mods Page Placeholder (replaced by dynamic widget)
     MODS_PAGE_PLACEHOLDER: QWidget

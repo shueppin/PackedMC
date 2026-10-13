@@ -47,6 +47,7 @@ class InstancePageClass:
         parent.USE_STANDARD_OPTIONS.clicked.connect(self._changed_instance_use_default_options_file)
         parent.ADVANCED_SETTINGS_BUTTON.clicked.connect(lambda: self.advanced_options_popup_handler.open_popup(self.selected_instance_name))
         parent.RESET_MINECRAFT_PATH_BUTTON.clicked.connect(self._reset_minecraft_path)
+        parent.INSTANCE_FAVOURITE_BUTTON.clicked.connect(self.toggle_favourite)
 
     def play_instance(self, instance_name: str):
         actual_instance_data = self.data.instances[instance_name]
@@ -95,7 +96,7 @@ class InstancePageClass:
 
         # TODO: Optionally: Periodically save the options file until the game is closed if packedmc stays open.
 
-    def create_instance(self, instance_name='New instance', is_default=False, edit_afterwards=True, instance_type='Release', instance_version='latest', minecraft_directory=MINECRAFT_DIRECTORY, advanced_arguments: dict = None):
+    def create_instance(self, instance_name='New instance', is_default=False, edit_afterwards=True, instance_type='Release', instance_version='latest', minecraft_directory=str(MINECRAFT_DIRECTORY), advanced_arguments: dict = None):
         instance_name = self.parent.make_name_unique(instance_name, list(self.data.instances.keys()))
         if advanced_arguments is None:
             advanced_arguments = AdvancedArgumentsData()
@@ -153,6 +154,12 @@ class InstancePageClass:
         parent.USE_STANDARD_OPTIONS.blockSignals(False)
 
         parent.MINECRAFT_DIRECTORY_PATH.setText(instance_data.minecraft_directory)
+
+        # Set the toggle button
+        if instance_data.is_favourite:
+            parent.INSTANCE_FAVOURITE_BUTTON.setChecked(True)
+        else:
+            parent.INSTANCE_FAVOURITE_BUTTON.setChecked(False)
 
         # Enable or disable buttons, if we are using the default instance
         if instance_data.is_default:
@@ -226,7 +233,7 @@ class InstancePageClass:
 
         # Allow only user data paths which actually exist
         if is_subdir_of_user_home(new_path) and os.path.exists(new_path):
-            self.data.instances[self.selected_instance_name].minecraft_directory = new_path
+            self.data.instances[self.selected_instance_name].minecraft_directory = str(new_path)
             self.data.save()
             self.parent.MINECRAFT_DIRECTORY_PATH.setText(new_path)  # Refresh the values
 
@@ -234,7 +241,7 @@ class InstancePageClass:
         reply = QMessageBox.question(self.parent, 'Confirm resetting path', f'''Do you want to reset the minecraft directory path to: \n{MINECRAFT_DIRECTORY} \n\n(Enter = Yes, Escape = No)''')
 
         if reply == 16384:  # Yes
-            self.data.instances[self.selected_instance_name].minecraft_directory = MINECRAFT_DIRECTORY
+            self.data.instances[self.selected_instance_name].minecraft_directory = str(MINECRAFT_DIRECTORY)
             self.data.save()
             self.edit_instance(self.selected_instance_name, True)
 
@@ -331,3 +338,6 @@ class InstancePageClass:
                 return instance_name
 
         return ''
+
+    def toggle_favourite(self):
+        self.data.instances[self.selected_instance_name].is_favourite = not self.data.instances[self.selected_instance_name].is_favourite

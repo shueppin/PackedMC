@@ -67,6 +67,10 @@ QPushButton:hover {{
     background-color: {PACKEDMC_BUTTON_HOVER_COLOR};
 }}
 
+QPushButton:checked:hover {{
+    background-color: {QTMATERIAL_PRIMARYCOLOR};
+}}
+
 QPushButton:pressed:hover {{
     background-color: {PACKEDMC_BUTTON_PRESSED_COLOR};
 }}

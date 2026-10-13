@@ -82,7 +82,7 @@ class ImportProfilesHandler:
         self.import_profiles_popup.IMPORT_BUTTON.clicked.connect(self._import_selected_profiles)
 
     def open_popup(self):
-        launcher_profiles_path, _ = QFileDialog.getOpenFileName(self.parent, 'Select profiles file for the launcher', MINECRAFT_LAUNCHER_PROFILES_PATH, "JSON Files (*.json);;All Files (*)")
+        launcher_profiles_path, _ = QFileDialog.getOpenFileName(self.parent, 'Select profiles file for the launcher', str(MINECRAFT_LAUNCHER_PROFILES_PATH), "JSON Files (*.json);;All Files (*)")
 
         logger.info(f'Importing profiles from {launcher_profiles_path}')
 
@@ -169,9 +169,9 @@ class ImportProfilesHandler:
 
             # Get the game directory and advanced java arguments
             if 'gameDir' in profile_data:
-                minecraft_directory = profile_data['gameDir']
+                minecraft_directory: str = profile_data['gameDir']
             else:
-                minecraft_directory = MINECRAFT_DIRECTORY
+                minecraft_directory: str = str(MINECRAFT_DIRECTORY)
 
             advanced_arguments = {}
 

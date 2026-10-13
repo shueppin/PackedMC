@@ -6,6 +6,7 @@ import logging
 import json
 import os
 from dataclasses import dataclass, field, fields, asdict, InitVar
+from pathlib import Path
 
 from utils.file_paths import MINECRAFT_DIRECTORY
 from minecraft_api.minecraft_launcher_integration import DEFAULT_MAX_HEAP_SIZE, DEFAULT_START_HEAP_SIZE, DEFAULT_OTHER_JVM_ARGS
@@ -46,6 +47,11 @@ class _CompactListEncoder(json.JSONEncoder):
         elif isinstance(obj, list):
             # ALWAYS compact lists
             yield json.dumps(obj, separators=(", ", ":"), ensure_ascii=self.ensure_ascii)
+
+        elif isinstance(obj, Path):
+            # Safety check to ensure no crashes when decoding paths
+            logger.warning(f'"{obj}" is a pathlib.Path, expected a string.')
+            yield json.dumps(str(obj), ensure_ascii=self.ensure_ascii)
 
         else:
             yield json.dumps(obj, ensure_ascii=self.ensure_ascii)
@@ -136,10 +142,11 @@ class SingleInstanceData(_DataBase):
     type: str = field(default='')
     version: str = field(default='')
     is_default: bool = field(default=False)
-    minecraft_directory: str = field(default=MINECRAFT_DIRECTORY)
+    minecraft_directory: str = field(default=str(MINECRAFT_DIRECTORY))
     use_default_options_file: bool = field(default=False)
     advanced_arguments: AdvancedArgumentsData = field(default_factory=AdvancedArgumentsData)
     mods: dict[str, tuple[str, str, int]] = field(default_factory=dict)
+    is_favourite: bool = field(default=False)
 
 
 @dataclass

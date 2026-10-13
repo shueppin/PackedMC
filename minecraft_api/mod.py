@@ -321,7 +321,7 @@ def _update_modrinth_mod_data(mod_name: str, callback_function: Callable[[str, l
         with open(icon_file_path, 'wb') as file:
             file.write(response.content)
     else:
-        logger.warning(f'No icon URL available for mod "{mod_name}"')
+        logger.info(f'No icon URL available for mod "{mod_name}"')
 
     if callback_function is not None:
         callback_function(html_description, sorted(loaders), supported_versions, *callback_function_args)

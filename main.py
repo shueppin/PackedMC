@@ -21,7 +21,6 @@ from utils.file_paths import UPDATER_FILE_PATH, ICONS_FILE_PATH
 # TODO: Allow manual mod file adding: Instead of using a link for the mod, we add a file (via the explorer). Then we specify the version (using checkboxes) and the loader.
 # TODO: Add modpack support
 # TODO: Add Forge support
-# TODO: Add system to allow marking instances as favourite
 # TODO: Show which mods have been updated
 # TODO: Download and enable mod dependencies after showing a popup
 

@@ -2,9 +2,9 @@ import logging
 from enum import Enum
 
 # noinspection PyPackageRequirements
-from PyQt6.QtCore import QPropertyAnimation, QParallelAnimationGroup, QPoint, QEasingCurve, Qt
+from PyQt6.QtCore import QPropertyAnimation, QParallelAnimationGroup, QPoint, QEasingCurve
 # noinspection PyPackageRequirements
-from PyQt6.QtWidgets import QMainWindow, QWidget, QRadioButton, QCheckBox, QStackedWidget, QLayout
+from PyQt6.QtWidgets import QMainWindow, QStackedWidget
 
 
 logger = logging.getLogger(__name__)

@@ -208,7 +208,17 @@ class MainWindow(QMainWindow, MainWindowElements):
 
         # Page specific functions
         if page_index == 0:
-            self.INSTANCES_PAGE.set_values(sorted(self.data.instances.keys(), key=lambda x: x.lower()))
+            # Separately sort favourites and normal instances
+            favourite_instances = []
+            normal_instances = []
+            for instance in sorted(self.data.instances.keys(), key=lambda x: x.lower()):
+                if self.data.instances[instance].is_favourite:
+                    # TODO: Add a star to the name to display it as favourite
+                    favourite_instances.append(instance)
+                else:
+                    normal_instances.append(instance)
+            self.INSTANCES_PAGE.set_values(favourite_instances + normal_instances)
+
         elif page_index == 2:
             mod_page_values = []
             for mod_name in sorted(self.data.mods.keys(), key=lambda x: x.lower()):

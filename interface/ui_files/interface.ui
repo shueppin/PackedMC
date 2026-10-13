@@ -166,36 +166,6 @@
       </widget>
       <widget class="QWidget" name="INSTANCE_EDIT_PAGE">
        <layout class="QGridLayout" name="gridLayout" rowstretch="1,1,1,1,1,8" columnstretch="2,2,1,2,2,3,3,2" rowminimumheight="0,0,0,0,0,0">
-        <item row="0" column="1" colspan="6">
-         <widget class="QLineEdit" name="INSTANCE_NAME">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="font">
-           <font>
-            <bold>true</bold>
-           </font>
-          </property>
-          <property name="focusPolicy">
-           <enum>Qt::StrongFocus</enum>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-          </property>
-          <property name="placeholderText">
-           <string>Instance Name</string>
-          </property>
-          <property name="clearButtonEnabled">
-           <bool>false</bool>
-          </property>
-          <property name="class" stdset="0">
-           <string>bigger_text colored_text</string>
-          </property>
-         </widget>
-        </item>
         <item row="1" column="2">
          <spacer name="horizontalSpacer_2">
           <property name="orientation">
@@ -482,6 +452,52 @@
           </property>
          </widget>
         </item>
+        <item row="0" column="1" colspan="5">
+         <widget class="QLineEdit" name="INSTANCE_NAME">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="font">
+           <font>
+            <bold>true</bold>
+           </font>
+          </property>
+          <property name="focusPolicy">
+           <enum>Qt::StrongFocus</enum>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+          </property>
+          <property name="placeholderText">
+           <string>Instance Name</string>
+          </property>
+          <property name="clearButtonEnabled">
+           <bool>false</bool>
+          </property>
+          <property name="class" stdset="0">
+           <string>bigger_text colored_text</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="6">
+         <widget class="QPushButton" name="INSTANCE_FAVOURITE_BUTTON">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="text">
+           <string>Favourite</string>
+          </property>
+          <property name="checkable">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
        </layout>
       </widget>
       <widget class="QWidget" name="MODS_PAGE_PLACEHOLDER">
@@ -748,8 +764,8 @@
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>296</width>
-                <height>128</height>
+                <width>98</width>
+                <height>66</height>
                </rect>
               </property>
               <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -983,8 +999,8 @@
                   <rect>
                    <x>0</x>
                    <y>0</y>
-                   <width>297</width>
-                   <height>235</height>
+                   <width>98</width>
+                   <height>70</height>
                   </rect>
                  </property>
                  <layout class="QVBoxLayout" name="verticalLayout_7">
