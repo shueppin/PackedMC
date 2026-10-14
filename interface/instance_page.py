@@ -1,7 +1,6 @@
 import logging
 import psutil
 import os
-import traceback
 import re
 
 # noinspection PyPackageRequirements
@@ -87,20 +86,17 @@ class InstancePageClass:
         write_instance_data_to_profiles_file(instance_name, actual_instance_data)
         start_official_launcher()
 
-        try:
-            if actual_instance_data.type != 'Release' and actual_instance_data.type != 'Snapshot':
-                # Update and download the mods
-                update_mod_files(self.parent, instance_name, actual_instance_data.mods, actual_instance_data.version, actual_instance_data.type)
+        if actual_instance_data.type != 'Release' and actual_instance_data.type != 'Snapshot':
+            # Update and download the mods
+            update_mod_files(self.parent, instance_name, actual_instance_data.mods, actual_instance_data.version, actual_instance_data.type)
 
-                # Move the mods to the minecraft folder
-                move_mods_from_packedmc_to_minecraft(instance_name, minecraft_directory)
+            # Move the mods to the minecraft folder
+            move_mods_from_packedmc_to_minecraft(instance_name, minecraft_directory)
 
-            # Close PackedMC if the setting is selected
-            if self.data.settings.close_packedmc:
-                logger.info(f'Closing PackedMC')
-                exit()
-        except Exception:
-            traceback.print_exc()
+        # Close PackedMC if the setting is selected
+        if self.data.settings.close_packedmc:
+            logger.info(f'Closing PackedMC')
+            exit()
 
         # TODO: Optionally: Periodically save the options file until the game is closed if packedmc stays open.
 

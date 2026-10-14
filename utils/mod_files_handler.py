@@ -1,4 +1,3 @@
-import traceback
 import os
 import logging
 import time
@@ -68,6 +67,7 @@ def update_mod_files(main_window: MainWindow, instance_name: str, mods_data: dic
             progress_dialog.setValue(index + 1)
             progress_dialog.setLabelText("Downloading mod: \n" + mod_name)
 
+        # noinspection PyBroadException
         try:
             old_download_url, old_filename, last_checked = mods_data[mod_name]
         except Exception:  # If there is a mistake in the data, then update it and use default values
@@ -110,8 +110,6 @@ def update_mod_files(main_window: MainWindow, instance_name: str, mods_data: dic
         except (APICooldown, TryAgainLater):
             # Just do nothing. It will be tried again when playing this instance again.
             pass
-        except Exception:
-            traceback.print_exc()
 
     if output:
         progress_dialog.close()
@@ -132,45 +130,42 @@ def move_mods_from_packedmc_to_minecraft(instance_name: str, minecraft_directory
     packedmc_mods_directory = PACKEDMC_MINECRAFT_DATA_DIRECTORY / 'mods' / instance_name
 
     # Get all the files in the mods directory which were not copied by PackedMC
-    try:
-        mods_directory = os.path.join(minecraft_directory, 'mods')
-        os.makedirs(mods_directory, exist_ok=True)  # Creates the mod folder if it does not already exist
+    mods_directory = os.path.join(minecraft_directory, 'mods')
+    os.makedirs(mods_directory, exist_ok=True)  # Creates the mod folder if it does not already exist
 
-        packedmc_copied_mods_file = os.path.join(mods_directory, 'packedmc.json')
-        if os.path.exists(packedmc_copied_mods_file):
-            with open(packedmc_copied_mods_file, 'r') as f:
-                old_packedmc_copied_files: list[str] = json.load(f)
-        else:
-            old_packedmc_copied_files = []
-        old_packedmc_copied_files.append('packedmc.json')
+    packedmc_copied_mods_file = os.path.join(mods_directory, 'packedmc.json')
+    if os.path.exists(packedmc_copied_mods_file):
+        with open(packedmc_copied_mods_file, 'r') as f:
+            old_packedmc_copied_files: list[str] = json.load(f)
+    else:
+        old_packedmc_copied_files = []
+    old_packedmc_copied_files.append('packedmc.json')
 
-        with os.scandir(mods_directory) as it:
-            actual_mod_files = [entry.name for entry in it if entry.is_file()]
+    with os.scandir(mods_directory) as it:
+        actual_mod_files = [entry.name for entry in it if entry.is_file()]
 
-        for filename in old_packedmc_copied_files:
-            if filename in actual_mod_files:
-                actual_mod_files.remove(filename)
+    for filename in old_packedmc_copied_files:
+        if filename in actual_mod_files:
+            actual_mod_files.remove(filename)
 
-        # Store all the mods which were not copied by PackedMC in a backup folder
-        if len(actual_mod_files) > 0:
-            backup_directory_name = 'packedmc_backup_' + datetime.now().isoformat(timespec='seconds').replace('T', '_').replace(':', '-')
-            backup_directory = os.path.join(mods_directory, backup_directory_name)
-            os.mkdir(backup_directory)
-            for filename in actual_mod_files:
-                shutil.move(os.path.join(mods_directory, filename), backup_directory)
+    # Store all the mods which were not copied by PackedMC in a backup folder
+    if len(actual_mod_files) > 0:
+        backup_directory_name = 'packedmc_backup_' + datetime.now().isoformat(timespec='seconds').replace('T', '_').replace(':', '-')
+        backup_directory = os.path.join(mods_directory, backup_directory_name)
+        os.mkdir(backup_directory)
+        for filename in actual_mod_files:
+            shutil.move(os.path.join(mods_directory, filename), backup_directory)
 
-        # Remove all the files which are not replaced soon with the files from the PackedMC mods directory
-        new_mod_files = os.listdir(packedmc_mods_directory)
-        for filename in old_packedmc_copied_files:
-            if filename not in new_mod_files:
-                if os.path.exists(os.path.join(mods_directory, filename)):
-                    os.remove(os.path.join(mods_directory, filename))
+    # Remove all the files which are not replaced soon with the files from the PackedMC mods directory
+    new_mod_files = os.listdir(packedmc_mods_directory)
+    for filename in old_packedmc_copied_files:
+        if filename not in new_mod_files:
+            if os.path.exists(os.path.join(mods_directory, filename)):
+                os.remove(os.path.join(mods_directory, filename))
 
-        # Copy all files from the packedmc mods folder to the minecraft mods folder and list them in the JSON file
-        for filename in new_mod_files:
-            shutil.copy2(os.path.join(packedmc_mods_directory, filename), mods_directory)
+    # Copy all files from the packedmc mods folder to the minecraft mods folder and list them in the JSON file
+    for filename in new_mod_files:
+        shutil.copy2(os.path.join(packedmc_mods_directory, filename), mods_directory)
 
-        with open(packedmc_copied_mods_file, 'w') as f:
-            json.dump(new_mod_files, f)
-    except Exception:
-        traceback.print_exc()
+    with open(packedmc_copied_mods_file, 'w') as f:
+        json.dump(new_mod_files, f)
