@@ -113,7 +113,7 @@ def _get_curseforge_download_url(curseforge_url: str, game_version: str, mod_loa
         project_id = str(file_data['id'])
         file_name = file_data['name']
 
-        download_url = CURSEFORGE_FILE_DOWNLOAD_BASE_URL + '/' + project_id[:4] + '/' + project_id[4:] + '/' + file_name
+        download_url = CURSEFORGE_FILE_DOWNLOAD_BASE_URL + project_id[:4] + '/' + project_id[4:] + '/' + file_name
         download_url = download_url.replace(' ', '%20')
 
         return download_url, file_name
