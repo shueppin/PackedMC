@@ -51,3 +51,7 @@ class MainWindowElements:
     SWITCH_SECONDARY_COLOR: QCheckBox
     CLOSE_PACKEDMC_BUTTON: QCheckBox
     USE_DARK_THEME: QCheckBox
+    CREATE_BACKUP_BUTTON: QPushButton
+    RESTORE_BACKUP_BUTTON: QPushButton
+    DELETE_BACKUP_BUTTON: QPushButton
+    DATA_BACKUP_LIST: QWidget

@@ -1,11 +1,13 @@
 import logging
 import os
 import threading
+import shutil
+from datetime import datetime
 
 # noinspection PyPackageRequirements
 from PyQt6 import uic
 # noinspection PyPackageRequirements
-from PyQt6.QtWidgets import QMainWindow, QPushButton, QVBoxLayout
+from PyQt6.QtWidgets import QMainWindow, QPushButton, QVBoxLayout, QMessageBox
 from qt_material import apply_stylesheet, list_themes, get_theme, opacity
 
 from .type_hinting import MainWindowElements
@@ -19,7 +21,7 @@ from pyqt_utils.animation import animate_transition, AnimationScrollDirection
 
 from utils.mod_files_handler import update_mod_files
 from utils.data_file_helper import DEFAULT_INSTANCE_NAME, Data
-from utils.file_paths import INTERFACE_FILE_PATH, CUSTOM_STYLESHEET_FILE_PATH, DATA_FILE_PATH, PACKEDMC_MINECRAFT_DATA_DIRECTORY
+from utils.file_paths import INTERFACE_FILE_PATH, CUSTOM_STYLESHEET_FILE_PATH, DATA_FILE_PATH, PACKEDMC_OPTIONS_FILES_DIRECTORY, BACKUP_DIRECTORY
 from minecraft_api.minecraft_launcher_integration import save_options_file_of_last_used_instance
 from minecraft_api.mod import get_mod_icon_path, InvalidModBaseUrl, ModNotExisting
 
@@ -41,7 +43,7 @@ STYLE_THEMES = {  # Manually selected themes. First entry is light mode, second 
 
 
 # Ensure correct directories exist
-os.makedirs(PACKEDMC_MINECRAFT_DATA_DIRECTORY / 'options_files', exist_ok=True)  # creates all missing parents; no error if exists
+os.makedirs(PACKEDMC_OPTIONS_FILES_DIRECTORY, exist_ok=True)  # creates all missing parents; no error if exists
 
 
 class MainWindow(QMainWindow, MainWindowElements):
@@ -54,6 +56,7 @@ class MainWindow(QMainWindow, MainWindowElements):
         self.data = Data(DATA_FILE_PATH)  # Initialize using Default Data as base
         self.application = application
         self.possible_stylesheet_file_names = list_themes()
+        self.selected_data_backup = ""
 
         # Create the pages and popups from their respective classes
         self.mods_page_class = ModPageClass(self)
@@ -110,12 +113,8 @@ class MainWindow(QMainWindow, MainWindowElements):
             self.data.last_played_instance = DEFAULT_INSTANCE_NAME
             self.data.save()
 
-        # Create the settings page
-        all_theme_names = [theme_name.capitalize() for theme_name in STYLE_THEMES.keys()]
-        selected_theme = self.data.settings.theme.capitalize()
-
-        # Creating the buttons will also apply the style to the window on startup.
-        create_buttons_in_scroll_area(self.STYLES_SELECTION_LIST, all_theme_names, selected_theme, (lambda _button, theme_name: self.apply_stylesheet(theme_name=theme_name.lower())))
+        # Buttons for settings page
+        self._create_color_buttons()
         self.SWITCH_SECONDARY_COLOR.setChecked(self.data.settings.invert_secondary)
         self.SWITCH_SECONDARY_COLOR.clicked.connect(lambda button_state: self.apply_stylesheet(invert_secondary=button_state))
         self.SCALE_SELECTION.setValue(self.data.settings.scale + WINDOW_SCALE_MODIFIER)
@@ -124,6 +123,9 @@ class MainWindow(QMainWindow, MainWindowElements):
         self.CLOSE_PACKEDMC_BUTTON.clicked.connect(self.close_packedmc_button_clicked)
         self.USE_DARK_THEME.setChecked(self.data.settings.use_dark_theme)
         self.USE_DARK_THEME.clicked.connect(lambda button_state: self.apply_stylesheet(use_dark_theme=button_state))
+        self.RESTORE_BACKUP_BUTTON.clicked.connect(self.restore_backup)
+        self.DELETE_BACKUP_BUTTON.clicked.connect(self.delete_backup)
+        self.CREATE_BACKUP_BUTTON.clicked.connect(self.create_backup)
 
         # Show the initial page instantly and refresh whole window again
         self.show_page(0, show_instantly=True)
@@ -206,8 +208,8 @@ class MainWindow(QMainWindow, MainWindowElements):
         else:
             animate_transition(self, self.PAGE_CONTAINER, page_index, animation_direction=animation_direction)
 
-        # Page specific functions
-        if page_index == 0:
+        # Functions to execute when a specific page is shown
+        if page_index == 0:  # Instances page
             # Separately sort favourites and normal instances
             favourite_instances = []
             normal_instances = []
@@ -218,7 +220,8 @@ class MainWindow(QMainWindow, MainWindowElements):
                     normal_instances.append(instance)
             self.INSTANCES_PAGE.set_values(favourite_instances + normal_instances)
 
-        elif page_index == 2:
+        elif page_index == 2:  # Mods page
+            # Display mods with images
             mod_page_values = []
             for mod_name in sorted(self.data.mods.keys(), key=lambda x: x.lower()):
                 icon_file_path = ''
@@ -228,17 +231,25 @@ class MainWindow(QMainWindow, MainWindowElements):
                     pass
                 except InvalidModBaseUrl:
                     pass
-                except Exception as e:
-                    logger.error('Uncaught exception when listing mod', exc_info=e)
                 mod_page_values.append((mod_name, icon_file_path))  # It is important to add these as a tuple
 
             self.MODS_PAGE.set_values(mod_page_values)
 
+        elif page_index == 4:  # Settings page
+            self._display_available_data_backups()
+
     '''
     Settings Page
     '''
+    def _create_color_buttons(self):
+        """ Executing this function will also apply the stylesheet """
+        all_theme_names = [theme_name.capitalize() for theme_name in STYLE_THEMES.keys()]
+        selected_theme = self.data.settings.theme.capitalize()
+
+        create_buttons_in_scroll_area(self.STYLES_SELECTION_LIST, all_theme_names, selected_theme, (lambda _button, theme_name: self.apply_stylesheet(theme_name=theme_name.lower())))
+
     def _style_scale_changed(self, scale_value: int):
-        # We calculate minus the default scale, so we can use values between 1 and 5 in the UI
+        # We subtract the default scale, so we can use values between 1 and 5 in the UI
         self.apply_stylesheet(density_scale=scale_value - WINDOW_SCALE_MODIFIER)
 
         # Change grid size
@@ -250,6 +261,56 @@ class MainWindow(QMainWindow, MainWindowElements):
 
         self.MODS_PAGE.set_size(70 + 50 * scale_value, 60 + 20 * scale_value)
         self.MODS_PAGE.set_spacing(vertical_spacing=10 * scale_value)
+
+    def _display_available_data_backups(self):
+        self.selected_data_backup = ""
+
+        backup_names = []
+        for filename in sorted(os.listdir(BACKUP_DIRECTORY), reverse=True):
+            name = filename.rstrip(".json").replace("_", " ")
+            if "before" in name:
+                name += " (automatic)"
+            backup_names.append(name)
+
+        create_buttons_in_scroll_area(self.DATA_BACKUP_LIST, backup_names, "", self._selected_data_backup)
+
+        self.RESTORE_BACKUP_BUTTON.setDisabled(True)
+        self.DELETE_BACKUP_BUTTON.setDisabled(True)
+
+    def _selected_data_backup(self, _button, button_name: str):
+        self.selected_data_backup = button_name
+
+        # Enable the buttons since now a backup is selected
+        self.RESTORE_BACKUP_BUTTON.setDisabled(False)
+        self.DELETE_BACKUP_BUTTON.setDisabled(False)
+
+    def create_backup(self):
+        new_backup_filename = "data_from_" + datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + ".json"
+        new_backup_path = BACKUP_DIRECTORY / new_backup_filename
+        shutil.copy2(DATA_FILE_PATH, new_backup_path)
+
+        # Refresh the table
+        self._display_available_data_backups()
+
+    def restore_backup(self):
+        reply = QMessageBox.question(self, 'Confirm restoring backup', f'''Do you want to restore the backup of the data? \nYour actual data will be lost and completely replaced with the backup: \n{self.selected_data_backup} \n\n(Enter = Yes, Escape = No)''')
+
+        if reply == 16384:  # Yes
+            backup_filename = self.selected_data_backup.replace(" ", "_").rstrip("automatic").strip() + ".json"
+            shutil.copy2(BACKUP_DIRECTORY / backup_filename, DATA_FILE_PATH)
+
+        self._display_available_data_backups()
+        self.data.load()  # Reload the data
+        self._create_color_buttons()  # Reload the appearance
+
+    def delete_backup(self):
+        reply = QMessageBox.question(self, 'Confirm deleting backup', f'''Do you want to DELETE the backup of the data: \n{self.selected_data_backup} \n\n(Enter = Yes, Escape = No)''')
+
+        if reply == 16384:  # Yes
+            filename = self.selected_data_backup.replace(" ", "_").rstrip("automatic").strip() + ".json"
+            os.remove(BACKUP_DIRECTORY / filename)
+
+        self._display_available_data_backups()
 
     '''
     General functions

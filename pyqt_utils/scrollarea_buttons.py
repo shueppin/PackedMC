@@ -24,7 +24,7 @@ def create_buttons_in_scroll_area(scroll_area_content_widget: QWidget, button_na
     :param scroll_area_content_widget: The widget inside the scroll area which contains the content of the scroll area
     :param button_name_list: A list of names for the buttons
     :param selected_buttons: For radiobutton: The name of the selected radiobutton; For checkboxes: A list with the names of the selected buttons
-    :param button_on_click_function: The function to get executed on button click and in the beginning when the button is selected
+    :param button_on_click_function: The function to get executed on button click and in the beginning when the button is selected. Passed arguments with radiobutton: selected button, button name. Passed arguments with checkbox: button state, button name
     :param button_type: The type of button to create.
     """
     # This is the layout which contains the elements

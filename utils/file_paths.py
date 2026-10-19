@@ -8,6 +8,7 @@ import sys
 MAIN_DIRECTORY = Path(sys.argv[0]).resolve().parent
 UPDATER_FILE_PATH = MAIN_DIRECTORY / 'updater.py'
 CACHE_DIRECTORY = MAIN_DIRECTORY / '.cache'
+BACKUP_DIRECTORY = MAIN_DIRECTORY / "backup"
 
 # Interface paths
 INTERFACE_FILES_DIRECTORY = MAIN_DIRECTORY / 'interface'
