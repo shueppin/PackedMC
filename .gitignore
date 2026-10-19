@@ -2,5 +2,6 @@
 data.json
 version_history.json
 .cache
-/minecraft_data/
+backup
+minecraft_data
 crash.log

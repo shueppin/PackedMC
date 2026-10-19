@@ -1,4 +1,9 @@
+"""
+To suppress any updates add "dev" to version_history.json
+"""
+
 import json
+import os
 import shutil
 import sys
 import tempfile
@@ -17,6 +22,8 @@ API_URL = f"https://api.github.com/repos/shueppin/PackedMC/releases/latest"
 ZIP_URL = "https://github.com/shueppin/PackedMC/archive/refs/tags/{tag}.zip"
 
 VERSION_HISTORY = "version_history.json"
+DATA_FILE = "data.json"
+DATA_BACKUP_FILE = "data_before_{tag}.json"
 
 # Directories and files to ignore
 IGNORE = {
@@ -31,6 +38,11 @@ IGNORE = {
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent
+BACKUP_DIRECTORY = PROJECT_ROOT / "backup"
+
+
+# Ensure correct directories exist
+os.makedirs(BACKUP_DIRECTORY, exist_ok=True)  # creates all missing parents; no error if exists
 
 
 def get_latest_tag():
@@ -145,11 +157,19 @@ def update_project():
         logger.info(f'Development mode is active, files are not updated. To deactivate, remove "dev" from the history.')
         return
 
+    # Get latest tag
     latest_tag = get_latest_tag()
     if latest_tag in history:
         logger.info(f"{latest_tag} is already installed.")
         return
 
+    # Create a backup of data.json before the update
+    source = PROJECT_ROOT / DATA_FILE
+    if source.exists():
+        destination = BACKUP_DIRECTORY / DATA_BACKUP_FILE.format(tag=latest_tag)
+        shutil.copy2(source, destination)
+
+    # Extract and update files using temporary directory
     with tempfile.TemporaryDirectory() as tmp:
         tmp = Path(tmp)
 
@@ -167,8 +187,16 @@ def update_project():
 
         sync_files(source_root)
 
+    # After updating add the version tag
     history.append(latest_tag)
     save_version_history(history)
+
+    # Remove the old backups, keep only the newest 3.
+    for old_version_tag in history[:-3]:
+        old_backup_path = BACKUP_DIRECTORY / DATA_BACKUP_FILE.format(tag=old_version_tag)
+        if old_backup_path.exists():
+            os.remove(old_backup_path)
+            logger.info(f"Deleted {old_backup_path}...")
 
     logger.info(f"Updated to {latest_tag} successfully.")
 
@@ -186,25 +214,31 @@ def launch_background(script_path, args=None):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) >= 2:
-        if sys.argv[1] == "cmd_installer":
-            sitecustomize_path = PROJECT_ROOT / "python" / "sitecustomize.py"
-            # Change the installation and reconfigure that the main.py file will be run from now on
-            with open(sitecustomize_path, encoding="utf-8") as f:
-                content = f.read()
-
-            content = content.replace("updater.py", "main.py")
-
-            with open(sitecustomize_path, "w", encoding="utf-8") as f:
-                f.write(content)
-
     try:
-        update_project()
-    except Exception as e:
-        logger.error(f"\nUpdate failed: {e}")
-        sys.exit(1)
+        # Check if it is being run by cmd installer, and if so change the path to the main python script
+        if len(sys.argv) >= 2:
+            if sys.argv[1] == "cmd_installer":
+                sitecustomize_path = PROJECT_ROOT / "python" / "sitecustomize.py"
+                # Change the installation and reconfigure that the main.py file will be run from now on
+                with open(sitecustomize_path, encoding="utf-8") as sitecustomize_file:
+                    content = sitecustomize_file.read()
 
-    if len(sys.argv) >= 2:
-        if sys.argv[1] == "cmd_installer":
-            # Run the main file
-            launch_background("main.py")
+                content = content.replace("updater.py", "main.py")
+
+                with open(sitecustomize_path, "w", encoding="utf-8") as sitecustomize_file:
+                    sitecustomize_file.write(content)
+
+        # Download / Update all relevant files
+        update_project()
+
+        # Launch main file after installation
+        if len(sys.argv) >= 2:
+            if sys.argv[1] == "cmd_installer":
+                # Run the main file
+                launch_background("main.py")
+
+    # Catch every exception and start the repair
+    except BaseException as e:
+        # TODO: Start the repair
+        logger.error(f"Update failed: {e}")
+        sys.exit(1)
