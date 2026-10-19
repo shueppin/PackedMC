@@ -323,6 +323,12 @@ if errorlevel 1 goto fileModifyError
 :noShortcutInPrograms
 
 
+:: Execute the start file using the initial arguments.
+if /I "%show_console%"=="True" "%pythonUnpackDir%\python.exe" "%initialFilePath%" %initial_arguments%
+if /I "%show_console%" NEQ "True" "%pythonUnpackDir%\pythonw.exe" "%initialFilePath%" %initial_arguments%
+if errorlevel 1 goto executionError
+
+
 :: Final message
 echo.
 echo.
@@ -335,12 +341,6 @@ echo.
 echo %cm%You can now follow further instructions from the program if there are any.
 echo The program will be started now. You can close this window.
 echo.
-
-
-:: Execute the start file using the initial arguments.
-if /I "%show_console%"=="True" "%pythonUnpackDir%\python.exe" "%initialFilePath%" %initial_arguments%
-if /I "%show_console%" NEQ "True" "%pythonUnpackDir%\pythonw.exe" "%initialFilePath%" %initial_arguments%
-if errorlevel 1 goto executionError
 
 
 goto end
