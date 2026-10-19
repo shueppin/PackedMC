@@ -7,11 +7,17 @@ import os
 import shutil
 import sys
 import tempfile
+import urllib.request
 import zipfile
 from pathlib import Path
 import subprocess
-import requests
 import logging
+
+# If "requests" is missing or broken, the update fails inside update_project() instead of crashing on import, so the error handling below can still start the repair.
+try:
+    import requests
+except ImportError:
+    requests = None
 
 
 logging.basicConfig(format="%(levelname)s %(name)s: %(message)s", level=logging.INFO)
@@ -20,6 +26,14 @@ logger = logging.getLogger("updater")
 
 API_URL = f"https://api.github.com/repos/shueppin/PackedMC/releases/latest"
 ZIP_URL = "https://github.com/shueppin/PackedMC/archive/refs/tags/{tag}.zip"
+RAW_URL = "https://raw.githubusercontent.com/shueppin/PackedMC/{ref}/{path}"
+FALLBACK_REF = "main"  # Used for downloading repair.py when the latest release can't be determined
+
+UPDATER_FILE = "updater.py"
+MAIN_FILE = "main.py"
+REPAIR_FILE = "repair.py"
+
+CMD_INSTALLER_FLAG = "cmd_installer"
 
 VERSION_HISTORY = "version_history.json"
 DATA_FILE = "data.json"
@@ -39,6 +53,7 @@ IGNORE = {
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 BACKUP_DIRECTORY = PROJECT_ROOT / "backup"
+REPAIR_PATH = PROJECT_ROOT / REPAIR_FILE
 
 
 # Ensure correct directories exist
@@ -154,8 +169,11 @@ def sync_files(source_root: Path):
 def update_project():
     history = load_version_history()
     if "dev" in history:
-        logger.info(f'Development mode is active, files are not updated. To deactivate, remove "dev" from the history.')
+        logger.info('Development mode is active, files are not updated. To deactivate, remove "dev" from the history.')
         return
+
+    if requests is None:
+        raise RuntimeError('The "requests" module is not available.')
 
     # Get latest tag
     latest_tag = get_latest_tag()
@@ -163,7 +181,7 @@ def update_project():
         logger.info(f"{latest_tag} is already installed.")
         return
 
-    # Create a backup of data.json before the update
+    # Create a backup of data.json before the update (if there is one)
     source = PROJECT_ROOT / DATA_FILE
     if source.exists():
         destination = BACKUP_DIRECTORY / DATA_BACKUP_FILE.format(tag=latest_tag)
@@ -180,7 +198,9 @@ def update_project():
         with zipfile.ZipFile(zip_path) as z:
             z.extractall(tmp)
 
-        source_root = tmp / f"PackedMC-{latest_tag.strip("v")}"  # Somehow GitHub does only use "0.1" if the tag is "v0.1"
+        # Somehow GitHub does only use "0.1" if the tag is "v0.1"
+        folder_version = latest_tag.lstrip("v")
+        source_root = tmp / f"PackedMC-{folder_version}"
 
         if not source_root.exists():
             raise RuntimeError(f"Source directory not found: {source_root}")
@@ -213,32 +233,78 @@ def launch_background(script_path, args=None):
     )
 
 
+def fetch_bytes(url, timeout=30):
+    # Uses urllib on purpose, so this also works if "requests" is the thing that is broken
+    request = urllib.request.Request(url, headers={"User-Agent": "shueppin/PackedMC"})
+    with urllib.request.urlopen(request, timeout=timeout) as response:
+        return response.read()
+
+
+def ensure_repair_script():
+    """ Make sure repair.py exists in the project, download it if it is missing. """
+    if REPAIR_PATH.exists():
+        return
+
+    logger.warning(f"{REPAIR_FILE} is missing, downloading it...")
+
+    try:
+        ref = json.loads(fetch_bytes(API_URL))["tag_name"]
+    except Exception as e:
+        logger.warning(f"Could not get latest release ({e}), using '{FALLBACK_REF}' instead.")
+        ref = FALLBACK_REF
+
+    data = fetch_bytes(RAW_URL.format(ref=ref, path=REPAIR_FILE))
+    REPAIR_PATH.write_bytes(data)
+
+
+def run_repair():
+    """ Ensures repair.py exists and runs it. """
+    try:
+        ensure_repair_script()
+    except Exception as e:
+        logger.error(f"Could not get {REPAIR_FILE}: {e}")
+        return 1
+
+    logger.info("Starting the repair...")
+    try:
+        # Run the repair script in the background, independent of the updater
+        cmd = [sys.executable, str(REPAIR_PATH.resolve())]
+
+        subprocess.Popen(  # Take the output to the main console
+            cmd,
+            start_new_session=True,  # mostly helps on Unix/POSIX
+        )
+    except Exception as e:
+        logger.error(f"Could not run {REPAIR_FILE}: {e}")
+        return 1
+
+
 if __name__ == "__main__":
+    arguments = sys.argv[1:]
+    cmd_installer = CMD_INSTALLER_FLAG in arguments
+
     try:
         # Check if it is being run by cmd installer, and if so change the path to the main python script
-        if len(sys.argv) >= 2:
-            if sys.argv[1] == "cmd_installer":
-                sitecustomize_path = PROJECT_ROOT / "python" / "sitecustomize.py"
-                # Change the installation and reconfigure that the main.py file will be run from now on
-                with open(sitecustomize_path, encoding="utf-8") as sitecustomize_file:
-                    content = sitecustomize_file.read()
+        if cmd_installer:
+            sitecustomize_path = PROJECT_ROOT / "python" / "sitecustomize.py"
+            # Change the installation and reconfigure that the main.py file will be run from now on
+            with open(sitecustomize_path, encoding="utf-8") as sitecustomize_file:
+                content = sitecustomize_file.read()
 
-                content = content.replace("updater.py", "main.py")
+            content = content.replace(UPDATER_FILE, MAIN_FILE)
 
-                with open(sitecustomize_path, "w", encoding="utf-8") as sitecustomize_file:
-                    sitecustomize_file.write(content)
+            with open(sitecustomize_path, "w", encoding="utf-8") as sitecustomize_file:
+                sitecustomize_file.write(content)
 
         # Download / Update all relevant files
         update_project()
 
         # Launch main file after installation
-        if len(sys.argv) >= 2:
-            if sys.argv[1] == "cmd_installer":
-                # Run the main file
-                launch_background("main.py")
+        if cmd_installer:
+            # Run the main file
+            launch_background(MAIN_FILE)
 
-    # Catch every exception and start the repair
-    except BaseException as e:
-        # TODO: Start the repair
+    # Catch every exception, make sure repair.py exists and start the repair
+    except Exception as e:
         logger.error(f"Update failed: {e}")
-        sys.exit(1)
+        run_repair()
