@@ -119,7 +119,11 @@ def update_mod_files(main_window: MainWindow, instance_name: str, mods_data: dic
 
     # Delete all unneeded files (either from removed mods, or old versions of a mod)
     for unneeded_filename in unneeded_files:
-        os.remove(os.path.join(packedmc_mods_directory, unneeded_filename))
+        try:
+            os.remove(os.path.join(packedmc_mods_directory, unneeded_filename))
+        except FileNotFoundError:
+            # This happens when the update thread from startup interferes with the updater from pressing play.
+            pass
 
     if not output:
         logger.info(f'Updated mods in the background for {instance_name}.')
