@@ -296,7 +296,8 @@ class MainWindow(QMainWindow, MainWindowElements):
         reply = QMessageBox.question(self, 'Confirm restoring backup', f'''Do you want to restore the backup of the data? \nYour actual data will be lost and completely replaced with the backup: \n{self.selected_data_backup} \n\n(Enter = Yes, Escape = No)''')
 
         if reply == 16384:  # Yes
-            backup_filename = self.selected_data_backup.replace(" ", "_").rstrip("automatic").strip() + ".json"
+            backup_filename = self.selected_data_backup.rstrip(" (automatic)").strip().replace(" ", "_") + ".json"
+            print(backup_filename)
             shutil.copy2(BACKUP_DIRECTORY / backup_filename, DATA_FILE_PATH)
 
         self._display_available_data_backups()
