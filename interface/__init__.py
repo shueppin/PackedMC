@@ -3,6 +3,8 @@ import os
 import threading
 import shutil
 from datetime import datetime
+import json
+import subprocess
 
 # noinspection PyPackageRequirements
 from PyQt6 import uic
@@ -10,6 +12,7 @@ from PyQt6 import uic
 from PyQt6.QtWidgets import QMainWindow, QPushButton, QVBoxLayout, QMessageBox
 from qt_material import apply_stylesheet, list_themes, get_theme, opacity
 
+from repair import SITECUSTOMIZE_PATH
 from .type_hinting import MainWindowElements
 from .popups import ImportProfilesHandler
 from .mod_page import ModPageClass
@@ -21,7 +24,7 @@ from pyqt_utils.animation import animate_transition, AnimationScrollDirection
 
 from utils.mod_files_handler import update_mod_files
 from utils.data_file_helper import DEFAULT_INSTANCE_NAME, Data
-from utils.file_paths import INTERFACE_FILE_PATH, CUSTOM_STYLESHEET_FILE_PATH, DATA_FILE_PATH, PACKEDMC_OPTIONS_FILES_DIRECTORY, BACKUP_DIRECTORY
+from utils.file_paths import INTERFACE_FILE_PATH, CUSTOM_STYLESHEET_FILE_PATH, DATA_FILE_PATH, PACKEDMC_OPTIONS_FILES_DIRECTORY, BACKUP_DIRECTORY, VERSION_HISTORY, MAIN_DIRECTORY
 from minecraft_api.minecraft_launcher_integration import save_options_file_of_last_used_instance
 from minecraft_api.mod import get_mod_icon_path, InvalidModBaseUrl, ModNotExisting
 
@@ -113,6 +116,17 @@ class MainWindow(QMainWindow, MainWindowElements):
             self.data.last_played_instance = DEFAULT_INSTANCE_NAME
             self.data.save()
 
+        # Load the actual version for the label
+        if VERSION_HISTORY.exists():
+            with open(VERSION_HISTORY, 'r') as f:
+                all_packedmc_versions = sorted(json.load(f))
+                if "dev" in all_packedmc_versions:
+                    packedmc_version = "dev"
+                else:
+                    packedmc_version = all_packedmc_versions[-1]
+        else:
+            packedmc_version = "unknown"
+
         # Buttons for settings page
         self._create_color_buttons()
         self.SWITCH_SECONDARY_COLOR.setChecked(self.data.settings.invert_secondary)
@@ -126,6 +140,10 @@ class MainWindow(QMainWindow, MainWindowElements):
         self.RESTORE_BACKUP_BUTTON.clicked.connect(self.restore_backup)
         self.DELETE_BACKUP_BUTTON.clicked.connect(self.delete_backup)
         self.CREATE_BACKUP_BUTTON.clicked.connect(self.create_backup)
+        self.OPEN_PACKEDMC_DIRECTORY.clicked.connect(lambda: subprocess.Popen(f'explorer "{MAIN_DIRECTORY}"'))
+        self.SHOW_CONSOLE_BUTTON.clicked.connect(self.show_console)
+
+        self.PACKEDMC_VERSION.setText(f"PackedMC Version: {packedmc_version}")
 
         # Show the initial page instantly and refresh whole window again
         self.show_page(0, show_instantly=True)
@@ -237,6 +255,7 @@ class MainWindow(QMainWindow, MainWindowElements):
 
         elif page_index == 4:  # Settings page
             self._display_available_data_backups()
+            self._update_show_console_button()
 
     '''
     Settings Page
@@ -312,6 +331,45 @@ class MainWindow(QMainWindow, MainWindowElements):
             os.remove(BACKUP_DIRECTORY / filename)
 
         self._display_available_data_backups()
+
+    def _update_show_console_button(self):
+        if not SITECUSTOMIZE_PATH.exists():
+            self.SHOW_CONSOLE_BUTTON.setDisabled(True)
+            self.SHOW_CONSOLE_BUTTON.setChecked(True)
+            return
+
+        with open(SITECUSTOMIZE_PATH, 'r') as f:
+            content = f.read()
+
+        if "SHOW_CONSOLE = True" in content:
+            self.SHOW_CONSOLE_BUTTON.setDisabled(False)
+            self.SHOW_CONSOLE_BUTTON.setChecked(True)
+        elif "SHOW_CONSOLE = False" in content:
+            self.SHOW_CONSOLE_BUTTON.setDisabled(False)
+            self.SHOW_CONSOLE_BUTTON.setChecked(False)
+        else:
+            logger.warning(f"Couldn't set value for SHOW_CONSOLE_BUTTON. {SITECUSTOMIZE_PATH.resolve()} doesn't contain the necessary settings.")
+            self.SHOW_CONSOLE_BUTTON.setDisabled(True)
+            self.SHOW_CONSOLE_BUTTON.setChecked(True)
+
+    def show_console(self):
+        if SITECUSTOMIZE_PATH.exists():
+            with open(SITECUSTOMIZE_PATH, 'r') as f:
+                content = f.read()
+
+            if "SHOW_CONSOLE = True" in content:
+                new_content = content.replace("SHOW_CONSOLE = True", "SHOW_CONSOLE = False")
+            elif "SHOW_CONSOLE = False" in content:
+                new_content = content.replace("SHOW_CONSOLE = False", "SHOW_CONSOLE = True")
+            else:
+                logger.warning(f"Couldn't toggle console. {SITECUSTOMIZE_PATH.resolve()} doesn't contain the necessary settings.")
+                new_content = content
+
+            with open(SITECUSTOMIZE_PATH, 'w') as f:
+                f.write(new_content)
+
+            self._update_show_console_button()
+
 
     '''
     General functions

@@ -1,6 +1,5 @@
 # noinspection PyPackageRequirements
-from PyQt6.QtWidgets import QStackedWidget, QPushButton, QWidget, QSpinBox, QLineEdit, QComboBox, QFrame, QCheckBox, QTextBrowser
-
+from PyQt6.QtWidgets import QStackedWidget, QPushButton, QWidget, QSpinBox, QLineEdit, QComboBox, QFrame, QCheckBox, QTextBrowser, QLabel
 
 ''' 
 Type hints for interface.ui
@@ -55,3 +54,6 @@ class MainWindowElements:
     RESTORE_BACKUP_BUTTON: QPushButton
     DELETE_BACKUP_BUTTON: QPushButton
     DATA_BACKUP_LIST: QWidget
+    SHOW_CONSOLE_BUTTON: QCheckBox
+    PACKEDMC_VERSION: QLabel
+    OPEN_PACKEDMC_DIRECTORY: QPushButton

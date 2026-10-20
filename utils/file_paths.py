@@ -9,6 +9,7 @@ MAIN_DIRECTORY = Path(sys.argv[0]).resolve().parent
 UPDATER_FILE_PATH = MAIN_DIRECTORY / 'updater.py'
 CACHE_DIRECTORY = MAIN_DIRECTORY / '.cache'
 BACKUP_DIRECTORY = MAIN_DIRECTORY / "backup"
+VERSION_HISTORY = MAIN_DIRECTORY / "version_history.json"
 
 # Interface paths
 INTERFACE_FILES_DIRECTORY = MAIN_DIRECTORY / 'interface'

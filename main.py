@@ -22,8 +22,8 @@ from utils.file_paths import UPDATER_FILE_PATH, ICONS_FILE_PATH
 # TODO: Allow manual mod file adding: Instead of using a link for the mod, we add a file (via the explorer). Then we specify the version (using checkboxes) and the loader.
 # TODO: Add modpack support
 # TODO: Add Forge support
-# TODO: Show which mods have been updated
 # TODO: Download and enable mod dependencies after showing a popup
+# TODO: Show which mods / how many mods are not compatible with the selected version. Then add checkbox to ignore popup of incompatible mods
 
 
 logging.basicConfig(format="%(levelname)s %(name)s: %(message)s", level=logging.INFO)
