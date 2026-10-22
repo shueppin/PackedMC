@@ -28,10 +28,11 @@ logger = logging.getLogger(__name__)
 SKIP_WHEN_LAST_CHECKED_BEFORE = 600
 
 
-def update_mod_files(main_window: MainWindow, instance_name: str, mods_data: dict[str, tuple[str, str, int]], mc_version: str, loader: str, output=True):
+def update_mod_files(main_window: MainWindow, instance_name: str, mods_data: dict[str, tuple[str, str, int]], mc_version: str, loader: str, output=True) -> list[str]:
     """
     Go through all mods and try to get their download links (if they were not just checked recently).
     Then download the files if they don't already exist and remove the old mod versions.
+    This returns a (possibly empty) list with all the mods that were not available for this version.
     """
     data: Data = main_window.data
 
@@ -113,9 +114,6 @@ def update_mod_files(main_window: MainWindow, instance_name: str, mods_data: dic
 
     if output:
         progress_dialog.close()
-        # If not all mods could be updated, show a message
-        if len(mods_not_found_for_this_version) > 0:
-            QMessageBox.information(main_window, 'Could not find all mods', f'Could not find a file for the following mods for {loader} {mc_version}: \n - {"\n - ".join(mods_not_found_for_this_version)}')
 
     # Delete all unneeded files (either from removed mods, or old versions of a mod)
     for unneeded_filename in unneeded_files:
@@ -127,6 +125,9 @@ def update_mod_files(main_window: MainWindow, instance_name: str, mods_data: dic
 
     if not output:
         logger.info(f'Updated mods in the background for {instance_name}.')
+
+    # Return the list of not updated mods
+    return mods_not_found_for_this_version
 
 
 def move_mods_from_packedmc_to_minecraft(instance_name: str, minecraft_directory: str):

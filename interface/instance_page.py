@@ -88,10 +88,13 @@ class InstancePageClass:
 
         if actual_instance_data.type != 'Release' and actual_instance_data.type != 'Snapshot':
             # Update and download the mods
-            update_mod_files(self.parent, instance_name, actual_instance_data.mods, actual_instance_data.version, actual_instance_data.type)
+            not_updated_mods = update_mod_files(self.parent, instance_name, actual_instance_data.mods, actual_instance_data.version, actual_instance_data.type)
 
             # Move the mods to the minecraft folder
             move_mods_from_packedmc_to_minecraft(instance_name, minecraft_directory)
+
+            if len(not_updated_mods) > 0:
+                QMessageBox.information(self.parent, 'Could not find all mods', f'Could not find a file for the following mods for {actual_instance_data.type} {actual_instance_data.version}: \n - {"\n - ".join(not_updated_mods)}')
 
         # Close PackedMC if the setting is selected
         if self.data.settings.close_packedmc:
