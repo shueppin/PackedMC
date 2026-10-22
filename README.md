@@ -1,7 +1,7 @@
 # PackedMC
 A fully Open Source GUI to manage Minecraft Instances and Mods.  
 It is written in Python 3.14 and uses a PyQT6 interface in combination with [qt-material](https://github.com/dunderlab/qt-material).
-When pressing "Play" inside PackedMC, it will start the official Minecraft Launcher and select a profile, so you can just press "play" inside the Launcher and start the correct version.
+When pressing "Play" inside PackedMC, it will start the official Minecraft Launcher and select a profile, so you can just press "play" inside the Launcher and start the correct version with the selected mods if available.
 
 
 ## Features
@@ -11,6 +11,7 @@ When pressing "Play" inside PackedMC, it will start the official Minecraft Launc
 - Mods are automatically downloaded and updated.
 - Native support and automatic downloads for Minecraft Vanilla and Fabric.
 - Play using the standard Minecraft Launcher. No additional login required.
+- Automatic updates of PackedMC.
 
 
 ## Installation
@@ -29,15 +30,15 @@ You can now start PackedMC with `python main.py`.
 Any updates to PackedMC will be downloaded automatically. The new features will be available after a restart of PackedMC.  
 
 
-# Troubleshooting
+## Troubleshooting
 If the launcher crashes for any reason, the error message can be found in the PackedMC directory in `crash.log`.  
-Feel free to open an issue with the error or a pull request with the fix.
+Feel free to open an issue with the error or even a pull request with the fix.
 
 
 ## Uninstall PackedMC
 If you decide to uninstall PackedMC, follow the instructions for your platform below:  
 ### Windows
-Click the start menu and search for PackedMC.  
-Click on "Open file location". This should lead you to something like `C:\Users\[name]\AppData\Roaming\Microsoft\Windows\Start Menu\Programs`.  
-Right-Click on PackedMC and choose "Open file path". This leads you to the files of PackedMC, default is `C:\Users\[name]\AppData\Local\Programs\PackedMC\python`.  
-Go outside the `python` directory and outside the `PackedMC` directory, and then delete this. Then also delete the first file at `...\Microsoft\Windows\Start Menu\Programs` and you are done.
+Open PackedMC and go to the Settings tab.  
+Click on "Open PackedMC Directory" to open it in the explorer. Default is `C:\Users\[name]\AppData\Local\Programs\PackedMC`.  
+You can delete this whole directory. ATTENTION: Your mods and instances will be lost too.  
+Then go to `C:\Users\[name]\AppData\Roaming\Microsoft\Windows\Start Menu\Programs`, where `[name]` is your Windows user. There you can delete the PackedMC link.
