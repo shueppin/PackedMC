@@ -42,3 +42,7 @@ Open PackedMC and go to the Settings tab.
 Click on "Open PackedMC Directory" to open it in the explorer. Default is `C:\Users\[name]\AppData\Local\Programs\PackedMC`.  
 You can delete this whole directory. ATTENTION: Your mods and instances will be lost too.  
 Then go to `C:\Users\[name]\AppData\Roaming\Microsoft\Windows\Start Menu\Programs`, where `[name]` is your Windows user. There you can delete the PackedMC link.
+
+
+## Notice
+This product is not affiliated with Mojang or Microsoft.
