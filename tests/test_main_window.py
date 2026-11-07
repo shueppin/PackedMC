@@ -11,7 +11,7 @@ from PyQt6.QtWidgets import QApplication, QCheckBox, QRadioButton
 import interface
 from interface import MainWindow
 
-from . import testing_file_paths as paths
+from . import fake_file_paths as paths
 from .helpers import (
     directory_listing, find_field, freeze_datetime, make_data_file_contents, make_instance_dict, make_launcher_profile, make_mod_dict,
     read_data_file, read_json, write_data_file, write_json, write_launcher_profiles, write_text,

@@ -3,7 +3,7 @@ from pathlib import Path
 
 from utils.data_file_helper import Data, SingleInstanceData, SingleModData, AdvancedArgumentsData, SettingsData, DEFAULT_INSTANCE_NAME
 
-from . import testing_file_paths as paths
+from . import fake_file_paths as paths
 from .helpers import make_data_file_contents, make_instance_dict, make_mod_dict, read_json, write_data_file, write_json
 
 

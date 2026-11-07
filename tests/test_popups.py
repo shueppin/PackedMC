@@ -5,7 +5,7 @@ Tests for the popups opened from the UI: importing launcher profiles and the adv
 import pytest
 from PyQt6.QtWidgets import QCheckBox
 
-from . import testing_file_paths as paths
+from . import fake_file_paths as paths
 from .helpers import (
     directory_listing, make_data_file_contents, make_instance_dict, make_launcher_profile, read_data_file, write_json, write_text,
 )

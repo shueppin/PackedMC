@@ -8,7 +8,7 @@ from utils import mod_files_handler
 from utils.data_file_helper import Data, SingleInstanceData, SingleModData
 from utils.mod_files_handler import update_mod_files, move_mods_from_packedmc_to_minecraft, SKIP_WHEN_LAST_CHECKED_BEFORE
 
-from . import testing_file_paths as paths
+from . import fake_file_paths as paths
 from .helpers import directory_listing, freeze_datetime, read_data_file
 
 NOW = 1_800_000_000

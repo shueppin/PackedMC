@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 import requests
 
-from . import testing_file_paths as paths
+from . import fake_file_paths as paths
 from .fake_internet import FakeInternet, UnregisteredRequest
 
 

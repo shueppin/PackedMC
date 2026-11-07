@@ -7,7 +7,7 @@ from minecraft_api.mod import (
     get_download_url, get_mod_data, get_mod_icon_path,
 )
 
-from . import testing_file_paths as paths
+from . import fake_file_paths as paths
 from .fake_internet import RESPONSES_DIRECTORY
 from .helpers import directory_listing, read_json
 

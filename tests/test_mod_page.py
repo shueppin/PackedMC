@@ -5,7 +5,7 @@ import pytest
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QCheckBox, QPushButton, QLabel
 
-from . import testing_file_paths as paths
+from . import fake_file_paths as paths
 from .helpers import find_field, make_data_file_contents, make_instance_dict, make_mod_dict, read_data_file
 
 MODRINTH_CACHE = paths.CACHE_DIRECTORY / 'modrinth_mods'

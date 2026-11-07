@@ -11,7 +11,7 @@ from minecraft_api.minecraft_launcher_integration import (
 )
 from utils.data_file_helper import SingleInstanceData, AdvancedArgumentsData
 
-from . import testing_file_paths as paths
+from . import fake_file_paths as paths
 from .helpers import directory_listing, freeze_datetime, make_launcher_profile, read_launcher_profiles, write_launcher_profiles, write_text
 
 OPTIONS_DIRECTORY = paths.PACKEDMC_OPTIONS_FILES_DIRECTORY

@@ -3,7 +3,7 @@ import logging
 
 from minecraft_api import minecraft
 
-from . import testing_file_paths as paths
+from . import fake_file_paths as paths
 from .helpers import read_json, write_json
 
 MOJANG_URL = 'https://launchermeta.mojang.com/mc/game/version_manifest.json'

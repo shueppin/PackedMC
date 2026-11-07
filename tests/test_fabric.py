@@ -3,7 +3,7 @@ import pytest
 from minecraft_api import fabric
 from minecraft_api.fabric import VersionException
 
-from . import testing_file_paths as paths
+from . import fake_file_paths as paths
 from .fake_internet import RESPONSES_DIRECTORY
 from .helpers import directory_listing
 

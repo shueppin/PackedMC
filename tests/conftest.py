@@ -32,13 +32,13 @@ if str(PROJECT_DIRECTORY) not in sys.path:
 
 # 2. Swap the file paths ---------------------------------------------------------------------------------------------
 import utils  # noqa: E402  (the package itself has no side effects)
-from . import testing_file_paths  # noqa: E402
+from . import fake_file_paths  # noqa: E402
 
 assert 'utils.file_paths' not in sys.modules, 'utils.file_paths was imported before the tests could replace it.'
-sys.modules['utils.file_paths'] = testing_file_paths
-utils.file_paths = testing_file_paths
+sys.modules['utils.file_paths'] = fake_file_paths
+utils.file_paths = fake_file_paths
 
-TESTING_DIRECTORY = testing_file_paths.TESTING_DIRECTORY
+TESTING_DIRECTORY = fake_file_paths.TESTING_DIRECTORY
 
 
 def _create_directories(directories):
@@ -50,7 +50,7 @@ def reset_testing_directory(extra_directories=()):
     """ Delete everything in the testing directory and recreate the standard directory skeleton. """
     if TESTING_DIRECTORY.exists():
         shutil.rmtree(TESTING_DIRECTORY)
-    _create_directories(set(testing_file_paths.REQUIRED_DIRECTORIES) | set(extra_directories))
+    _create_directories(set(fake_file_paths.REQUIRED_DIRECTORIES) | set(extra_directories))
 
 
 reset_testing_directory()
@@ -99,7 +99,7 @@ import utils.data_file_helper  # noqa: E402,F401
 import utils.mod_files_handler  # noqa: E402,F401
 import interface  # noqa: E402,F401
 
-assert interface.INTERFACE_FILE_PATH is testing_file_paths.INTERFACE_FILE_PATH, 'The project is not using the testing file paths!'
+assert interface.INTERFACE_FILE_PATH is fake_file_paths.INTERFACE_FILE_PATH, 'The project is not using the testing file paths!'
 
 # Directories which the project created while importing must also exist after every wipe.
 _IMPORT_TIME_DIRECTORIES = {path for path in TESTING_DIRECTORY.rglob('*') if path.is_dir()}
@@ -123,8 +123,8 @@ def pytest_sessionfinish(session, exitstatus):
 def _fake_home_directory():
     """ ``is_subdir_of_user_home`` asks the OS for the home directory. Point it into the testing directory. """
     patches = pytest.MonkeyPatch()
-    patches.setenv('HOME', str(testing_file_paths.FAKE_HOME_DIRECTORY))
-    patches.setenv('USERPROFILE', str(testing_file_paths.FAKE_HOME_DIRECTORY))
+    patches.setenv('HOME', str(fake_file_paths.FAKE_HOME_DIRECTORY))
+    patches.setenv('USERPROFILE', str(fake_file_paths.FAKE_HOME_DIRECTORY))
     yield
     patches.undo()
 

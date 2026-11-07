@@ -5,7 +5,7 @@ import json
 from datetime import datetime
 from pathlib import Path
 
-from . import testing_file_paths as paths
+from . import fake_file_paths as paths
 
 
 def read_json(path: Path):

@@ -8,7 +8,7 @@ import pytest
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QPushButton
 
-from . import testing_file_paths as paths
+from . import fake_file_paths as paths
 from .helpers import (
     click_button_in, directory_listing, find_field, make_data_file_contents, make_instance_dict, make_launcher_profile, make_mod_dict,
     read_data_file, read_launcher_profiles, write_launcher_profiles, write_text,
