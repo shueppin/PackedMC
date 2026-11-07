@@ -1,0 +1,12 @@
+{
+  "slug": "old-mod",
+  "title": "Old Mod",
+  "body": "Only for old versions.",
+  "game_versions": [
+    "1.19.4"
+  ],
+  "loaders": [
+    "fabric"
+  ],
+  "icon_url": null
+}

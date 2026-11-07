@@ -1,0 +1,23 @@
+{
+  "hits": [
+    {
+      "slug": "sodium",
+      "title": "Sodium",
+      "description": "A modern rendering engine",
+      "author": "jellysquid3",
+      "downloads": 1000,
+      "icon_url": "https://cdn.modrinth.com/data/AANobbMI/icon.png"
+    },
+    {
+      "slug": "sodium-extra",
+      "title": "Sodium Extra",
+      "description": "Extra options for Sodium",
+      "author": "FlashyReese",
+      "downloads": 500,
+      "icon_url": null
+    }
+  ],
+  "offset": 0,
+  "limit": 20,
+  "total_hits": 2
+}

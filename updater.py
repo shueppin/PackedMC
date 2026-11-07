@@ -47,7 +47,10 @@ IGNORE = {
     ".gitignore",
     VERSION_HISTORY,
     "README.md",
-    "data.json"
+    "data.json",
+    "tests",
+    "requirements-testing.txt",
+    "pytest.ini"
 }
 
 

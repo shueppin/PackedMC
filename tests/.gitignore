@@ -1,0 +1,3 @@
+# The sandbox the tests work in. Safe to delete at any time.
+testing_directory/
+__pycache__/

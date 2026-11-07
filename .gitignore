@@ -5,3 +5,4 @@ version_history.json
 backup
 minecraft_data
 crash.log
+__pycache__/

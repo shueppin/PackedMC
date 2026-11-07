@@ -1,0 +1,122 @@
+[
+  {
+    "url": "https://launchermeta.mojang.com/mc/game/version_manifest.json",
+    "file": "mojang_version_manifest.json"
+  },
+  {
+    "url": "https://meta.fabricmc.net/v2/versions/loader",
+    "file": "fabric_loader_versions.json"
+  },
+  {
+    "url": "https://meta.fabricmc.net/v2/versions/loader/1.21.4/0.16.9/profile/json",
+    "file": "fabric_profile_0.16.9_1.21.4.json"
+  },
+  {
+    "url": "https://meta.fabricmc.net/v2/versions/loader/1.0.0-unknown/0.16.9/profile/json",
+    "status": 400,
+    "text": "no mappings version found for 1.0.0-unknown"
+  },
+  {
+    "url": "https://maven.fabricmc.net/net/fabricmc/fabric-loader/0.16.9/fabric-loader-0.16.9.jar",
+    "file": "fabric-loader-0.16.9.jar"
+  },
+  {
+    "url": "https://maven.fabricmc.net/net/fabricmc/fabric-loader/9.9.9/fabric-loader-9.9.9.jar",
+    "status": 404,
+    "text": "Not Found"
+  },
+  {
+    "url": "https://api.modrinth.com/v2/project/fabric-api",
+    "file": "modrinth_project_fabric-api.json",
+    "headers": {
+      "X-Ratelimit-Remaining": "299"
+    }
+  },
+  {
+    "url": "https://api.modrinth.com/v2/project/fabric-api/version",
+    "file": "modrinth_versions_fabric-api.json",
+    "headers": {
+      "X-Ratelimit-Remaining": "299"
+    }
+  },
+  {
+    "url": "https://api.modrinth.com/v2/project/sodium",
+    "file": "modrinth_project_sodium.json"
+  },
+  {
+    "url": "https://api.modrinth.com/v2/project/sodium/version",
+    "file": "modrinth_versions_sodium.json"
+  },
+  {
+    "url": "https://api.modrinth.com/v2/project/old-mod",
+    "file": "modrinth_project_old-mod.json"
+  },
+  {
+    "url": "https://api.modrinth.com/v2/project/old-mod/version",
+    "file": "modrinth_versions_old-mod.json"
+  },
+  {
+    "url": "https://api.modrinth.com/v2/project/does-not-exist",
+    "status": 404,
+    "text": "{\"error\": \"not_found\"}"
+  },
+  {
+    "url": "https://api.modrinth.com/v2/project/does-not-exist/version",
+    "status": 404,
+    "text": "{\"error\": \"not_found\"}"
+  },
+  {
+    "url": "https://api.modrinth.com/v2/search",
+    "match_query": {
+      "query": "sodium"
+    },
+    "file": "modrinth_search_sodium.json"
+  },
+  {
+    "url": "https://api.modrinth.com/v2/search",
+    "match_query": {
+      "query": "nothing-matches-this"
+    },
+    "file": "modrinth_search_empty.json"
+  },
+  {
+    "url": "https://cdn.modrinth.com/data/*/icon.png",
+    "file": "icon.png"
+  },
+  {
+    "url": "https://cdn.modrinth.com/data/P7dR8mSH/versions/v1214/fabric-api-0.115.0-1.21.4.jar",
+    "text": "fabric-api 0.115.0 for 1.21.4"
+  },
+  {
+    "url": "https://cdn.modrinth.com/data/P7dR8mSH/versions/v1213/fabric-api-0.114.0-1.21.3.jar",
+    "text": "fabric-api 0.114.0 for 1.21.3"
+  },
+  {
+    "url": "https://cdn.modrinth.com/data/P7dR8mSH/versions/v1201/fabric-api-0.92.2-1.20.1.jar",
+    "text": "fabric-api 0.92.2 for 1.20.1"
+  },
+  {
+    "url": "https://cdn.modrinth.com/data/AANobbMI/versions/s1214/sodium-fabric-0.6.0-1.21.4.jar",
+    "text": "sodium 0.6.0 for 1.21.4"
+  },
+  {
+    "url": "https://api.cfwidget.com/minecraft/mc-mods/jei",
+    "file": "curseforge_project_jei.json"
+  },
+  {
+    "url": "https://api.cfwidget.com/minecraft/mc-mods/jei",
+    "match_query": {
+      "version": "1.21.4",
+      "loader": "fabric"
+    },
+    "file": "curseforge_download_jei_1.21.4_fabric.json"
+  },
+  {
+    "url": "https://media.forgecdn.net/avatars/thumbnails/jei.png",
+    "file": "icon.png"
+  },
+  {
+    "url": "https://edge.forgecdn.net/files/5953/701/jei-1.21.4-fabric-19.0.0.jar",
+    "text": "jei 19.0.0 for 1.21.4 fabric"
+  }
+]

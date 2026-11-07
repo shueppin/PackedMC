@@ -1,0 +1,16 @@
+[
+  {
+    "game_versions": [
+      "1.19.4"
+    ],
+    "loaders": [
+      "fabric"
+    ],
+    "files": [
+      {
+        "url": "https://cdn.modrinth.com/data/OLD/versions/o1/old-mod-1.0-1.19.4.jar",
+        "filename": "old-mod-1.0-1.19.4.jar"
+      }
+    ]
+  }
+]

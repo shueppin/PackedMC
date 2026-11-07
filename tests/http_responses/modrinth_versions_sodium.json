@@ -1,0 +1,17 @@
+[
+  {
+    "game_versions": [
+      "1.21.4"
+    ],
+    "loaders": [
+      "fabric",
+      "neoforge"
+    ],
+    "files": [
+      {
+        "url": "https://cdn.modrinth.com/data/AANobbMI/versions/s1214/sodium-fabric-0.6.0-1.21.4.jar",
+        "filename": "sodium-fabric-0.6.0-1.21.4.jar"
+      }
+    ]
+  }
+]

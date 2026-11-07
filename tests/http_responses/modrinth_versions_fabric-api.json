@@ -1,0 +1,45 @@
+[
+  {
+    "game_versions": [
+      "1.21.4"
+    ],
+    "loaders": [
+      "fabric"
+    ],
+    "files": [
+      {
+        "url": "https://cdn.modrinth.com/data/P7dR8mSH/versions/v1214/fabric-api-0.115.0-1.21.4.jar",
+        "filename": "fabric-api-0.115.0-1.21.4.jar"
+      }
+    ]
+  },
+  {
+    "game_versions": [
+      "1.21.3"
+    ],
+    "loaders": [
+      "fabric"
+    ],
+    "files": [
+      {
+        "url": "https://cdn.modrinth.com/data/P7dR8mSH/versions/v1213/fabric-api-0.114.0-1.21.3.jar",
+        "filename": "fabric-api-0.114.0-1.21.3.jar"
+      }
+    ]
+  },
+  {
+    "game_versions": [
+      "1.20.1"
+    ],
+    "loaders": [
+      "fabric",
+      "quilt"
+    ],
+    "files": [
+      {
+        "url": "https://cdn.modrinth.com/data/P7dR8mSH/versions/v1201/fabric-api-0.92.2-1.20.1.jar",
+        "filename": "fabric-api-0.92.2-1.20.1.jar"
+      }
+    ]
+  }
+]

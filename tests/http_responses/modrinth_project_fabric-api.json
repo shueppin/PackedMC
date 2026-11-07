@@ -1,0 +1,17 @@
+{
+  "slug": "fabric-api",
+  "title": "Fabric API",
+  "body": "# Fabric API\n\nEssential **hooks** for modding with Fabric.\n\n<div align=\"center\"><img src=\"https://example.invalid/banner.png\"></div>\n\n- first point\n- second point\n",
+  "game_versions": [
+    "1.19.4",
+    "1.20.1",
+    "1.21.3",
+    "1.21.4",
+    "24w14a"
+  ],
+  "loaders": [
+    "fabric",
+    "quilt"
+  ],
+  "icon_url": "https://cdn.modrinth.com/data/P7dR8mSH/icon.png"
+}

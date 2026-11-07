@@ -1,0 +1,39 @@
+{
+  "id": 238222,
+  "title": "Just Enough Items (JEI)",
+  "description": "<p>View items and recipes</p>",
+  "thumbnail": "https://media.forgecdn.net/avatars/thumbnails/jei.png",
+  "files": [
+    {
+      "id": 1,
+      "name": "jei-1.21.4-fabric-19.0.0.jar",
+      "versions": [
+        "1.21.4",
+        "Fabric"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "jei-1.20.1-forge-15.0.0.jar",
+      "versions": [
+        "1.20.1",
+        "Forge"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "jei-1.20.1-fabric-15.0.0.jar",
+      "versions": [
+        "1.20.1",
+        "Fabric"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "jei-snapshot.jar",
+      "versions": [
+        "Snapshot"
+      ]
+    }
+  ]
+}
