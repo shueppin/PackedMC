@@ -10,11 +10,6 @@ from .helpers import (
     directory_listing, make_data_file_contents, make_instance_dict, make_launcher_profile, read_data_file, write_json, write_text,
 )
 
-IMPORT_PROFILES_BUG = pytest.mark.xfail(reason="BUG: ImportProfilesHandler._import_selected_profiles uses self.parent.data['instances'], but Data is a dataclass without __getitem__, "
-                                               "so importing any profile raises TypeError. (Use self.parent.data.instances.)")
-JAVA_ARGUMENTS_BUG = pytest.mark.xfail(reason="BUG: Importing profiles passes advanced_arguments as a plain dict with string values and picomc style keys "
-                                              "('java.path', a list for 'other_arguments'), but SingleInstanceData expects an AdvancedArgumentsData. "
-                                              "Later attribute access (start_heap_size ...) raises AttributeError. Hidden behind the TypeError above until that one is fixed.")
 
 IMPORT_FILE = paths.FAKE_HOME_DIRECTORY / 'import' / 'launcher_profiles.json'
 
@@ -91,7 +86,6 @@ def import_profiles(window, dialogs, *display_names):
 FABRIC_NAME = 'My Fabric (running fabric-loader-0.16.9-1.21.4)'
 
 
-@IMPORT_PROFILES_BUG
 def test_importing_a_fabric_profile_creates_an_instance(window, dialogs):
     import_profiles(window, dialogs, FABRIC_NAME)
 
@@ -100,7 +94,6 @@ def test_importing_a_fabric_profile_creates_an_instance(window, dialogs):
     assert instance['minecraft_directory'] == str(paths.FAKE_HOME_DIRECTORY / 'fabric_dir')
 
 
-@IMPORT_PROFILES_BUG
 def test_only_selected_profiles_are_imported_and_the_popup_closes(window, dialogs):
     import_profiles(window, dialogs, '1.20.1')
 
@@ -108,7 +101,6 @@ def test_only_selected_profiles_are_imported_and_the_popup_closes(window, dialog
     assert not window.import_profiles_popup_handler.import_profiles_popup.isVisible()
 
 
-@IMPORT_PROFILES_BUG
 def test_importing_a_release_profile_without_a_name_uses_the_version(window, dialogs):
     import_profiles(window, dialogs, '1.20.1')
 
@@ -117,7 +109,6 @@ def test_importing_a_release_profile_without_a_name_uses_the_version(window, dia
     assert instance['minecraft_directory'] == str(paths.MINECRAFT_DIRECTORY)  # No gameDir in the profile
 
 
-@IMPORT_PROFILES_BUG
 def test_importing_the_latest_release_profile(window, dialogs):
     import_profiles(window, dialogs, 'Newest (running latest-release)')
 
@@ -125,7 +116,6 @@ def test_importing_the_latest_release_profile(window, dialogs):
     assert (instance['type'], instance['version']) == ('Release', 'latest')
 
 
-@IMPORT_PROFILES_BUG
 def test_imported_names_are_made_unique(window, dialogs):
     write_import_file({'a': make_launcher_profile(name='Survival', last_version_id='1.20.1')})
     open_import_popup(window, dialogs)
@@ -136,14 +126,11 @@ def test_imported_names_are_made_unique(window, dialogs):
     assert 'Survival 2' in read_data_file()['instances']
 
 
-@IMPORT_PROFILES_BUG
 def test_imported_instances_appear_on_the_instances_page(window, dialogs):
     import_profiles(window, dialogs, FABRIC_NAME)
     assert 'My Fabric' in window.INSTANCES_PAGE.values
 
 
-@IMPORT_PROFILES_BUG
-@JAVA_ARGUMENTS_BUG
 def test_java_arguments_of_an_imported_profile_become_advanced_arguments(window, dialogs):
     write_import_file({'a': make_launcher_profile(name='Tuned', last_version_id='1.20.1', javaArgs='-Xmx4G -Xms1G -XX:+UseG1GC -Dfoo=bar')})
     open_import_popup(window, dialogs)
@@ -153,6 +140,18 @@ def test_java_arguments_of_an_imported_profile_become_advanced_arguments(window,
 
     arguments = window.data.instances['Tuned'].advanced_arguments
     assert (arguments.start_heap_size, arguments.max_heap_size) == (1, 4)
+    assert arguments.other_arguments == '-XX:+UseG1GC -Dfoo=bar'
+
+
+def test_java_arguments_of_an_imported_profile_with_megabyte_size(window, dialogs):
+    write_import_file({'a': make_launcher_profile(name='Tuned', last_version_id='1.20.1', javaArgs='-Xmx1G -Xms512M -XX:+UseG1GC -Dfoo=bar')})
+    open_import_popup(window, dialogs)
+    profile_boxes(window)['Tuned (running 1.20.1)'].setChecked(True)
+
+    window.import_profiles_popup_handler.import_profiles_popup.IMPORT_BUTTON.click()
+
+    arguments = window.data.instances['Tuned'].advanced_arguments
+    assert (arguments.start_heap_size, arguments.max_heap_size) == (2, 1)
     assert arguments.other_arguments == '-XX:+UseG1GC -Dfoo=bar'
 
 

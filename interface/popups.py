@@ -11,7 +11,7 @@ from PyQt6.QtWidgets import QWidget, QDialog, QPushButton, QMainWindow, QTextEdi
 from pyqt_utils.scrollable_grid import DEFAULT_ALL_TAGS_NAME, DEFAULT_NO_TAGS_NAME
 from pyqt_utils.scrollarea_buttons import create_buttons_in_scroll_area, ScrollAreaButtonType
 
-from utils.data_file_helper import Data
+from utils.data_file_helper import Data, AdvancedArgumentsData
 from utils.file_paths import MINECRAFT_LAUNCHER_PROFILES_PATH, MINECRAFT_DIRECTORY, UI_FILES_DIRECTORY, VERSIONS_DIRECTORY
 from minecraft_api.fabric import install_version
 from minecraft_api.minecraft import ALL_RELEASE_VERSIONS, ALL_SNAPSHOT_VERSIONS
@@ -139,7 +139,7 @@ class ImportProfilesHandler:
             else:
                 original_instance_name = display_name.strip()
 
-            instance_name = self.parent.make_name_unique(original_instance_name, list(self.parent.data['instances'].keys()))
+            instance_name = self.parent.make_name_unique(original_instance_name, list(self.parent.data.instances.keys()))
 
             # Find out what type of instance it is
             if profile_data['lastVersionId'].startswith('latest'):
@@ -173,27 +173,32 @@ class ImportProfilesHandler:
             else:
                 minecraft_directory: str = str(MINECRAFT_DIRECTORY)
 
-            advanced_arguments = {}
+            advanced_arguments = AdvancedArgumentsData()
 
-            # Get the java path
-            if 'javaDir' in profile_data:
-                advanced_arguments['java.path'] = profile_data['javaDir']
-
-            other_arguments = []
+            # A custom java path is not supported.
+            other = []
             # Go through all the java arguments and put them in a picomc format
             if 'javaArgs' in profile_data:
                 java_arguments = profile_data['javaArgs'].split(' ')
 
                 for argument in java_arguments:
-                    if argument.startswith('-Xms'):
-                        advanced_arguments['start_heap_size'] = argument.replace('-Xms', '').replace('G', '')
-                    elif argument.startswith('-Xmx'):
-                        advanced_arguments['max_heap_size'] = argument.replace('-Xmx', '').replace('G', '')
-                    else:
-                        other_arguments.append(argument)
+                    if argument.startswith('-Xms'):  # Ignore any Megabyte notations
+                        if "M" in argument:
+                            logger.warning(f'Imported minecraft profile "{instance_name}" has unsupported argument: {argument}')
+                            continue
+                        advanced_arguments.start_heap_size = int(argument.replace('-Xms', '').replace('G', ''))
 
-            if other_arguments:
-                advanced_arguments['other_arguments'] = other_arguments
+                    elif argument.startswith('-Xmx'):
+                        if "M" in argument:
+                            logger.warning(f'Imported minecraft profile "{instance_name}" has unsupported argument: {argument}')
+                            continue
+                        advanced_arguments.max_heap_size = int(argument.replace('-Xmx', '').replace('G', ''))
+
+                    else:
+                        other.append(argument)
+
+            if other:
+                advanced_arguments.other_arguments = ' '.join(other)
 
             self.parent.instance_page_class.create_instance(instance_name, edit_afterwards=False, instance_type=instance_type, instance_version=instance_version, minecraft_directory=minecraft_directory, advanced_arguments=advanced_arguments)
 

@@ -206,8 +206,6 @@ def test_updating_while_offline_for_the_first_time_does_not_crash(window, fake_i
     assert directory_listing(MODS_DIRECTORY) == []
 
 
-@pytest.mark.xfail(reason='BUG: When offline, get_download_url returns ("", ""). If the mod was downloaded before, the empty URL differs from the stored URL, '
-                          'so requests.get("") is called and raises MissingSchema. Playing offline crashes.')
 def test_updating_while_offline_keeps_previously_downloaded_mods(window, fake_internet):
     MODS_DIRECTORY.mkdir(parents=True)
     (MODS_DIRECTORY / FABRIC_API_FILE).write_bytes(b'downloaded yesterday')

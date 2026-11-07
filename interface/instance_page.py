@@ -266,10 +266,13 @@ class InstancePageClass:
 
             if reply == 16384:  # Yes
                 del self.data.instances[selected_instance]
-                self.data.save()
 
                 # Make a unique name here already, to be able to rename the options file
                 new_instance_name = self.parent.make_name_unique(DEFAULT_INSTANCE_NAME, list(self.data.instances.keys()))
+
+                if self.data.last_played_instance == selected_instance:
+                    self.data.last_played_instance = new_instance_name
+                self.data.save()
 
                 # Rename the options file in PackedMC if it exists
                 old_options_file_path = PACKEDMC_OPTIONS_FILES_DIRECTORY / f'{selected_instance}.txt'
@@ -288,6 +291,8 @@ class InstancePageClass:
 
         if reply == 16384:  # Yes
             del self.data.instances[selected_instance]
+            if self.data.last_played_instance == selected_instance:
+                self.data.last_played_instance = self.get_default_instance_name()
             self.data.save()
 
             # Go to the instances page

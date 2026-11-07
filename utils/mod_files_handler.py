@@ -62,6 +62,7 @@ def update_mod_files(main_window: MainWindow, instance_name: str, mods_data: dic
 
         progress_dialog.setFixedSize(300, 250)
 
+    # TODO: Add some system to ensure the unupdated mods are updated first
     # Go through every mod and download it if needed
     for index, mod_name in enumerate(mods_data):
         if output:
@@ -85,6 +86,14 @@ def update_mod_files(main_window: MainWindow, instance_name: str, mods_data: dic
 
         try:
             download_url, filename = get_download_url(data.mods[mod_name].url, mc_version, loader)
+
+            # If you're offline, you get an empty URL in return. Then just skip this mod with a message. This also ensures that the old file persists.
+            if not download_url:
+                logger.info(f"Could not download mod: {mod_name} (probably because you're offline)")
+                if old_filename in unneeded_files:
+                    unneeded_files.remove(old_filename)
+                continue
+
             data.instances[instance_name].mods[mod_name] = (download_url, filename, actual_time)
 
             # If the version is not already in the supported versions, then add it.
@@ -108,9 +117,10 @@ def update_mod_files(main_window: MainWindow, instance_name: str, mods_data: dic
             mods_not_found_for_this_version.append(mod_name)
             data.instances[instance_name].mods[mod_name] = ('', '', last_checked)
             data.save()
-        except (APICooldown, TryAgainLater):
-            # Just do nothing. It will be tried again when playing this instance again.
-            pass
+        except (APICooldown, TryAgainLater, ConnectionError):
+            # Make sure that the old version of the file is not removed. The mod will be updated when playing this instance again.
+            if old_filename in unneeded_files:
+                unneeded_files.remove(old_filename)
 
     if output:
         progress_dialog.close()

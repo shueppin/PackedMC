@@ -171,8 +171,6 @@ def test_pressing_play_on_an_instance_card_starts_the_game(window, subprocesses)
     assert len(subprocesses.calls) == 1
 
 
-@pytest.mark.xfail(reason='BUG: last_played_instance is not reset when its instance is deleted. The next "Play" then crashes with a KeyError, '
-                          'because the options of the last played instance are saved first.')
 def test_playing_after_deleting_the_last_played_instance_works(window, pages, dialogs):
     write_launcher_profiles()
     pages.play_instance('Survival')
@@ -186,7 +184,6 @@ def test_playing_after_deleting_the_last_played_instance_works(window, pages, di
     assert window.data.last_played_instance == 'Modded'
 
 
-@pytest.mark.xfail(reason='BUG: Same cause as above. If the last played instance was deleted, the next start of PackedMC raises a KeyError in MainWindow.__init__.')
 def test_starting_packedmc_after_deleting_the_last_played_instance_works(window, pages, dialogs, make_main_window):
     write_launcher_profiles()
     pages.play_instance('Survival')
