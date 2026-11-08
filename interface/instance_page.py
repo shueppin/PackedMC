@@ -3,6 +3,7 @@ import psutil
 import os
 import re
 
+import requests.exceptions
 # noinspection PyPackageRequirements
 from PyQt6.QtWidgets import QFileDialog, QMessageBox
 
@@ -16,6 +17,7 @@ from utils.file_paths import MINECRAFT_DIRECTORY, is_subdir_of_user_home, PACKED
 from minecraft_api.minecraft_launcher_integration import save_options_file_of_last_used_instance, load_options_file_from_packedmc, write_instance_data_to_profiles_file, start_official_launcher
 from minecraft_api.minecraft import ALL_RELEASE_VERSIONS, ALL_SNAPSHOT_VERSIONS, get_installed_versions
 from minecraft_api.mod import get_mod_icon_path, InvalidModBaseUrl, ModNotExisting
+from minecraft_api.fabric import VersionException
 
 # Import the MainWindow for Type Checking
 from typing import TYPE_CHECKING
@@ -83,7 +85,17 @@ class InstancePageClass:
         self.data.save()
 
         # Create a profile in the official Minecraft Launcher with the correct data and then start it
-        write_instance_data_to_profiles_file(instance_name, actual_instance_data)
+        try:
+            write_instance_data_to_profiles_file(instance_name, actual_instance_data)
+        except VersionException:
+            logger.warning(f'Found no Fabric version for Minecraft {actual_instance_data.version}.')
+            QMessageBox.warning(self.parent, 'Could not install Fabric', f'Found no Fabric version for Minecraft {actual_instance_data.version}.')
+            return
+        except requests.exceptions.ConnectionError:
+            logger.warning(f'Could not download Fabric. Maybe you are offline?')
+            QMessageBox.warning(self.parent, 'Could not install Fabric', f'Could not download Fabric. Maybe you are offline?')
+            return
+
         start_official_launcher()
 
         if actual_instance_data.type != 'Release' and actual_instance_data.type != 'Snapshot':

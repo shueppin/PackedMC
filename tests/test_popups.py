@@ -212,8 +212,6 @@ def test_the_update_fabric_button_installs_the_newest_loader(window, advanced, f
     ])
 
 
-@pytest.mark.xfail(reason='BUG: "Update to newest Fabric version" passes the instance version "latest" (the default!) to the Fabric API instead of resolving it to the newest '
-                          'release first, so a VersionException is raised. write_instance_data_to_profiles_file does resolve "latest".')
 def test_the_update_fabric_button_works_for_latest(window, advanced, fake_internet):
     # This is what the real Fabric meta API answers for the unknown version "latest"
     fake_internet.add_route('https://meta.fabricmc.net/v2/versions/loader/latest/0.16.9/profile/json', status=400, text='no mappings version found for latest')
@@ -223,3 +221,33 @@ def test_the_update_fabric_button_works_for_latest(window, advanced, fake_intern
     advanced.UPDATE_FABRIC_VERSION_BUTTON.click()
 
     assert (paths.VERSIONS_DIRECTORY / 'fabric-loader-0.16.9-1.21.4').is_dir()
+
+
+def test_updating_fabric_with_unsupported_minecraft_version_shows_a_message(window, advanced, fake_internet, dialogs):
+    # Fabric has no loader for this Minecraft version. This is what the real Fabric meta API answers in that case.
+    fake_internet.add_route('https://meta.fabricmc.net/v2/versions/loader/1.0.0-unsupported/0.16.9/profile/json', status=400, text='no mappings version found for 1.0.0-unsupported')
+    window.data.instances['Modded'].version = '1.0.0-unsupported'
+    window.ADVANCED_SETTINGS_BUTTON.click()
+
+    advanced.UPDATE_FABRIC_VERSION_BUTTON.click()  # Must not raise
+
+    # The user is told what is wrong
+    assert dialogs.last.kind == 'warning' and dialogs.last.title == 'Could not update Fabric'
+    assert '1.0.0-unsupported' in dialogs.last.text
+    # Nothing was installed and the button still offers the update
+    assert advanced.UPDATE_FABRIC_VERSION_BUTTON.text() == 'Update to newest Fabric version'
+    assert not any(paths.VERSIONS_DIRECTORY.glob('fabric-loader-*'))
+
+
+def test_updating_fabric_while_offline_shows_a_message(window, advanced, fake_internet, dialogs):
+    window.ADVANCED_SETTINGS_BUTTON.click()
+    fake_internet.go_offline()  # Fabric can't be downloaded, because there is no connection
+
+    advanced.UPDATE_FABRIC_VERSION_BUTTON.click()  # Must not raise
+
+    # The user is told what is wrong
+    assert dialogs.last.kind == 'warning' and dialogs.last.title == 'Could not update Fabric'
+    assert 'offline' in dialogs.last.text.lower()
+    # Nothing was installed and the button still offers the update
+    assert advanced.UPDATE_FABRIC_VERSION_BUTTON.text() == 'Update to newest Fabric version'
+    assert not any(paths.VERSIONS_DIRECTORY.glob('fabric-loader-*'))

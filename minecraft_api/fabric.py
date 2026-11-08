@@ -27,6 +27,10 @@ def get_newest_fabric_version() -> str:  # Get the newest stable fabric version
 def get_json_file(minecraft_version: str, fabric_version: str):
     json_file_url = JSON_FILE_URL.format(minecraft_version=minecraft_version, fabric_version=fabric_version)
     json_response = requests.get(json_file_url)
+
+    if not json_response.ok:
+        raise VersionException(f'No Fabric JSON found for Minecraft {minecraft_version}')
+
     json_file_content = json_response.content
 
     if str(json_file_content.decode()) == f'no mappings version found for {minecraft_version}':
@@ -38,6 +42,10 @@ def get_json_file(minecraft_version: str, fabric_version: str):
 def get_jar_file(fabric_version: str):
     jar_file_url = JAR_FILE_URL.format(fabric_version=fabric_version)
     jar_response = requests.get(jar_file_url)
+
+    if not jar_response.ok:
+        raise VersionException(f'No Fabric JAR found for {fabric_version}')
+
     jar_file_content = jar_response.content
 
     if not jar_response:

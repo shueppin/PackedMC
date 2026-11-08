@@ -1,5 +1,6 @@
 import logging
 import json
+import requests
 
 # noinspection PyPackageRequirements
 from PyQt6 import uic
@@ -13,7 +14,7 @@ from pyqt_utils.scrollarea_buttons import create_buttons_in_scroll_area, ScrollA
 
 from utils.data_file_helper import Data, AdvancedArgumentsData
 from utils.file_paths import MINECRAFT_LAUNCHER_PROFILES_PATH, MINECRAFT_DIRECTORY, UI_FILES_DIRECTORY, VERSIONS_DIRECTORY
-from minecraft_api.fabric import install_version
+from minecraft_api.fabric import install_version, VersionException
 from minecraft_api.minecraft import ALL_RELEASE_VERSIONS, ALL_SNAPSHOT_VERSIONS
 
 # Import the MainWindow for Type Checking
@@ -248,7 +249,20 @@ class AdvancedOptionsHandler:
 
     def _update_fabric_version(self):
         minecraft_version_id = self.data.instances[self.selected_instance_name].version
-        full_version_id = install_version(VERSIONS_DIRECTORY, minecraft_version=minecraft_version_id)
+        if minecraft_version_id == "latest":
+            minecraft_version_id = ALL_RELEASE_VERSIONS[0]
+
+        try:
+            full_version_id = install_version(VERSIONS_DIRECTORY, minecraft_version=minecraft_version_id)
+        except VersionException:
+            logger.warning(f'Found no Fabric version for Minecraft {minecraft_version_id}.')
+            QMessageBox.warning(self.parent, 'Could not update Fabric', f'Found no Fabric version for Minecraft {minecraft_version_id}.')
+            return
+        except requests.exceptions.ConnectionError:
+            logger.warning(f'Could not download Fabric. Maybe you are offline?')
+            QMessageBox.warning(self.parent, 'Could not update Fabric', f'Could not download Fabric. Maybe you are offline?')
+            return
+
         logger.info(f'Installed fabric "{full_version_id}"')
         self.advanced_options_popup.UPDATE_FABRIC_VERSION_BUTTON.setText(f"Installed Fabric version {full_version_id}")
 

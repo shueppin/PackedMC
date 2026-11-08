@@ -31,7 +31,7 @@ def test_get_json_file_returns_the_profile(fake_internet):
 
 
 def test_get_json_file_for_unsupported_minecraft_version_raises():
-    with pytest.raises(VersionException, match='No Fabric Version found for Minecraft 1.0.0-unknown'):
+    with pytest.raises(VersionException, match='No Fabric JSON found for Minecraft 1.0.0-unknown'):
         fabric.get_json_file('1.0.0-unknown', '0.16.9')
 
 

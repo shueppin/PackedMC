@@ -171,6 +171,44 @@ def test_pressing_play_on_an_instance_card_starts_the_game(window, subprocesses)
     assert len(subprocesses.calls) == 1
 
 
+def test_playing_fabric_with_unsupported_minecraft_version_shows_message(window, pages, subprocesses, fake_internet, dialogs):
+    # Fabric has no loader for this Minecraft version. This is what the real Fabric meta API answers in that case.
+    fake_internet.add_route('https://meta.fabricmc.net/v2/versions/loader/1.0.0-unsupported/0.16.9/profile/json', status=400, text='no mappings version found for 1.0.0-unsupported')
+    write_launcher_profiles()
+    pages.create_instance('Unsupported', edit_afterwards=False, instance_type='Fabric', instance_version='1.0.0-unsupported')
+    window.data.instances['Unsupported'].mods['Sodium'] = ('', '', 0)  # A mod, to check that nothing is downloaded either
+
+    pages.play_instance('Unsupported')  # Must not raise
+
+    # The user is told what is wrong
+    assert dialogs.messages, 'No dialog was shown.'
+    assert dialogs.last.kind in ('warning', 'critical')
+    assert '1.0.0-unsupported' in dialogs.last.text
+    # The game was not launched and nothing was prepared for it
+    assert subprocesses.calls == []
+    assert 'packedmc' not in read_launcher_profiles()['profiles']
+    assert not (paths.VERSIONS_DIRECTORY / 'fabric-loader-0.16.9-1.0.0-unsupported').exists()
+    fake_internet.assert_not_requested('https://api.modrinth.com/v2/project/sodium/version')  # No mod update either
+
+
+def test_playing_fabric_while_offline_shows_message(window, pages, subprocesses, fake_internet, dialogs):
+    write_launcher_profiles()
+    pages.create_instance('Offline Fabric', edit_afterwards=False, instance_type='Fabric', instance_version='1.21.4')
+    window.data.instances['Offline Fabric'].mods['Sodium'] = ('', '', 0)  # A mod, to check that nothing is downloaded either
+    fake_internet.go_offline()  # Fabric can't be downloaded, because there is no connection
+
+    pages.play_instance('Offline Fabric')  # Must not raise
+
+    # The user is told what is wrong
+    assert dialogs.messages, 'No dialog was shown.'
+    assert dialogs.last.kind in ('warning', 'critical')
+    # The game was not launched and nothing was prepared for it
+    assert subprocesses.calls == []
+    assert 'packedmc' not in read_launcher_profiles()['profiles']
+    assert not (paths.VERSIONS_DIRECTORY / 'fabric-loader-0.16.9-1.21.4').exists()
+    fake_internet.assert_not_requested('https://api.modrinth.com/v2/project/sodium/version')  # No mod update either
+
+
 def test_playing_after_deleting_the_last_played_instance_works(window, pages, dialogs):
     write_launcher_profiles()
     pages.play_instance('Survival')
