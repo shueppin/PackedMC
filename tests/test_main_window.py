@@ -348,8 +348,6 @@ def test_declining_the_deletion_keeps_the_backup(main_window, backups, dialogs):
     assert directory_listing(paths.BACKUP_DIRECTORY) == ['data_from_2026-01-01_10-00-00.json']
 
 
-@pytest.mark.xfail(reason='BUG: delete_backup strips the " (automatic)" suffix with rstrip("automatic"), which does not remove the closing parenthesis. '
-                          'The computed file name is wrong, so deleting an automatic (pre-update) backup raises FileNotFoundError.')
 def test_deleting_an_automatic_backup_removes_the_file(main_window, backups, dialogs):
     write_text(paths.BACKUP_DIRECTORY / 'data_before_v0.2.json', '{}')
     backups.show()

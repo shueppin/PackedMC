@@ -286,7 +286,7 @@ class MainWindow(QMainWindow, MainWindowElements):
 
         backup_names = []
         for filename in sorted(os.listdir(BACKUP_DIRECTORY), reverse=True):
-            name = filename.rstrip(".json").replace("_", " ")
+            name = filename.removesuffix(".json").replace("_", " ")
             if "before" in name:
                 name += " (automatic)"
             backup_names.append(name)
@@ -315,8 +315,7 @@ class MainWindow(QMainWindow, MainWindowElements):
         reply = QMessageBox.question(self, 'Confirm restoring backup', f'''Do you want to restore the backup of the data? \nYour actual data will be lost and completely replaced with the backup: \n{self.selected_data_backup} \n\n(Enter = Yes, Escape = No)''')
 
         if reply == 16384:  # Yes
-            backup_filename = self.selected_data_backup.rstrip(" (automatic)").strip().replace(" ", "_") + ".json"
-            print(backup_filename)
+            backup_filename = self.selected_data_backup.removesuffix(" (automatic)").strip().replace(" ", "_") + ".json"
             shutil.copy2(BACKUP_DIRECTORY / backup_filename, DATA_FILE_PATH)
 
         self._display_available_data_backups()
@@ -327,8 +326,8 @@ class MainWindow(QMainWindow, MainWindowElements):
         reply = QMessageBox.question(self, 'Confirm deleting backup', f'''Do you want to DELETE the backup of the data: \n{self.selected_data_backup} \n\n(Enter = Yes, Escape = No)''')
 
         if reply == 16384:  # Yes
-            filename = self.selected_data_backup.replace(" ", "_").rstrip("automatic").strip() + ".json"
-            os.remove(BACKUP_DIRECTORY / filename)
+            backup_filename = self.selected_data_backup.removesuffix(" (automatic)").strip().replace(" ", "_") + ".json"
+            os.remove(BACKUP_DIRECTORY / backup_filename)
 
         self._display_available_data_backups()
 

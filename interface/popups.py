@@ -187,13 +187,13 @@ class ImportProfilesHandler:
                         if "M" in argument:
                             logger.warning(f'Imported minecraft profile "{instance_name}" has unsupported argument: {argument}')
                             continue
-                        advanced_arguments.start_heap_size = int(argument.replace('-Xms', '').replace('G', ''))
+                        advanced_arguments.start_heap_size = int(argument.replace('-Xms', '').rstrip('Gg'))
 
                     elif argument.startswith('-Xmx'):
                         if "M" in argument:
                             logger.warning(f'Imported minecraft profile "{instance_name}" has unsupported argument: {argument}')
                             continue
-                        advanced_arguments.max_heap_size = int(argument.replace('-Xmx', '').replace('G', ''))
+                        advanced_arguments.max_heap_size = int(argument.replace('-Xmx', '').rstrip('Gg'))
 
                     else:
                         other.append(argument)

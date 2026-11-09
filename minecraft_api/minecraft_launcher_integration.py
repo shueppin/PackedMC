@@ -5,7 +5,7 @@ import logging
 import shutil
 import subprocess
 
-from utils.file_paths import PACKEDMC_MINECRAFT_DATA_DIRECTORY, VERSIONS_DIRECTORY, MINECRAFT_LAUNCHER_PROFILES_PATH, ICONS_FILE_PATH, PACKEDMC_OPTIONS_FILES_DIRECTORY
+from utils.file_paths import PACKEDMC_MINECRAFT_DATA_DIRECTORY, VERSIONS_DIRECTORY, MINECRAFT_LAUNCHER_PROFILES_PATH, ICONS_FILE_PATH, PACKEDMC_OPTIONS_FILES_DIRECTORY, MINECRAFT_DIRECTORY
 from minecraft_api.minecraft import ALL_RELEASE_VERSIONS
 from minecraft_api.fabric import install_version
 
@@ -63,11 +63,11 @@ def save_options_file_of_last_used_instance(last_played_instance_name: str, last
         backup_file_path = os.path.join(PACKEDMC_MINECRAFT_DATA_DIRECTORY, 'backup_options.txt')
 
         # Create the options file path based on the last profile's Game Directory
-        last_played_profile_game_dir = last_played_profile_data.get('gameDir')
+        last_played_profile_game_dir = last_played_profile_data.get('gameDir') or MINECRAFT_DIRECTORY
         if not last_played_profile_game_dir:
             logger.warning("Launcher profile data could not be found.")
             return
-        minecraft_options_file_path = os.path.join(last_played_profile_id, 'options.txt')
+        minecraft_options_file_path = os.path.join(last_played_profile_game_dir, 'options.txt')
 
         try:
             shutil.copy2(minecraft_options_file_path, backup_file_path)
@@ -107,6 +107,12 @@ def load_options_file_from_packedmc(instance_name: str, actual_instance_data: Si
             logger.info("No default instance options file found.")
 
 
+def _return_fabric_version_keys(name):
+    # This returns the fabric version keys, so they can be sorted, and are not compared as strings.
+    parts = name.split('-')  # ['fabric', 'loader', '0.16.10', '1.21.4']
+    return tuple(int(p) for p in parts[2].split('.') if p.isdigit())
+
+
 def write_instance_data_to_profiles_file(instance_name: str, actual_instance_data: SingleInstanceData):
     # Modify the launcher profiles file
     if not os.path.exists(MINECRAFT_LAUNCHER_PROFILES_PATH):
@@ -130,16 +136,11 @@ def write_instance_data_to_profiles_file(instance_name: str, actual_instance_dat
 
     # Replace the version id for special types like fabric or forge
     if actual_instance_data.type == "Fabric":
-        # Check what the newest fabric version for this Minecraft version is by looking at the directories
-        for directory_name in sorted(os.listdir(VERSIONS_DIRECTORY), reverse=True):
-            if not directory_name.startswith('fabric-loader'):
-                continue
-
-            split_name = directory_name.split('-')
-            if split_name[-1] == actual_instance_data.version:
-                version_id = directory_name
-                break
-        else:  # The for loop did not break, thus the fabric version does not exist. Then it is installed.
+        # Get all the fabric version names for the selected Minecraft version
+        fabric_names = [version_name for version_name in os.listdir(VERSIONS_DIRECTORY) if version_name.startswith('fabric-loader') and version_name.split('-')[-1] == version_id]
+        if fabric_names:
+            version_id = max(fabric_names, key=_return_fabric_version_keys)
+        else:  # No fabric version was found for this Minecraft version. Then it is installed.
             version_id = install_version(VERSIONS_DIRECTORY, minecraft_version=version_id)
             logger.info(f'Installed fabric "{version_id}"')
 
@@ -186,6 +187,10 @@ def get_last_played_minecraft_launcher_profile() -> tuple[str, dict[str, str]]:
                 if newest_launch_time < profile_launch_time:
                     newest_launch_time = profile_launch_time
                     last_used_profile_id = profile_id
+
+            # Safety check for empty "profiles"
+            if not last_used_profile_id:
+                return '', {}
 
             return last_used_profile_id, profile_data['profiles'][last_used_profile_id]
 

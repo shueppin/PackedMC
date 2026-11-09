@@ -46,7 +46,6 @@ def test_last_played_profile_without_profiles_file():
     assert get_last_played_minecraft_launcher_profile() == ('', {})
 
 
-@pytest.mark.xfail(reason='ROBUSTNESS: A launcher_profiles.json with an empty "profiles" object raises KeyError(""), which breaks starting PackedMC and playing.')
 def test_last_played_profile_with_empty_profiles_object():
     write_launcher_profiles({})
     assert get_last_played_minecraft_launcher_profile() == ('', {})
@@ -130,8 +129,6 @@ def test_without_a_profiles_file_nothing_is_stored():
     assert directory_listing(OPTIONS_DIRECTORY) == []
 
 
-@pytest.mark.xfail(reason='BUG: When another profile was played last, the backup should copy "<gameDir>/options.txt" of that profile, but the code joins the profile ID '
-                          '("other") instead of the game directory, so the backup is never made.')
 def test_options_of_another_last_played_profile_are_backed_up():
     game_directory = paths.FAKE_HOME_DIRECTORY / 'other_game_dir'
     write_launcher_profiles({'other': make_launcher_profile(name='Other', game_dir=game_directory)})
@@ -275,7 +272,6 @@ def test_fabric_is_installed_if_no_loader_exists_for_the_version(fake_internet):
     ])
 
 
-@pytest.mark.xfail(reason='BUG: The newest loader is chosen with a plain string sort, so "0.16.9" is considered newer than "0.16.10".')
 def test_the_newest_installed_fabric_loader_is_chosen_by_version_number(fake_internet):
     write_launcher_profiles()
     for loader_version in ('0.16.9', '0.16.10'):
@@ -286,8 +282,6 @@ def test_the_newest_installed_fabric_loader_is_chosen_by_version_number(fake_int
     assert read_launcher_profiles()['profiles']['packedmc']['lastVersionId'] == 'fabric-loader-0.16.10-1.21.4'
 
 
-@pytest.mark.xfail(reason='SUSPECTED BUG: For Fabric with version "latest" the installed loaders are compared with the string "latest" instead of the resolved version, '
-                          'so an existing loader is never found and Fabric is downloaded again every time.')
 def test_fabric_latest_reuses_an_installed_loader(fake_internet):
     write_launcher_profiles()
     (paths.VERSIONS_DIRECTORY / 'fabric-loader-0.16.9-1.21.4').mkdir(parents=True)
