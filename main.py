@@ -6,9 +6,7 @@ import traceback
 from datetime import datetime
 import ctypes
 
-# noinspection PyPackageRequirements
 from PyQt6.QtGui import QIcon
-# noinspection PyPackageRequirements
 from PyQt6.QtWidgets import QApplication
 
 # This is a fix to allow this project to use relative imports when run via a portable python instance
@@ -48,7 +46,6 @@ def excepthook(exc_type, exc_value, exc_tb):
         f.write(f"\n\n[{timestamp}]\n{msg}\n")
 
     # Display a popup using the native Window
-    # noinspection PyUnresolvedReferences
     ctypes.windll.user32.MessageBoxW(
         0,
         f"An unexpected error occurred in PackedMC. \n\nYou can find more details in \n{CRASH_FILE_PATH.resolve()} \n\nIf this error persists, you can report it under \nhttps://github.com/shueppin/PackedMC/issues \n\nClick in this window and press Ctrl+C to copy this message to clipboard.",

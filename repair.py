@@ -45,6 +45,7 @@ def get_branch_name():
 
 def is_dev_mode():
     history_file = PROJECT_ROOT / VERSION_HISTORY
+    # noinspection broad-exception
     try:
         with open(history_file, "r", encoding="utf-8") as f:
             return "dev" in json.load(f)

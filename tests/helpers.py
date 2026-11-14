@@ -49,7 +49,7 @@ def make_mod_dict(url='', loaders=None, supported_versions=None, tags=None) -> d
     return {'url': url, 'loaders': loaders or [], 'supported_versions': supported_versions or [], 'tags': tags or []}
 
 
-def make_data_file_contents(instances: dict | None = None, mods: dict | None = None, last_played_instance: str = None, tags: list | None = None, settings: dict | None = None) -> dict:
+def make_data_file_contents(instances: dict | None = None, mods: dict | None = None, last_played_instance: str | None = None, tags: list | None = None, settings: dict | None = None) -> dict:
     instances = instances or {}
     if last_played_instance is None:
         last_played_instance = next(iter(instances), '')

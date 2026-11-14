@@ -26,6 +26,7 @@ JEI_FILE = 'jei-1.21.4-fabric-19.0.0.jar'
 @pytest.fixture(autouse=True)
 def frozen_time(monkeypatch):
     """ ``mod_files_handler`` decides what to re-check using the current time. NOW is the time in all tests. """
+    # noinspection unresolved-references
     monkeypatch.setattr(mod_files_handler, 'time', SimpleNamespace(time=lambda: NOW))
     return NOW
 

@@ -26,7 +26,11 @@ PACKEDMC_OPTIONS_FILES_DIRECTORY = PACKEDMC_MINECRAFT_DATA_DIRECTORY / 'options_
 
 # Minecraft Paths
 if 'windows' in platform().lower():
-    ROAMING_DIRECTORY = Path(os.getenv('Appdata'))
+    _env = os.getenv('Appdata')
+    if not _env:
+        raise OSError('Appdata environment variable not found. PackedMC requires this to locate the Minecraft directory.')
+
+    ROAMING_DIRECTORY = Path(_env)
     MINECRAFT_DIRECTORY = ROAMING_DIRECTORY / '.minecraft'
     MINECRAFT_LAUNCHER_PROFILES_PATH = MINECRAFT_DIRECTORY / 'launcher_profiles.json'
     VERSIONS_DIRECTORY = MINECRAFT_DIRECTORY / 'versions'

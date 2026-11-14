@@ -121,7 +121,6 @@ def test_real_process_list_is_not_used(running_processes):
 
 def test_project_threads_run_inline_and_errors_are_collected(inline_thread_errors):
     import threading
-    from minecraft_api import mod
     ran = []
 
     thread = threading.Thread(target=lambda: ran.append(1))  # Not project code: a real thread

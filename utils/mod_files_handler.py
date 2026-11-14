@@ -6,9 +6,7 @@ import shutil
 import json
 from datetime import datetime
 
-# noinspection PyPackageRequirements
-from PyQt6.QtWidgets import QMessageBox, QProgressDialog
-# noinspection PyPackageRequirements
+from PyQt6.QtWidgets import QProgressDialog
 from PyQt6.QtCore import Qt
 
 from utils.file_paths import PACKEDMC_MINECRAFT_DATA_DIRECTORY
@@ -46,11 +44,11 @@ def update_mod_files(main_window: MainWindow, instance_name: str, mods_data: dic
 
     packedmc_mods_directory = PACKEDMC_MINECRAFT_DATA_DIRECTORY / 'mods' / instance_name
     os.makedirs(packedmc_mods_directory, exist_ok=True)  # Ensure it exists
-    unneeded_files = os.listdir(packedmc_mods_directory)
+    unneeded_files: list[str] = os.listdir(packedmc_mods_directory)
 
     mods_not_found_for_this_version = []
 
-    progress_dialog = None  # Define it
+    progress_dialog: QProgressDialog  # Define it
     if output:
         progress_dialog = QProgressDialog("Downloading mods...", "", 0, len(mods_data), main_window)  # empty cancel text
         progress_dialog.setCancelButton(None)  # remove cancel button
@@ -66,10 +64,11 @@ def update_mod_files(main_window: MainWindow, instance_name: str, mods_data: dic
     # Go through every mod and download it if needed
     for index, mod_name in enumerate(mods_data):
         if output:
+            # noinspection unbound-local-variable
             progress_dialog.setValue(index + 1)
             progress_dialog.setLabelText("Downloading mod: \n" + mod_name)
 
-        # noinspection PyBroadException
+        # noinspection broad-exception
         try:
             old_download_url, old_filename, last_checked = mods_data[mod_name]
         except Exception:  # If there is a mistake in the data, then update it and use default values

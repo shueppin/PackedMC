@@ -79,7 +79,7 @@ def load_version_history():
         return []
 
     with open(history_file, "r", encoding="utf-8") as f:
-        return sorted(json.load(f))
+        return json.load(f)
 
 
 def save_version_history(history):

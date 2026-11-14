@@ -6,15 +6,15 @@ import os
 from datetime import datetime
 
 import pytest
-from PyQt6.QtWidgets import QApplication, QCheckBox, QRadioButton
+from PyQt6.QtWidgets import QApplication, QRadioButton
 
 import interface
 from interface import MainWindow
 
 from . import fake_file_paths as paths
 from .helpers import (
-    directory_listing, find_field, freeze_datetime, make_data_file_contents, make_instance_dict, make_launcher_profile, make_mod_dict,
-    read_data_file, read_json, write_data_file, write_json, write_launcher_profiles, write_text,
+    directory_listing, freeze_datetime, make_data_file_contents, make_instance_dict, make_launcher_profile, make_mod_dict,
+    read_data_file, read_json, write_json, write_launcher_profiles, write_text,
 )
 
 DEFAULT = 'Latest Release'
@@ -34,6 +34,7 @@ def radio_buttons(widget) -> dict[str, QRadioButton]:
 @pytest.fixture
 def sitecustomize(monkeypatch):
     """ repair.SITECUSTOMIZE_PATH points into the project, so it is redirected into the testing directory. """
+    # noinspection unresolved-references
     monkeypatch.setattr(interface, 'SITECUSTOMIZE_PATH', SITECUSTOMIZE)
     return SITECUSTOMIZE
 
@@ -59,6 +60,7 @@ def test_start_with_existing_data_does_not_create_another_instance(make_main_win
 @pytest.mark.parametrize('history, expected', [
     (None, 'PackedMC Version: unknown'),
     (['v0.1', 'v0.3', 'v0.2'], 'PackedMC Version: v0.3'),
+    (['v1.1.10', 'v1.1.2', 'v1.1.11'], 'PackedMC Version: v1.1.11'),
     (['v0.1', 'dev'], 'PackedMC Version: dev'),
 ])
 def test_version_label(make_main_window, history, expected):
@@ -227,6 +229,7 @@ def test_the_real_qt_material_stylesheet_can_be_applied(main_window, monkeypatch
     from qt_material import apply_stylesheet as real_apply_stylesheet
     application = QApplication.instance()
     old_style_sheet, old_style = application.styleSheet(), application.style().objectName()
+    # noinspection unresolved-references
     monkeypatch.setattr(interface, 'apply_stylesheet', real_apply_stylesheet)
     try:
         main_window.apply_stylesheet(theme_name='blue', use_dark_theme=True)

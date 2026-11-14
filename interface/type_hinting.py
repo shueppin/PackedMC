@@ -1,4 +1,3 @@
-# noinspection PyPackageRequirements
 from PyQt6.QtWidgets import QStackedWidget, QPushButton, QWidget, QSpinBox, QLineEdit, QComboBox, QFrame, QCheckBox, QTextBrowser, QLabel
 
 ''' 

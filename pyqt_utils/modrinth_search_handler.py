@@ -1,10 +1,7 @@
 import json
 
-# noinspection PyPackageRequirements
 from PyQt6.QtCore import QObject, QTimer, QUrl, QUrlQuery, pyqtSignal
-# noinspection PyPackageRequirements
 from PyQt6.QtGui import QPixmap
-# noinspection PyPackageRequirements
 from PyQt6.QtNetwork import QNetworkAccessManager, QNetworkRequest
 
 
@@ -28,7 +25,6 @@ class ModrinthSearcher(QObject):
         self.search_timer = QTimer(self)
         self.search_timer.setSingleShot(True)
         self.search_timer.setInterval(debounce_ms)
-        # noinspection PyUnresolvedReferences
         self.search_timer.timeout.connect(self._perform_search)
 
         self.current_query = ""
@@ -74,12 +70,10 @@ class ModrinthSearcher(QObject):
         request = QNetworkRequest(url)
         request.setRawHeader(b"User-Agent", b"shueppin/PackedMC")
 
-        # noinspection PyUnresolvedReferences
         self.search_started.emit(query)
         reply = self.network_manager.get(request)
         self.current_reply = reply
         reply.setProperty("search_generation", generation)
-        # noinspection PyUnresolvedReferences
         reply.finished.connect(lambda: self._reply_finished(reply))
 
     def _reply_finished(self, reply):
@@ -95,7 +89,6 @@ class ModrinthSearcher(QObject):
         if reply.error() != reply.NetworkError.NoError:
             error = reply.errorString()
             reply.deleteLater()
-            # noinspection PyUnresolvedReferences
             self.search_failed.emit(error)
             return
 
@@ -104,12 +97,10 @@ class ModrinthSearcher(QObject):
             hits = payload.get("hits", [])
         except (json.JSONDecodeError, UnicodeDecodeError, TypeError) as exc:
             reply.deleteLater()
-            # noinspection PyUnresolvedReferences
             self.search_failed.emit(str(exc))
             return
 
         reply.deleteLater()
-        # noinspection PyUnresolvedReferences
         self.results_ready.emit(hits)
 
 
@@ -127,13 +118,11 @@ class ModrinthIconLoader(QObject):
             return
 
         if url in self.cache:
-            # noinspection PyUnresolvedReferences
             self.icon_ready.emit(url, self.cache[url])
             return
 
         request = QNetworkRequest(QUrl(url))
         reply = self.network_manager.get(request)
-        # noinspection PyUnresolvedReferences
         reply.finished.connect(lambda: self._reply_finished(reply, url))
 
     def _reply_finished(self, reply, url):
@@ -146,7 +135,6 @@ class ModrinthIconLoader(QObject):
 
         if not pixmap.isNull():
             self.cache[url] = pixmap
-            # noinspection PyUnresolvedReferences
             self.icon_ready.emit(url, pixmap)
 
         reply.deleteLater()

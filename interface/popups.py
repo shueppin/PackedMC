@@ -2,11 +2,8 @@ import logging
 import json
 import requests
 
-# noinspection PyPackageRequirements
 from PyQt6 import uic
-# noinspection PyPackageRequirements
 from PyQt6.QtCore import Qt
-# noinspection PyPackageRequirements
 from PyQt6.QtWidgets import QWidget, QDialog, QPushButton, QMainWindow, QTextEdit, QSpinBox, QCheckBox, QFileDialog, QVBoxLayout, QListWidget, QLabel, QListWidgetItem, QInputDialog, QHBoxLayout, QMessageBox
 
 from pyqt_utils.scrollable_grid import DEFAULT_ALL_TAGS_NAME, DEFAULT_NO_TAGS_NAME
@@ -298,7 +295,6 @@ class ModTagPopup(QDialog):
         # Add button
         add_button = QPushButton("Add Tag")
         add_button.setMinimumHeight(38)
-        # noinspection PyUnresolvedReferences
         add_button.clicked.connect(self._add_tag)
 
         layout.addWidget(add_button)
@@ -330,12 +326,10 @@ class ModTagPopup(QDialog):
 
         # Rename button
         rename_button = QPushButton("Rename")
-        # noinspection PyUnresolvedReferences
         rename_button.clicked.connect(lambda: self._rename_tag(tag))
 
         # Delete button
         delete_button = QPushButton("Delete")
-        # noinspection PyUnresolvedReferences
         delete_button.clicked.connect(lambda: self._delete_tag(tag))
 
         layout.addWidget(rename_button)

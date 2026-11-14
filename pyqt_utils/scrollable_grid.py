@@ -4,11 +4,8 @@ from typing import Callable
 import os
 from pathlib import Path
 
-# noinspection PyPackageRequirements
 from PyQt6.QtWidgets import QWidget, QGridLayout, QScrollArea, QVBoxLayout, QLabel, QPushButton, QHBoxLayout, QFrame, QComboBox, QListWidget, QLineEdit, QListWidgetItem, QApplication
-# noinspection PyPackageRequirements
 from PyQt6.QtGui import QPixmap
-# noinspection PyPackageRequirements
 from PyQt6.QtCore import Qt, QPoint, QEvent
 
 from .modrinth_search_handler import ModrinthSearcher, ModrinthIconLoader, MODRINTH_BASE_MOD_URL
@@ -87,12 +84,10 @@ class _InstanceField(QFrame):
         play_button.setProperty('class', 'play_button')
         play_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         play_button.setCursor(Qt.CursorShape.PointingHandCursor)
-        # noinspection PyUnresolvedReferences
         play_button.clicked.connect(lambda: DynamicInstanceFieldHelper.play_function(instance_name))
         edit_button = QPushButton("Edit")
         edit_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         edit_button.setCursor(Qt.CursorShape.PointingHandCursor)
-        # noinspection PyUnresolvedReferences
         edit_button.clicked.connect(lambda: DynamicInstanceFieldHelper.edit_function(instance_name))
         button_layout.addWidget(play_button)
         button_layout.addWidget(edit_button)
@@ -179,7 +174,7 @@ class ModrinthResultWidget(QWidget):
 
         downloads = f"{project.get('downloads', '-1'):_} Downloads".replace("_", "'")  # Display the downloads with ' as separator between thousands
         info = f"{downloads:<35}"  # Ensure the string is at least 35 characters long (pad the rest with spaces)
-        info += "Author: " + project.get("author") or "Unknown"
+        info += "Author: " + (project.get("author") or "Unknown")
 
         description = " ".join(project.get("description", "").split())
 
@@ -265,14 +260,11 @@ class ScrollableGrid(QWidget):
 
         # Tag selector
         self.tags_combo_box = QComboBox()
-        # noinspection PyUnresolvedReferences
         self.tags_combo_box.currentTextChanged.connect(self._selected_tag_changed)
 
         self.search_line_edit = QLineEdit()
         self.search_line_edit.setPlaceholderText("Search local / Modrinth mods...")
-        # noinspection PyUnresolvedReferences
         self.search_line_edit.textChanged.connect(self._search_text_changed)
-        # noinspection PyUnresolvedReferences
         self.search_line_edit.returnPressed.connect(self._search_enter_pressed)
         self.search_line_edit.setClearButtonEnabled(True)
 
@@ -331,7 +323,6 @@ class ScrollableGrid(QWidget):
         overlay_layout.addWidget(self.modrinth_status_label)
 
         self.modrinth_results_list = QListWidget()
-        # noinspection PyUnresolvedReferences
         self.modrinth_results_list.itemClicked.connect(self._modrinth_result_clicked)
         overlay_layout.addWidget(self.modrinth_results_list, 1)
 
@@ -550,9 +541,9 @@ class ScrollableGrid(QWidget):
         self._hide_modrinth_overlay()
 
         mod_name = project.get("title") or project.get("slug") or "Unknown"
-        url = MODRINTH_BASE_MOD_URL + project.get("slug")
-        # noinspection PyArgumentList
+        url = MODRINTH_BASE_MOD_URL + str(project.get("slug"))
         # Ignore the exception that these arguments don't exist. This is because they are from the mod page directly for "create_mod"
+        # noinspection argument-list
         DynamicModFieldHelper.create_new_function(mod_name=mod_name, url=url)
 
     def _show_modrinth_overlay(self):

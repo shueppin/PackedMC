@@ -1,9 +1,7 @@
 from enum import Enum
 from typing import Callable
 
-# noinspection PyPackageRequirements
 from PyQt6.QtWidgets import QWidget, QRadioButton, QCheckBox, QLayout
-# noinspection PyPackageRequirements
 from PyQt6.QtCore import Qt
 
 
@@ -28,6 +26,7 @@ def create_buttons_in_scroll_area(scroll_area_content_widget: QWidget, button_na
     :param button_type: The type of button to create.
     """
     # This is the layout which contains the elements
+    # noinspection bad-assignment
     layout: QLayout = scroll_area_content_widget.layout()
 
     # Remove all existing items in the layout except for the Spacer
@@ -51,6 +50,7 @@ def create_buttons_in_scroll_area(scroll_area_content_widget: QWidget, button_na
             # If the button is the selected one then check it and run the function
             if button_name == selected_buttons:
                 button.setChecked(True)
+                # noinspection bad-argument-type
                 button_on_click_function(button, button_name)  # Return the button itself, because if there is just one radiobutton you are able to deselect it. When it is returned you can fix this later.
 
         # Create a checkbox button
@@ -60,6 +60,7 @@ def create_buttons_in_scroll_area(scroll_area_content_widget: QWidget, button_na
             # If the button is in the list of selected ones then check it and run the function
             if button_name in selected_buttons:
                 button.setChecked(True)
+                # noinspection bad-argument-type
                 button_on_click_function(True, button_name)  # True resembles the state of the button
 
         else:  # If the button is not the right type then exit
@@ -68,12 +69,10 @@ def create_buttons_in_scroll_area(scroll_area_content_widget: QWidget, button_na
         # Connect the function to the button click and for the radiobutton pass the button and the name (to be able to fix the state of it) and for the checkbox the state and the name.
         # It's important to pass them as arguments to lambda and not directly to the function, because otherwise it will just use the same variable for all.
         if button_type == ScrollAreaButtonType.RADIOBUTTON:
-            # noinspection PyUnresolvedReferences
             button.clicked.connect(lambda state, name=button_name, clicked_button=button: button_on_click_function(clicked_button, name))  # Attention: "clicked.connect()" passes the click state as a first argument.
         elif button_type == ScrollAreaButtonType.CHECKBOX:
-            # noinspection PyUnresolvedReferences
             button.clicked.connect(lambda state, name=button_name: button_on_click_function(state, name))  # Attention: "clicked.connect()" passes the click state as a first argument.
 
         # Add the button to the layout above the spacer
-        # noinspection PyUnresolvedReferences
+        # noinspection unresolved-references
         layout.insertWidget(layout.count() - 1, button)

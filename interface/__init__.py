@@ -6,9 +6,7 @@ from datetime import datetime
 import json
 import subprocess
 
-# noinspection PyPackageRequirements
 from PyQt6 import uic
-# noinspection PyPackageRequirements
 from PyQt6.QtWidgets import QMainWindow, QPushButton, QVBoxLayout, QMessageBox
 from qt_material import apply_stylesheet, list_themes, get_theme, opacity
 
@@ -119,11 +117,11 @@ class MainWindow(QMainWindow, MainWindowElements):
         # Load the actual version for the label
         if VERSION_HISTORY.exists():
             with open(VERSION_HISTORY, 'r') as f:
-                all_packedmc_versions = sorted(json.load(f))
+                all_packedmc_versions = json.load(f)
                 if "dev" in all_packedmc_versions:
                     packedmc_version = "dev"
                 else:
-                    packedmc_version = all_packedmc_versions[-1]
+                    packedmc_version = max(all_packedmc_versions, key=lambda version: tuple(int(part) for part in version[1:].split('.')))
         else:
             packedmc_version = "unknown"
 
@@ -285,6 +283,7 @@ class MainWindow(QMainWindow, MainWindowElements):
         self.selected_data_backup = ""
 
         backup_names = []
+        filename: str
         for filename in sorted(os.listdir(BACKUP_DIRECTORY), reverse=True):
             name = filename.removesuffix(".json").replace("_", " ")
             if "before" in name:
@@ -369,11 +368,10 @@ class MainWindow(QMainWindow, MainWindowElements):
 
             self._update_show_console_button()
 
-
     '''
     General functions
     '''
-    def apply_stylesheet(self, *args, theme_name='', use_dark_theme: bool = None, invert_secondary: bool = None, density_scale: int = None):
+    def apply_stylesheet(self, *args, theme_name='', use_dark_theme: bool | None = None, invert_secondary: bool | None = None, density_scale: int | None = None):
         """
         Add a custom stylesheet based on qt_material.
         Pass any changes as kwargs. Any empty fields will just use the old values from self.data.

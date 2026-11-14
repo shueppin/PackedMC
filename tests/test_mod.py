@@ -1,5 +1,4 @@
 import pytest
-import requests
 
 from minecraft_api import mod
 from minecraft_api.mod import (
@@ -152,6 +151,7 @@ def test_get_mod_data_for_curseforge_returns_and_caches_the_data(fake_internet):
 def test_get_mod_data_calls_the_callback_with_the_data_and_the_extra_arguments():
     calls = []
 
+    # noinspection bad-argument-type
     get_mod_data(MODRINTH_FABRIC_API, lambda *arguments: calls.append(arguments), ('Fabric API', MODRINTH_FABRIC_API))
 
     assert len(calls) == 1

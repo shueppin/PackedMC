@@ -1,3 +1,4 @@
+from pathlib import Path
 import requests
 import threading
 from typing import Callable, Unpack, TypeVarTuple
@@ -154,7 +155,7 @@ def _get_modrinth_download_url(modrinth_url: str, game_version: str, mod_loader:
     raise NoModFileAvailable(modrinth_url, mod_loader, game_version)
 
 
-def get_mod_icon_path(mod_url: str) -> str:
+def get_mod_icon_path(mod_url: str) -> Path:
     if CURSEFORGE_BASE_URL in mod_url:
         mod_name = mod_url[len(CURSEFORGE_BASE_URL):]
         icon_path = _CURSEFORGE_CACHE_DIRECTORY / f'{mod_name}.png'
@@ -172,7 +173,7 @@ def get_mod_icon_path(mod_url: str) -> str:
 params = TypeVarTuple("params")
 
 
-def get_mod_data(mod_url: str, callback_function: Callable[[str, list[str], list[str], Unpack[params]], None] = None, callback_function_args: tuple[Unpack[params]] = None, never_block=True) -> tuple[str, list[str], list[str]]:
+def get_mod_data(mod_url: str, callback_function: Callable[[str, list[str], list[str], Unpack[params]], None] | None = None, callback_function_args: tuple[Unpack[params]] | None = None, never_block=True) -> tuple[str, list[str], list[str]]:
     """
     Get the actual mod data from the API and cache it. Also download the icon, but not return it.
     It returns the cached description as HTML, the compatible mod loaders and the supported game versions (starting with the newest).
@@ -209,7 +210,7 @@ def get_mod_data(mod_url: str, callback_function: Callable[[str, list[str], list
         return mod_data['description'], mod_data['loaders'], mod_data['supported_versions']
 
 
-def _update_curseforge_mod_data(mod_name: str, callback_function: Callable[[str, list[str], list[str], Unpack[params]], None] = None, callback_function_args: tuple[Unpack[params]] = None):
+def _update_curseforge_mod_data(mod_name: str, callback_function: Callable[[str, list[str], list[str], Unpack[params]], None] | None = None, callback_function_args: tuple[Unpack[params]] | None = None):
     try:
         url_for_mod_data = CURSEFORGE_API_BASE_URL + mod_name
         response = requests.get(url_for_mod_data, headers=PROJECT_OWN_HEADERS, timeout=10)
@@ -258,6 +259,8 @@ def _update_curseforge_mod_data(mod_name: str, callback_function: Callable[[str,
         file.write(response.content)
 
     if callback_function is not None:
+        if not callback_function_args:
+            callback_function_args = ()
         callback_function(html_description, sorted(loaders), supported_versions, *callback_function_args)
 
 
@@ -274,7 +277,7 @@ def _remove_unnecessary_html_tags(text, tags=("div", "center", "details", "summa
     return text
 
 
-def _update_modrinth_mod_data(mod_name: str, callback_function: Callable[[str, list[str], list[str], Unpack[params]], None] = None, callback_function_args: tuple[Unpack[params]] = None):
+def _update_modrinth_mod_data(mod_name: str, callback_function: Callable[[str, list[str], list[str], Unpack[params]], None] | None = None, callback_function_args: tuple[Unpack[params]] | None = None):
     try:
         url_for_mod_data = MODRINTH_API_BASE_URL + mod_name
         response = requests.get(url_for_mod_data, headers=PROJECT_OWN_HEADERS, timeout=10)

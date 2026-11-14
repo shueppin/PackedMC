@@ -1,5 +1,4 @@
 import logging
-from pathlib import Path
 
 from utils.data_file_helper import Data, SingleInstanceData, SingleModData, AdvancedArgumentsData, SettingsData, DEFAULT_INSTANCE_NAME
 

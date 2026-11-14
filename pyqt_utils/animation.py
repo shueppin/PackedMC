@@ -1,10 +1,8 @@
 import logging
 from enum import Enum
 
-# noinspection PyPackageRequirements
 from PyQt6.QtCore import QPropertyAnimation, QParallelAnimationGroup, QPoint, QEasingCurve
-# noinspection PyPackageRequirements
-from PyQt6.QtWidgets import QMainWindow, QStackedWidget
+from PyQt6.QtWidgets import QMainWindow, QStackedWidget, QWidget
 
 
 logger = logging.getLogger(__name__)
@@ -65,6 +63,11 @@ def animate_transition(main_window: QMainWindow, stacked_widget: QStackedWidget,
     current_page = stacked_widget.currentWidget()
     new_page = stacked_widget.widget(new_index)
 
+    if current_page is None or new_page is None:
+        stacked_widget.is_animating = False
+        logger.warning(f"Could not animate transition: current_page or new_page is None (current_index={current_index}, new_index={new_index})")
+        return False
+
     # Modify the new page
     new_page.setGeometry(stacked_widget.geometry())
     new_page.move(new_page.pos() - offset)
@@ -84,6 +87,7 @@ def animate_transition(main_window: QMainWindow, stacked_widget: QStackedWidget,
     animation_new_page.setEndValue(current_page.pos())
 
     # Define and start the animation group
+    # noinspection argument-list
     animation_group = QParallelAnimationGroup(main_window, finished=lambda: _animation_done(stacked_widget, new_index))
 
     animation_group.addAnimation(animation_current_page)

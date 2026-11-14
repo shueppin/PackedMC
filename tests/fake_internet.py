@@ -140,7 +140,7 @@ class FakeInternet:
         for route in self.routes:
             route.is_default = True
 
-    def add_route(self, url: str, *, file: str = None, json: Any = None, text: str = None, content: bytes = None, status: int = 200, headers: dict[str, str] = None, match_query: dict[str, str] = None):
+    def add_route(self, url: str, *, file: str | None = None, json: Any = None, text: str | None = None, content: bytes | None = None, status: int = 200, headers: dict[str, str] | None = None, match_query: dict[str, str] | None = None):
         """ Register (or override) the answer for a URL. Without a body the answer is empty. """
         import json as json_module
 
@@ -206,6 +206,7 @@ class FakeInternet:
 
         response = requests.Response()
         response.status_code = route.status
+        # noinspection unresolved-references
         response.headers = requests.structures.CaseInsensitiveDict(route.headers)
         response._content = route.content
         response._content_consumed = True
@@ -232,7 +233,7 @@ class FakeInternet:
         return FakeQtReply(content=route.content)
 
     # ---------------------------------------------------------- assertions
-    def urls(self, method: str = None) -> list[str]:
+    def urls(self, method: str | None = None) -> list[str]:
         """ All requested URLs (including the query) in the order they were requested. """
         return [r.url for r in self.requests if method is None or r.method == method]
 

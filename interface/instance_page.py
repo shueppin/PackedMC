@@ -4,7 +4,6 @@ import os
 import re
 
 import requests.exceptions
-# noinspection PyPackageRequirements
 from PyQt6.QtWidgets import QFileDialog, QMessageBox
 
 from .popups import AdvancedOptionsHandler
@@ -115,7 +114,7 @@ class InstancePageClass:
 
         # TODO: Optionally: Periodically save the options file until the game is closed if packedmc stays open.
 
-    def create_instance(self, instance_name='New instance', is_default=False, edit_afterwards=True, instance_type='Release', instance_version='latest', minecraft_directory=str(MINECRAFT_DIRECTORY), advanced_arguments: dict = None):
+    def create_instance(self, instance_name='New instance', is_default=False, edit_afterwards=True, instance_type='Release', instance_version='latest', minecraft_directory=str(MINECRAFT_DIRECTORY), advanced_arguments: AdvancedArgumentsData | None = None):
         instance_name = self.parent.make_name_unique(instance_name, list(self.data.instances.keys()))
         if advanced_arguments is None:
             advanced_arguments = AdvancedArgumentsData()

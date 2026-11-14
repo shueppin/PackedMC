@@ -87,7 +87,9 @@ def _inline_thread_start(self):
 
 _session_patches = pytest.MonkeyPatch()
 _session_patches.setattr(threading.Thread, 'start', _inline_thread_start)
+# noinspection unresolved-references
 _session_patches.setattr(requests.adapters.HTTPAdapter, 'send', lambda adapter, request, **kwargs: INTERNET.send(adapter, request, **kwargs))
+# noinspection unresolved-references
 _session_patches.setattr(modrinth_search_handler, 'QNetworkAccessManager', make_fake_network_access_manager(INTERNET))
 
 # 4. Import the project. This runs the import-time code against the testing directory and the fake internet ----------
@@ -355,6 +357,7 @@ def stylesheet_calls(monkeypatch):
     Each call is stored as a dict with the keyword arguments. One test in test_main_window.py uses the real one.
     """
     calls = []
+    # noinspection unresolved-references
     monkeypatch.setattr(interface, 'apply_stylesheet', lambda application, **kwargs: calls.append(kwargs))
     return calls
 

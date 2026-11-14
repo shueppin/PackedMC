@@ -2,9 +2,7 @@ import logging
 import re
 import validators
 
-# noinspection PyPackageRequirements
 from PyQt6.QtWidgets import QMessageBox
-# noinspection PyPackageRequirements
 from PyQt6.QtCore import QTimer, QObject, pyqtSignal
 
 from .popups import ModTagPopup
@@ -29,7 +27,6 @@ class _ModDataConnector(QObject):
     updated = pyqtSignal(str, list, list, str, str)  # declared on class
 
     def emit_updated(self, description: str, loaders: list[str], supported_versions: list[str], mod_name: str, mod_url: str):
-        # noinspection PyUnresolvedReferences
         self.updated.emit(description, loaders, supported_versions, mod_name, mod_url)
 
 
@@ -43,10 +40,8 @@ class ModPageClass:
 
         self.mod_url_timer = QTimer(parent)  # Use a timer that is restarted on every text input, but the real function is only executed after the time has run out.
         self.mod_url_timer.setSingleShot(True)
-        # noinspection PyUnresolvedReferences
         self.mod_url_timer.timeout.connect(self._changed_mod_url)
         self.mod_data_connector = _ModDataConnector()
-        # noinspection PyUnresolvedReferences
         self.mod_data_connector.updated.connect(lambda description, loaders, supported_versions, mod_name, mod_url: self.set_mod_values(description, loaders, supported_versions, mod_name, mod_url))
 
         self.mod_tag_popup = ModTagPopup(self.parent)
