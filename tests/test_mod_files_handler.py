@@ -400,6 +400,111 @@ def test_a_file_which_can_not_be_removed_is_only_a_warning(window, monkeypatch, 
     assert 'stray.jar' in caplog.text
 
 
+# ================================================================================================= update order
+def lookups(fake_internet) -> list[str]:
+    """ The requests which asked a mod website for the download url of a mod (not the downloads themselves), in order. """
+    return [url.removeprefix('https://') for url in fake_internet.urls() if url.split('?')[0].endswith('/version') or 'api.cfwidget.com' in url]
+
+
+def move_time_forward(monkeypatch, seconds: int):
+    monkeypatch.setattr(mod_files_handler, 'time', SimpleNamespace(time=lambda: NOW + seconds))
+
+
+def test_the_mods_which_were_not_updated_for_the_longest_time_come_first(window, fake_internet):
+    window.data.instances[INSTANCE].mods['Fabric API'] = (FABRIC_API_URL, FABRIC_API_FILE, NOW - 5000)  # Updated recently
+    window.data.instances[INSTANCE].mods['JEI'] = ('', '', NOW - 9000)  # Updated long ago
+    window.data.instances[INSTANCE].mods['Sodium'] = ('', '', 0)  # Never updated
+    job = create_mod_update_job(window.data, INSTANCE, window.data.instances[INSTANCE].mods, '1.21.4', 'Fabric')
+
+    assert list(job.mods) == ['Sodium', 'JEI', 'Fabric API']
+
+    run_update(window)
+    assert lookups(fake_internet) == ['api.modrinth.com/v2/project/sodium/version', 'api.cfwidget.com/minecraft/mc-mods/jei?version=1.21.4&loader=fabric', 'api.modrinth.com/v2/project/fabric-api/version']
+
+
+def test_mods_with_the_same_update_time_keep_the_order_of_the_instance(window):
+    select_mods(window, 'JEI', 'Fabric API', 'Sodium')
+    job = create_mod_update_job(window.data, INSTANCE, window.data.instances[INSTANCE].mods, '1.21.4', 'Fabric')
+    assert list(job.mods) == ['JEI', 'Fabric API', 'Sodium']
+
+
+def test_mods_with_broken_entries_come_first(window):
+    select_mods(window, 'Sodium', state=('', '', NOW - 100))
+    window.data.instances[INSTANCE].mods['Fabric API'] = 'garbage'
+    job = create_mod_update_job(window.data, INSTANCE, window.data.instances[INSTANCE].mods, '1.21.4', 'Fabric')
+    assert list(job.mods) == ['Fabric API', 'Sodium']
+
+
+def test_the_progress_follows_the_update_order(window):
+    window.data.instances[INSTANCE].mods['Fabric API'] = (FABRIC_API_URL, FABRIC_API_FILE, NOW - 5000)
+    window.data.instances[INSTANCE].mods['Sodium'] = ('', '', 0)
+    job = create_mod_update_job(window.data, INSTANCE, window.data.instances[INSTANCE].mods, '1.21.4', 'Fabric')
+    progress = []
+
+    run_mod_update(job, on_progress=lambda *arguments: progress.append(arguments))
+
+    assert progress == [(0, 2, 'Sodium'), (1, 2, 'Fabric API'), (2, 2, '')]
+
+
+def test_the_order_of_the_mods_in_the_instance_itself_is_not_changed(window):
+    select_mods(window, 'Fabric API', 'Sodium')
+    window.data.instances[INSTANCE].mods['Fabric API'] = (FABRIC_API_URL, FABRIC_API_FILE, NOW - 5000)
+
+    run_update(window)
+
+    assert list(window.data.instances[INSTANCE].mods) == ['Fabric API', 'Sodium']
+
+
+def test_a_mod_which_failed_is_updated_first_the_next_time(window, fake_internet, monkeypatch):
+    select_mods(window, 'Sodium', 'Fabric API')  # The mod which fails is listed last
+    fake_internet.add_route(LOOKUP_URL, raises=requests.exceptions.ReadTimeout())
+    first_result = run_update(window)
+    assert list(first_result.failed) == ['Fabric API']
+    assert window.data.instances[INSTANCE].mods['Sodium'][2] == NOW  # Updated
+    assert window.data.instances[INSTANCE].mods['Fabric API'][2] == 0  # Not updated, so it still has no update time
+
+    fake_internet.add_route(LOOKUP_URL, file='modrinth_versions_fabric-api.json')  # The website works again
+    fake_internet.clear_history()
+    move_time_forward(monkeypatch, SKIP_WHEN_LAST_CHECKED_BEFORE + 1)  # Sodium is due for a check again, too
+    second_result = run_update(window)
+
+    assert not second_result.has_problems
+    assert lookups(fake_internet) == ['api.modrinth.com/v2/project/fabric-api/version', 'api.modrinth.com/v2/project/sodium/version']  # Not in the order of the instance
+
+
+def test_a_mod_for_which_no_file_was_found_is_checked_first_the_next_time(window, fake_internet, monkeypatch):
+    select_mods(window, 'Sodium', 'Old Mod')
+    first_result = run_update(window)
+    assert first_result.not_found == ['Old Mod']
+    assert window.data.instances[INSTANCE].mods['Old Mod'] == ('', '', 0)  # Keeps its old update time
+
+    fake_internet.clear_history()
+    move_time_forward(monkeypatch, SKIP_WHEN_LAST_CHECKED_BEFORE + 1)
+    run_update(window)
+
+    assert lookups(fake_internet) == ['api.modrinth.com/v2/project/old-mod/version', 'api.modrinth.com/v2/project/sodium/version']
+
+
+def test_an_interrupted_update_continues_with_the_mods_which_were_not_reached(window):
+    select_mods(window, 'Fabric API', 'Sodium', 'JEI')
+
+    class Interrupted(Exception):
+        pass
+
+    def stop_after_the_first_mod(outcome):
+        apply_mod_update_outcome(window.data, job, outcome)
+        raise Interrupted  # For example PackedMC is closed in the middle of the update
+
+    job = create_mod_update_job(window.data, INSTANCE, window.data.instances[INSTANCE].mods, '1.21.4', 'Fabric')
+    with pytest.raises(Interrupted):
+        run_mod_update(job, on_outcome=stop_after_the_first_mod)
+    assert window.data.instances[INSTANCE].mods['Fabric API'][2] == NOW  # Only this one was updated
+
+    next_job = create_mod_update_job(window.data, INSTANCE, window.data.instances[INSTANCE].mods, '1.21.4', 'Fabric')
+
+    assert list(next_job.mods) == ['Sodium', 'JEI', 'Fabric API']
+
+
 # ================================================================================ move_mods_from_packedmc_to_minecraft
 @pytest.fixture
 def minecraft_mods():

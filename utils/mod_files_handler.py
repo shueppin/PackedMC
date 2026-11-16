@@ -69,7 +69,7 @@ class ModUpdateJob:
     instance_name: str
     mc_version: str  # Never "latest"
     loader: str
-    mods: dict[str, _ModToUpdate]
+    mods: dict[str, _ModToUpdate]  # In the order in which they are updated (the mods which were not updated for the longest time first)
     mods_directory: Path
     checked_at: int
 
@@ -97,8 +97,13 @@ def create_mod_update_job(data: Data, instance_name: str, mods_data: dict[str, t
     if mc_version == 'latest':
         mc_version = LATEST_RELEASE
 
+    # The mods which were not updated for the longest time come first. A mod which was never checked, which could not be updated
+    # (timeout, offline...) or for which no file was found keeps its old check time (or none) and is therefore automatically
+    # updated first the next time, while the mods which were just updated come last. Equal times keep the order of the instance.
+    entries = sorted(list(mods_data.items()), key=lambda item: _parse_entry(item[1])[3])
+
     mods = {}
-    for mod_name, entry in list(mods_data.items()):
+    for mod_name, entry in entries:
         mod_data = data.mods.get(mod_name)
         mods[mod_name] = _ModToUpdate(url=mod_data.url if mod_data is not None else None, entry=entry)
 
@@ -231,7 +236,6 @@ def run_mod_update(job: ModUpdateJob, result: ModUpdateResult | None = None, on_
     unneeded_files = set(os.listdir(job.mods_directory))
     total = len(job.mods)
 
-    # TODO: Add some system to ensure the unupdated mods are updated first
     for index, (mod_name, mod) in enumerate(job.mods.items()):
         if on_progress is not None:
             on_progress(index, total, mod_name)
