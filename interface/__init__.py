@@ -158,7 +158,7 @@ class MainWindow(QMainWindow, MainWindowElements):
         instance_mods = self.data.instances[last_played_instance].mods
         instance_version = self.data.instances[last_played_instance].version
         instance_type = self.data.instances[last_played_instance].type
-        mod_update_thread = threading.Thread(target=update_mod_files, args=(self, last_played_instance, instance_mods, instance_version, instance_type, False), daemon=True)
+        mod_update_thread = threading.Thread(target=update_mod_files, args=(self, last_played_instance, instance_mods, instance_version, instance_type), daemon=True)
         mod_update_thread.start()
 
     '''

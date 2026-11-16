@@ -28,6 +28,9 @@ PROJECT_OWN_HEADERS = {
     'User-Agent': 'shueppin/PackedMC (in development)'
 }
 
+# The time in seconds that a request to a mod website may wait for the connection or for the next data, before it is aborted.
+REQUEST_TIMEOUT = 10
+
 
 _CURSEFORGE_CACHE_DIRECTORY = CACHE_DIRECTORY / 'curseforge_mods'
 _MODRINTH_CACHE_DIRECTORY = CACHE_DIRECTORY / 'modrinth_mods'
@@ -79,24 +82,27 @@ class NoModFileAvailable(Exception):
         super().__init__(message)
 
 
-def get_download_url(mod_url: str, game_version: str, mod_loader: str) -> tuple[str, str]:
+def get_download_url(mod_url: str, game_version: str, mod_loader: str, timeout: float = REQUEST_TIMEOUT) -> tuple[str, str]:
     """
     Returns the mod download URL and file name.
+    If the mod website does not answer within the timeout, a requests.exceptions.Timeout is raised.
     """
     if CURSEFORGE_BASE_URL in mod_url:
-        return _get_curseforge_download_url(mod_url, game_version, mod_loader.lower())
+        return _get_curseforge_download_url(mod_url, game_version, mod_loader.lower(), timeout)
 
     elif MODRINTH_BASE_URL in mod_url:
-        return _get_modrinth_download_url(mod_url, game_version, mod_loader.lower())
+        return _get_modrinth_download_url(mod_url, game_version, mod_loader.lower(), timeout)
 
     else:
         raise InvalidModBaseUrl(mod_url)
 
 
-def _get_curseforge_download_url(curseforge_url: str, game_version: str, mod_loader: str) -> tuple[str, str]:
+def _get_curseforge_download_url(curseforge_url: str, game_version: str, mod_loader: str, timeout: float = REQUEST_TIMEOUT) -> tuple[str, str]:
     try:
         url_for_version_data = CURSEFORGE_API_BASE_URL + curseforge_url[len(CURSEFORGE_BASE_URL):] + '?version=' + game_version + '&loader=' + mod_loader  # Remove the base curseforge url and add the api part and a version and a loader search
-        response = requests.get(url_for_version_data)
+        response = requests.get(url_for_version_data, timeout=timeout)
+    except requests.exceptions.Timeout:
+        raise  # A connection which times out is not the same as having no connection (a ConnectTimeout is also a ConnectionError)
     except requests.exceptions.ConnectionError:
         return '', ''
 
@@ -123,7 +129,7 @@ def _get_curseforge_download_url(curseforge_url: str, game_version: str, mod_loa
         raise NoModFileAvailable(curseforge_url, mod_loader, game_version)
 
 
-def _get_modrinth_download_url(modrinth_url: str, game_version: str, mod_loader: str) -> tuple[str, str]:
+def _get_modrinth_download_url(modrinth_url: str, game_version: str, mod_loader: str, timeout: float = REQUEST_TIMEOUT) -> tuple[str, str]:
     if not game_version:
         raise EmptyArguments('game_version', 'modrinth')
 
@@ -132,7 +138,9 @@ def _get_modrinth_download_url(modrinth_url: str, game_version: str, mod_loader:
 
     try:
         url_for_all_versions_data = MODRINTH_API_BASE_URL + modrinth_url[len(MODRINTH_BASE_URL):] + '/version'  # Remove the base modrinth url and add the api part
-        response = requests.get(url_for_all_versions_data, headers=PROJECT_OWN_HEADERS)
+        response = requests.get(url_for_all_versions_data, headers=PROJECT_OWN_HEADERS, timeout=timeout)
+    except requests.exceptions.Timeout:
+        raise  # A connection which times out is not the same as having no connection (a ConnectTimeout is also a ConnectionError)
     except requests.exceptions.ConnectionError:
         return '', ''
 
@@ -327,4 +335,6 @@ def _update_modrinth_mod_data(mod_name: str, callback_function: Callable[[str, l
         logger.info(f'No icon URL available for mod "{mod_name}"')
 
     if callback_function is not None:
+        if not callback_function_args:
+            callback_function_args = ()
         callback_function(html_description, sorted(loaders), supported_versions, *callback_function_args)

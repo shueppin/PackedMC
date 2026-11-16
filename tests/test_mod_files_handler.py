@@ -1,12 +1,17 @@
 import json
+import logging
 from datetime import datetime
 from types import SimpleNamespace
 
 import pytest
+import requests
 
 from utils import mod_files_handler
 from utils.data_file_helper import Data, SingleInstanceData, SingleModData
-from utils.mod_files_handler import update_mod_files, move_mods_from_packedmc_to_minecraft, SKIP_WHEN_LAST_CHECKED_BEFORE
+from utils.mod_files_handler import (
+    ModUpdateOutcome, apply_mod_update_outcome, create_mod_update_job, move_mods_from_packedmc_to_minecraft, run_mod_update,
+    update_mod_files, MOD_REQUEST_TIMEOUT, SKIP_WHEN_LAST_CHECKED_BEFORE,
+)
 
 from . import fake_file_paths as paths
 from .helpers import directory_listing, freeze_datetime, read_data_file
@@ -53,16 +58,16 @@ def select_mods(window, *names, state=('', '', 0)):
 
 
 def run_update(window, mc_version='1.21.4', loader='Fabric'):
-    return update_mod_files(window, INSTANCE, window.data.instances[INSTANCE].mods, mc_version, loader, output=False)
+    return update_mod_files(window, INSTANCE, window.data.instances[INSTANCE].mods, mc_version, loader)
 
 
 # ================================================================================================== update_mod_files
 def test_downloads_the_mod_files_into_the_packedmc_mods_directory(window, fake_internet):
     select_mods(window, 'Fabric API', 'Sodium', 'JEI')
 
-    not_found = run_update(window)
+    result = run_update(window)
 
-    assert not_found == []
+    assert not result.has_problems
     assert directory_listing(MODS_DIRECTORY) == sorted([FABRIC_API_FILE, SODIUM_FILE, JEI_FILE])
     assert (MODS_DIRECTORY / FABRIC_API_FILE).read_bytes() == b'fabric-api 0.115.0 for 1.21.4'
     assert (MODS_DIRECTORY / JEI_FILE).read_bytes() == b'jei 19.0.0 for 1.21.4 fabric'
@@ -106,9 +111,9 @@ def test_recently_checked_mods_are_skipped_without_any_request(window, fake_inte
     (MODS_DIRECTORY / FABRIC_API_FILE).write_bytes(b'already here')
     select_mods(window, 'Fabric API', state=(FABRIC_API_URL, FABRIC_API_FILE, NOW - 10))
 
-    not_found = run_update(window)
+    result = run_update(window)
 
-    assert not_found == []
+    assert not result.has_problems
     fake_internet.assert_no_requests()
     assert (MODS_DIRECTORY / FABRIC_API_FILE).read_bytes() == b'already here'  # Not deleted as "unneeded" and not replaced
 
@@ -159,9 +164,9 @@ def test_files_of_deselected_mods_are_deleted(window):
 def test_mods_without_a_file_for_this_version_are_reported(window, fake_internet):
     select_mods(window, 'Fabric API', 'Old Mod')
 
-    not_found = run_update(window)
+    result = run_update(window)
 
-    assert not_found == ['Old Mod']
+    assert result.not_found == ['Old Mod'] and result.failed == {}
     assert directory_listing(MODS_DIRECTORY) == [FABRIC_API_FILE]
     assert window.data.instances[INSTANCE].mods['Old Mod'] == ('', '', 0)  # Keeps the old "last checked" so it is retried next time
     fake_internet.assert_not_requested('https://cdn.modrinth.com/data/OLD/versions/o1/old-mod-1.0-1.19.4.jar')
@@ -170,24 +175,28 @@ def test_mods_without_a_file_for_this_version_are_reported(window, fake_internet
 def test_mods_from_unsupported_websites_are_reported_without_requests(window, fake_internet):
     select_mods(window, 'Strange')
 
-    assert run_update(window) == ['Strange']
+    assert run_update(window).not_found == ['Strange']
     fake_internet.assert_no_requests()
 
 
-def test_api_cooldown_is_ignored_and_retried_later(window, fake_internet):
+def test_api_cooldown_is_reported_as_failed_and_retried_later(window, fake_internet):
     fake_internet.add_route('https://api.modrinth.com/v2/project/fabric-api/version', file='modrinth_versions_fabric-api.json', headers={'X-Ratelimit-Remaining': '0'})
     select_mods(window, 'Fabric API')
 
-    assert run_update(window) == []
+    result = run_update(window)
+
+    assert result.not_found == [] and list(result.failed) == ['Fabric API'] and 'rate limit' in result.failed['Fabric API']
     assert directory_listing(MODS_DIRECTORY) == []
-    assert window.data.instances[INSTANCE].mods['Fabric API'] == ('', '', 0)
+    assert window.data.instances[INSTANCE].mods['Fabric API'] == ('', '', 0)  # Unchanged, so the next update tries again
 
 
-def test_curseforge_try_again_later_is_ignored(window, fake_internet):
+def test_curseforge_try_again_later_is_reported_as_failed(window, fake_internet):
     fake_internet.add_route('https://api.cfwidget.com/minecraft/mc-mods/jei?version=1.21.4&loader=fabric', status=202, json={})
     select_mods(window, 'JEI')
 
-    assert run_update(window) == []
+    result = run_update(window)
+
+    assert result.not_found == [] and list(result.failed) == ['JEI']
     assert directory_listing(MODS_DIRECTORY) == []
 
 
@@ -203,8 +212,11 @@ def test_updating_while_offline_for_the_first_time_does_not_crash(window, fake_i
     fake_internet.go_offline()
     select_mods(window, 'Fabric API')
 
-    assert run_update(window) == []
+    result = run_update(window)
+
+    assert result.not_found == [] and list(result.failed) == ['Fabric API'] and 'offline' in result.failed['Fabric API']
     assert directory_listing(MODS_DIRECTORY) == []
+    assert window.data.instances[INSTANCE].mods['Fabric API'] == ('', '', 0)  # Not marked as checked, so it is tried again soon
 
 
 def test_updating_while_offline_keeps_previously_downloaded_mods(window, fake_internet):
@@ -213,10 +225,179 @@ def test_updating_while_offline_keeps_previously_downloaded_mods(window, fake_in
     select_mods(window, 'Fabric API', state=(FABRIC_API_URL, FABRIC_API_FILE, NOW - 86400))
     fake_internet.go_offline()
 
-    run_update(window)
+    result = run_update(window)
 
+    assert list(result.failed) == ['Fabric API']
     assert (MODS_DIRECTORY / FABRIC_API_FILE).read_bytes() == b'downloaded yesterday'
     assert window.data.instances[INSTANCE].mods['Fabric API'][0] == FABRIC_API_URL
+
+
+# ============================================================================================ timeouts and failing mods
+LOOKUP_URL = 'https://api.modrinth.com/v2/project/fabric-api/version'
+
+
+def test_every_request_of_a_mod_update_has_a_timeout(window, fake_internet):
+    select_mods(window, 'Fabric API', 'Sodium', 'JEI')
+
+    run_update(window)
+
+    assert MOD_REQUEST_TIMEOUT == 10
+    assert len(fake_internet.requests) == 6  # 3 lookups and 3 downloads
+    assert [request.timeout for request in fake_internet.requests] == [MOD_REQUEST_TIMEOUT] * 6
+
+
+@pytest.mark.parametrize('error', [requests.exceptions.ReadTimeout(), requests.exceptions.ConnectTimeout()], ids=['read_timeout', 'connect_timeout'])
+def test_a_timeout_fails_only_that_mod_and_is_reported(window, fake_internet, caplog, error):
+    fake_internet.add_route(LOOKUP_URL, raises=error)
+    select_mods(window, 'Fabric API', 'Sodium')
+
+    with caplog.at_level(logging.WARNING):
+        result = run_update(window)
+
+    assert list(result.failed) == ['Fabric API'] and 'timed out' in result.failed['Fabric API'] and result.not_found == []
+    assert directory_listing(MODS_DIRECTORY) == [SODIUM_FILE]  # The other mod was still updated
+    warnings = [record.getMessage() for record in caplog.records if record.levelno == logging.WARNING]
+    assert len(warnings) == 1 and 'Fabric API' in warnings[0] and 'timed out' in warnings[0]
+
+
+def test_a_failed_mod_is_not_marked_as_checked_so_the_next_update_retries_it(window, fake_internet):
+    fake_internet.add_route(LOOKUP_URL, raises=requests.exceptions.ReadTimeout())
+    select_mods(window, 'Fabric API')
+    run_update(window)
+    assert window.data.instances[INSTANCE].mods['Fabric API'] == ('', '', 0)
+
+    fake_internet.add_route(LOOKUP_URL, file='modrinth_versions_fabric-api.json')  # The website works again
+    result = run_update(window)
+
+    assert not result.has_problems and directory_listing(MODS_DIRECTORY) == [FABRIC_API_FILE]
+
+
+def test_a_download_which_stalls_leaves_no_broken_file_and_keeps_the_old_one(window, fake_internet, caplog):
+    MODS_DIRECTORY.mkdir(parents=True)
+    (MODS_DIRECTORY / 'fabric-api-old.jar').write_bytes(b'old version')
+    select_mods(window, 'Fabric API', state=('https://cdn.modrinth.com/old.jar', 'fabric-api-old.jar', 0))
+    fake_internet.add_route(FABRIC_API_URL, stall_after=b'partial data')
+
+    with caplog.at_level(logging.WARNING):
+        result = run_update(window)
+
+    assert list(result.failed) == ['Fabric API'] and 'timed out' in result.failed['Fabric API']
+    assert directory_listing(MODS_DIRECTORY) == ['fabric-api-old.jar']  # No new file and no leftover temporary file
+    assert window.data.instances[INSTANCE].mods['Fabric API'] == ('https://cdn.modrinth.com/old.jar', 'fabric-api-old.jar', 0)
+    assert 'Fabric API' in caplog.text
+
+
+def test_an_error_page_is_not_saved_as_a_mod(window, fake_internet):
+    fake_internet.add_route(FABRIC_API_URL, status=404, text='<html>Not found</html>')
+    select_mods(window, 'Fabric API')
+
+    result = run_update(window)
+
+    assert 'HTTP 404' in result.failed['Fabric API']
+    assert directory_listing(MODS_DIRECTORY) == []
+
+
+def test_a_mod_which_the_website_does_not_know_is_a_failure_and_not_a_missing_version(window):
+    window.data.mods['Gone'] = SingleModData(url='https://modrinth.com/mod/does-not-exist', loaders=['Fabric'])
+    select_mods(window, 'Gone', 'Sodium')
+
+    result = run_update(window)
+
+    assert list(result.failed) == ['Gone'] and result.not_found == []
+    assert directory_listing(MODS_DIRECTORY) == [SODIUM_FILE]
+
+
+def test_missing_versions_and_failures_are_reported_together(window, fake_internet):
+    fake_internet.add_route('https://api.modrinth.com/v2/project/sodium/version', raises=requests.exceptions.ReadTimeout())
+    select_mods(window, 'Fabric API', 'Sodium', 'Old Mod')
+
+    result = run_update(window)
+
+    assert result.not_found == ['Old Mod'] and list(result.failed) == ['Sodium'] and result.has_problems
+    assert directory_listing(MODS_DIRECTORY) == [FABRIC_API_FILE]
+
+
+def test_an_unexpected_error_in_one_mod_does_not_stop_the_others(window, monkeypatch, caplog):
+    original = mod_files_handler.get_download_url
+
+    def broken_for_sodium(mod_url, *arguments, **keyword_arguments):
+        if 'sodium' in mod_url:
+            raise RuntimeError('something unexpected')
+        return original(mod_url, *arguments, **keyword_arguments)
+
+    # noinspection unresolved-references
+    monkeypatch.setattr(mod_files_handler, 'get_download_url', broken_for_sodium)
+    select_mods(window, 'Sodium', 'Fabric API')
+
+    result = run_update(window)
+
+    assert list(result.failed) == ['Sodium'] and 'something unexpected' in result.failed['Sodium']
+    assert directory_listing(MODS_DIRECTORY) == [FABRIC_API_FILE]
+
+
+def test_the_worker_part_never_changes_the_data(window):
+    """ The download runs in a background thread while the user edits the data. So the thread must only return what to change. """
+    select_mods(window, 'Fabric API')
+    job = create_mod_update_job(window.data, INSTANCE, window.data.instances[INSTANCE].mods, '1.21.4', 'Fabric')
+    outcomes = []
+
+    run_mod_update(job, on_outcome=outcomes.append)
+
+    assert directory_listing(MODS_DIRECTORY) == [FABRIC_API_FILE]  # The file was downloaded...
+    assert window.data.instances[INSTANCE].mods['Fabric API'] == ('', '', 0)  # ...but the data is unchanged
+    assert [(outcome.mod_name, outcome.status, outcome.filename) for outcome in outcomes] == [('Fabric API', 'updated', FABRIC_API_FILE)]
+
+
+def test_progress_is_reported_before_every_mod_and_at_the_end(window):
+    select_mods(window, 'Fabric API', 'Sodium')
+    job = create_mod_update_job(window.data, INSTANCE, window.data.instances[INSTANCE].mods, '1.21.4', 'Fabric')
+    progress = []
+
+    run_mod_update(job, on_progress=lambda *arguments: progress.append(arguments))
+
+    assert progress == [(0, 2, 'Fabric API'), (1, 2, 'Sodium'), (2, 2, '')]
+
+
+def test_results_for_mods_which_were_deselected_in_the_meantime_are_ignored(window):
+    select_mods(window, 'Fabric API', 'Sodium')
+    job = create_mod_update_job(window.data, INSTANCE, window.data.instances[INSTANCE].mods, '1.21.4', 'Fabric')
+    del window.data.instances[INSTANCE].mods['Sodium']  # The user deselects it while the download is running
+
+    apply_mod_update_outcome(window.data, job, ModUpdateOutcome('Sodium', 'updated', download_url=SODIUM_URL, filename=SODIUM_FILE, keep_filename=SODIUM_FILE, checked_at=NOW))
+
+    assert 'Sodium' not in window.data.instances[INSTANCE].mods
+
+
+def test_results_for_a_deleted_instance_are_ignored(window):
+    select_mods(window, 'Fabric API')
+    job = create_mod_update_job(window.data, INSTANCE, window.data.instances[INSTANCE].mods, '1.21.4', 'Fabric')
+    del window.data.instances[INSTANCE]
+
+    apply_mod_update_outcome(window.data, job, ModUpdateOutcome('Fabric API', 'updated', download_url=FABRIC_API_URL, filename=FABRIC_API_FILE, checked_at=NOW))  # Must not raise
+
+
+def test_leftover_temporary_files_are_cleaned_up(window):
+    MODS_DIRECTORY.mkdir(parents=True)
+    (MODS_DIRECTORY / f'{FABRIC_API_FILE}.1a2b3c4d.part').write_bytes(b'from an aborted download')
+    select_mods(window, 'Fabric API')
+
+    run_update(window)
+
+    assert directory_listing(MODS_DIRECTORY) == [FABRIC_API_FILE]
+
+
+def test_a_file_which_can_not_be_removed_is_only_a_warning(window, monkeypatch, caplog):
+    MODS_DIRECTORY.mkdir(parents=True)
+    (MODS_DIRECTORY / 'stray.jar').write_bytes(b'x')
+
+    def locked(path, *arguments, **keyword_arguments):
+        raise PermissionError('in use by another program')
+
+    monkeypatch.setattr(mod_files_handler.os, 'remove', locked)
+    with caplog.at_level(logging.WARNING):
+        run_update(window)  # Must not raise
+
+    assert 'stray.jar' in caplog.text
 
 
 # ================================================================================ move_mods_from_packedmc_to_minecraft

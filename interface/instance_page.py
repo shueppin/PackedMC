@@ -10,7 +10,7 @@ from .popups import AdvancedOptionsHandler
 
 from pyqt_utils.animation import AnimationScrollDirection
 
-from utils.mod_files_handler import update_mod_files, move_mods_from_packedmc_to_minecraft
+from utils.mod_files_handler import ModUpdateTask, ModUpdateResult, move_mods_from_packedmc_to_minecraft
 from utils.data_file_helper import Data, AdvancedArgumentsData, SingleInstanceData, DEFAULT_INSTANCE_NAME
 from utils.file_paths import MINECRAFT_DIRECTORY, is_subdir_of_user_home, PACKEDMC_OPTIONS_FILES_DIRECTORY
 from minecraft_api.minecraft_launcher_integration import save_options_file_of_last_used_instance, load_options_file_from_packedmc, write_instance_data_to_profiles_file, start_official_launcher
@@ -39,6 +39,7 @@ class InstancePageClass:
 
         # Create intern variables
         self.selected_instance_name = ''
+        self.mod_update_task: ModUpdateTask | None = None  # The running mod download after pressing play (the reference keeps it alive)
 
         # Create the advanced options popup
         self.advanced_options_popup_handler = AdvancedOptionsHandler(parent)
@@ -56,6 +57,11 @@ class InstancePageClass:
         parent.INSTANCE_FAVOURITE_BUTTON.clicked.connect(self._toggle_favourite)
 
     def play_instance(self, instance_name: str):
+        # The mods are downloaded in the background after pressing play, and the window stays usable meanwhile
+        if self.mod_update_task is not None:
+            QMessageBox.information(self.parent, 'Download in progress', 'PackedMC is still downloading the mods of an instance. \nPlease wait until the download is finished.')
+            return
+
         instance_name = _cleanup_name(instance_name)  # This is to remove ★ from the favourites
 
         actual_instance_data = self.data.instances[instance_name]
@@ -98,15 +104,46 @@ class InstancePageClass:
         start_official_launcher()
 
         if actual_instance_data.type != 'Release' and actual_instance_data.type != 'Snapshot':
-            # Update and download the mods
-            not_updated_mods = update_mod_files(self.parent, instance_name, actual_instance_data.mods, actual_instance_data.version, actual_instance_data.type)
+            # Update and download the mods in the background. When this is finished, the rest of the work is done in "_finish_playing".
+            # The values are stored now, because the instance can be edited while the mods are downloading.
+            instance_type, instance_version = actual_instance_data.type, actual_instance_data.version
+            self.mod_update_task = ModUpdateTask(
+                self.parent, instance_name, actual_instance_data.mods, instance_version, instance_type,
+                on_finished=lambda result: self._finish_playing(instance_name, instance_type, instance_version, minecraft_directory, result)
+            )
+            self.mod_update_task.start()
+            return
 
-            # Move the mods to the minecraft folder
-            move_mods_from_packedmc_to_minecraft(instance_name, minecraft_directory)
+        self._close_packedmc_if_selected()
 
-            if len(not_updated_mods) > 0:
-                QMessageBox.information(self.parent, 'Could not find all mods', f'Could not find a file for the following mods for {actual_instance_data.type} {actual_instance_data.version}: \n - {"\n - ".join(not_updated_mods)}')
+    def _finish_playing(self, instance_name: str, instance_type: str, instance_version: str, minecraft_directory: str, result: ModUpdateResult):
+        """ This is called when the mods are downloaded after pressing play. """
+        self.mod_update_task = None
 
+        # Move the mods to the minecraft folder
+        move_mods_from_packedmc_to_minecraft(instance_name, minecraft_directory)
+
+        self._show_mod_update_problems(instance_type, instance_version, result)
+        self._close_packedmc_if_selected()
+
+    def _show_mod_update_problems(self, instance_type: str, instance_version: str, result: ModUpdateResult):
+        if not result.has_problems:
+            return
+
+        sections = []
+        if result.not_found:
+            sections.append(f'Could not find a file for the following mods for {instance_type} {instance_version}: \n - {"\n - ".join(result.not_found)}')
+        if result.failed:
+            failed_mods = "\n - ".join(f'{mod_name} ({reason})' for mod_name, reason in result.failed.items())
+            sections.append(f'The following mods could not be updated. Files which already exist are kept and the update is tried again the next time you play: \n - {failed_mods}')
+        text = '\n\n'.join(sections)
+
+        if result.failed:
+            QMessageBox.warning(self.parent, 'Could not update all mods', text)
+        else:
+            QMessageBox.information(self.parent, 'Could not find all mods', text)
+
+    def _close_packedmc_if_selected(self):
         # Close PackedMC if the setting is selected
         if self.data.settings.close_packedmc:
             logger.info(f'Closing PackedMC')

@@ -66,6 +66,8 @@ class Route:
     content: bytes = b''
     order: int = 0
     is_default: bool = False  # Loaded from routes.json (as opposed to added by a test)
+    raises: BaseException | None = None  # Raised instead of answering, e.g. requests.exceptions.ReadTimeout()
+    stall_after: bytes | None = None  # Send these bytes and then stop sending data until the read timeout hits
 
     def specificity(self) -> tuple[int, int, int, int]:
         has_wildcard = '*' in self.url
@@ -140,8 +142,11 @@ class FakeInternet:
         for route in self.routes:
             route.is_default = True
 
-    def add_route(self, url: str, *, file: str | None = None, json: Any = None, text: str | None = None, content: bytes | None = None, status: int = 200, headers: dict[str, str] | None = None, match_query: dict[str, str] | None = None):
-        """ Register (or override) the answer for a URL. Without a body the answer is empty. """
+    def add_route(self, url: str, *, file: str = None, json: Any = None, text: str = None, content: bytes = None, status: int = 200, headers: dict[str, str] = None, match_query: dict[str, str] = None, raises: BaseException | None = None, stall_after: bytes | None = None):
+        """
+        Register (or override) the answer for a URL. Without a body the answer is empty.
+        ``raises`` makes the request fail with that exception (e.g. a timeout), ``stall_after`` makes a download break off after those bytes.
+        """
         import json as json_module
 
         if file is not None:
@@ -164,7 +169,7 @@ class FakeInternet:
         if (file or '').endswith('.json') or json is not None:
             route_headers.setdefault('Content-Type', 'application/json')
 
-        self.routes.append(Route(url=url_without_query(url), query=query, status=status, headers=route_headers, content=body, order=len(self.routes)))
+        self.routes.append(Route(url=url_without_query(url), query=query, status=status, headers=route_headers, content=body, order=len(self.routes), raises=raises, stall_after=stall_after))
 
     def go_offline(self):
         """ Every request raises ``requests.exceptions.ConnectionError`` (or a network error in Qt). """
@@ -204,12 +209,18 @@ class FakeInternet:
         """ Replacement for ``requests.adapters.HTTPAdapter.send``. """
         route = self._handle(request.method, request.url, dict(request.headers), request.body, timeout, 'requests')
 
+        if route.raises is not None:
+            raise route.raises
+
         response = requests.Response()
         response.status_code = route.status
         # noinspection unresolved-references
         response.headers = requests.structures.CaseInsensitiveDict(route.headers)
-        response._content = route.content
-        response._content_consumed = True
+        if route.stall_after is not None:
+            response.raw = _StallingRaw(route.stall_after)  # The body is read (and breaks off) while iterating over it
+        else:
+            response._content = route.content
+            response._content_consumed = True
         response.url = request.url
         response.encoding = 'utf-8'
         response.reason = 'OK' if route.status < 400 else 'ERROR'
@@ -225,6 +236,9 @@ class FakeInternet:
             route = self._handle('GET', url, headers, None, None, 'qt')
         except (requests.exceptions.ConnectionError, UnregisteredRequest):
             return FakeQtReply(error=QNetworkReply.NetworkError.HostNotFoundError, error_string=f'No fake answer for {url}')
+
+        if route.raises is not None:
+            return FakeQtReply(error=QNetworkReply.NetworkError.TimeoutError, error_string=str(route.raises))
 
         if route.status >= 400:
             error = QNetworkReply.NetworkError.ContentNotFoundError if route.status == 404 else QNetworkReply.NetworkError.UnknownContentError
@@ -259,6 +273,24 @@ class FakeInternet:
     def clear_history(self):
         self.requests.clear()
         self.unmatched.clear()
+
+
+class _StallingRaw:
+    """ The raw body of a response which sends some bytes and then times out, like a server that stops sending in the middle of a download. """
+
+    def __init__(self, first_bytes: bytes):
+        self._first_bytes = first_bytes
+
+    def stream(self, chunk_size=None, decode_content=None):
+        from urllib3.exceptions import ReadTimeoutError
+        yield self._first_bytes
+        raise ReadTimeoutError(None, None, 'Read timed out.')
+
+    def release_conn(self):
+        pass
+
+    def close(self):
+        pass
 
 
 class FakeQtReply(QObject):

@@ -194,6 +194,16 @@ def inline_thread_errors():
     assert not errors, f'Unhandled exceptions in PackedMC threads: {errors}'
 
 
+@pytest.fixture
+def real_threads(monkeypatch):
+    """
+    By default the threads of PackedMC run inline during the tests, which makes them deterministic. Request this fixture for a test that
+    needs real background threads, e.g. to check that the window stays usable while a download runs.
+    Such a test has to wait for the thread itself (qtbot.waitUntil / qtbot.waitSignal), so that no thread outlives the test.
+    """
+    monkeypatch.setattr(threading.Thread, 'start', _original_thread_start)
+
+
 @pytest.fixture(autouse=True)
 def restore_minecraft_globals(monkeypatch):
     """ ``_reload_data`` rebinds the module globals. Make sure that never leaks into the next test. """
