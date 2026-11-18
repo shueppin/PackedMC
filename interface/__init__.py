@@ -403,7 +403,7 @@ class MainWindow(QMainWindow, MainWindowElements):
         # Define some extra values
         extra = {
             # Button colors (use in designer with custom property called "class")
-            'warning': '#dc3545',
+            # 'warning': '#dc3545',
 
             # Density Scale (for qt_material)
             'density_scale': density_scale,

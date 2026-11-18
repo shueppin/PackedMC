@@ -11,7 +11,7 @@ from pyqt_utils.animation import AnimationScrollDirection
 from pyqt_utils.scrollarea_buttons import create_buttons_in_scroll_area, ScrollAreaButtonType
 
 from utils.data_file_helper import Data, SingleModData
-from minecraft_api.mod import get_mod_data, InvalidModBaseUrl, ModNotExisting
+from minecraft_api.mod import CURSEFORGE_BASE_URL, MODRINTH_BASE_URL, get_mod_data, InvalidModBaseUrl, ModNotExisting
 
 # Import the MainWindow for Type Checking
 from typing import TYPE_CHECKING
@@ -85,6 +85,7 @@ class ModPageClass:
         parent.MOD_URL.blockSignals(True)
         parent.MOD_URL.setText(mod_url)
         parent.MOD_URL.blockSignals(False)
+        self._update_mod_url_style(mod_url)
 
         self._create_tag_buttons()
 
@@ -147,6 +148,7 @@ class ModPageClass:
         new_url = self.parent.MOD_URL.text().strip()
         self.data.mods[self.selected_mod_name].url = new_url
         self.data.save()
+        self._update_mod_url_style(new_url)
         if validators.url(new_url):
             try:
                 description, loaders, supported_versions = get_mod_data(new_url, self.mod_data_connector.emit_updated, (self.selected_mod_name, new_url))
@@ -159,7 +161,20 @@ class ModPageClass:
                 logger.error('Uncaught exception when changing mod URL', exc_info=e)
         else:
             pass
-        # TODO: Change color of input field when it is an invalid URL
+
+    def _update_mod_url_style(self, mod_url: str):
+        is_supported_url = (
+            validators.url(mod_url)
+            and (mod_url.startswith(CURSEFORGE_BASE_URL) or mod_url.startswith(MODRINTH_BASE_URL))
+        )
+        if not is_supported_url:
+            print('unsupported url')
+            self.parent.MOD_URL.setProperty('class', 'unsupported_url')
+        else:
+            self.parent.MOD_URL.setProperty('class', '')
+        self.parent.MOD_URL.style().unpolish(self.parent.MOD_URL)
+        self.parent.MOD_URL.style().polish(self.parent.MOD_URL)
+        self.parent.MOD_URL.update()
 
     def _delete_mod(self):
         # Ask to delete it

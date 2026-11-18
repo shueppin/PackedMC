@@ -152,3 +152,13 @@ QTableView {{
     background-color: {QTMATERIAL_PRIMARYLIGHTCOLOR};
 }}
 
+
+
+/* Mod page specific settings */
+.unsupported_url {{
+    color: #cc7539;
+}}
+
+.unsupported_url:pressed {{
+    color: #cc7539;
+}}
