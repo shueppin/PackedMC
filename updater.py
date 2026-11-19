@@ -210,8 +210,9 @@ def update_project():
 
         sync_files(source_root)
 
-    # After updating add the version tag
+    # After updating add the version tag, and sort the history (by version number) and save it
     history.append(latest_tag)
+    history = sorted(history, key=lambda version: tuple(int(part) for part in version[1:].split(".")))
     save_version_history(history)
 
     # Remove the old backups, keep only the newest 3.
