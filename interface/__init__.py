@@ -16,7 +16,7 @@ from .popups import ImportProfilesHandler
 from .mod_page import ModPageClass
 from .instance_page import InstancePageClass
 
-from pyqt_utils.scrollable_grid import FieldType, ScrollableGrid, DynamicInstanceFieldHelper, DynamicModFieldHelper, DEFAULT_NO_TAGS_NAME
+from pyqt_utils.scrollable_grid import FieldType, ScrollableGrid, InstanceFieldHelper, ModFieldHelper, DEFAULT_NO_TAGS_NAME
 from pyqt_utils.scrollarea_buttons import create_buttons_in_scroll_area
 from pyqt_utils.animation import animate_transition, AnimationScrollDirection
 
@@ -66,17 +66,18 @@ class MainWindow(QMainWindow, MainWindowElements):
         self.import_profiles_popup_handler = ImportProfilesHandler(self)
 
         # "Collect" the functions and values for the clickable fields inside the scrollable grids
-        DynamicInstanceFieldHelper.play_function = self.instance_page_class.play_instance
-        DynamicInstanceFieldHelper.edit_function = self.instance_page_class.edit_instance
-        DynamicInstanceFieldHelper.create_new_function = self.instance_page_class.create_instance
-        DynamicInstanceFieldHelper.import_profiles_function = self.import_profiles_popup_handler.open_popup
+        InstanceFieldHelper.play_function = self.instance_page_class.play_instance
+        InstanceFieldHelper.edit_function = self.instance_page_class.edit_instance
+        InstanceFieldHelper.create_new_function = self.instance_page_class.create_instance
+        InstanceFieldHelper.import_profiles_function = self.import_profiles_popup_handler.open_popup
 
-        DynamicModFieldHelper.edit_function = self.mods_page_class.edit_mod
-        DynamicModFieldHelper.create_new_function = self.mods_page_class.create_mod
-        DynamicModFieldHelper.display_function = self.instance_page_class.clicked_displayed_mod
-        DynamicModFieldHelper.available_tags = self.data.tags
+        ModFieldHelper.edit_function = self.mods_page_class.edit_mod
+        ModFieldHelper.create_new_function = self.mods_page_class.create_mod
+        ModFieldHelper.display_function = self.instance_page_class.clicked_displayed_mod
+        ModFieldHelper.available_tags = self.data.tags
         # The following returns true if either wanted tag is in mod's tags, or we want mods without tags and the mod has no tags.
-        DynamicModFieldHelper.tag_check_function = lambda name, tag: (tag in self.data.mods[name].tags) or (tag == DEFAULT_NO_TAGS_NAME and not self.data.mods[name].tags)
+        ModFieldHelper.tag_check_function = lambda name, tag: (tag in self.data.mods[name].tags) or (tag == DEFAULT_NO_TAGS_NAME and not self.data.mods[name].tags)
+        ModFieldHelper.version_check_function = self.instance_page_class.mod_version_check_function
 
         # Bind the page selection buttons
         self.INSTANCES_PAGE_BUTTON.pressed.connect(lambda: self._page_selection_button_on_press(self.INSTANCES_PAGE_BUTTON, 0))

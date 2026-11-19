@@ -152,6 +152,10 @@ QTableView {{
     background-color: {QTMATERIAL_PRIMARYLIGHTCOLOR};
 }}
 
+.unavailable_version {{
+    color: #cc7539;
+}}
+
 
 
 /* Mod page specific settings */

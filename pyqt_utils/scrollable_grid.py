@@ -29,7 +29,7 @@ class FieldType(Enum):
     MODS_DISPLAYED = "Mods Displayed"  # For the instances page, to just display. When clicked they execute "display_function".
 
 
-class DynamicInstanceFieldHelper:
+class InstanceFieldHelper:
     """ Object to keep track of the functions to execute. """
     play_function: Callable[[str], None]
     edit_function: Callable[[str], None]
@@ -37,16 +37,17 @@ class DynamicInstanceFieldHelper:
     import_profiles_function: Callable[[], None]
 
 
-class DynamicModFieldHelper:
+class ModFieldHelper:
     """ Object to keep track of the functions to execute and the values that are needed. """
     edit_function: Callable[[str], None]
     create_new_function: Callable[[], None]
     display_function: Callable[[str, bool], None]
     available_tags: list[str]
     tag_check_function: Callable[[str, str], bool]  # Function to check whether the mod should be displayed based on the mod name and the actual selected tag
+    version_check_function: Callable[[str], bool]  # Function to check whether the mod should show that it is not compatible with the current version
 
 
-def _check_if_all_attributes_defined(cls: type[DynamicInstanceFieldHelper | DynamicModFieldHelper]):
+def _check_if_all_attributes_defined(cls: type[InstanceFieldHelper | ModFieldHelper]):
     for name in cls.__annotations__:  # Go through all attributes
         if not name.startswith("_") and not hasattr(cls, name):
             logger.error(f"Helper class {cls.__name__} has no attribute '{name}'. Please set this before creating the dynamic widget.")
@@ -84,11 +85,11 @@ class _InstanceField(QFrame):
         play_button.setProperty('class', 'play_button')
         play_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         play_button.setCursor(Qt.CursorShape.PointingHandCursor)
-        play_button.clicked.connect(lambda: DynamicInstanceFieldHelper.play_function(instance_name))
+        play_button.clicked.connect(lambda: InstanceFieldHelper.play_function(instance_name))
         edit_button = QPushButton("Edit")
         edit_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         edit_button.setCursor(Qt.CursorShape.PointingHandCursor)
-        edit_button.clicked.connect(lambda: DynamicInstanceFieldHelper.edit_function(instance_name))
+        edit_button.clicked.connect(lambda: InstanceFieldHelper.edit_function(instance_name))
         button_layout.addWidget(play_button)
         button_layout.addWidget(edit_button)
 
@@ -126,11 +127,11 @@ class _ModField(QFrame):
                 layout.addWidget(icon_label)
 
         # Name
-        label = QLabel(mod_name)
-        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        label.setProperty('class', 'bigger_text')
+        self.label = QLabel(mod_name)
+        self.label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.label.setProperty('class', 'bigger_text')
         layout.addStretch()
-        layout.addWidget(label)
+        layout.addWidget(self.label)
         layout.addStretch()
 
         self.setLayout(layout)
@@ -143,6 +144,12 @@ class _ModField(QFrame):
             self.setProperty('class', 'clickable_frame_selected')
         else:
             self.setProperty('class', 'clickable_frame_unselected')
+
+        if self.only_displayed:
+            if not ModFieldHelper.version_check_function(self.mod_name):
+                class_value = self.label.property('class')
+                self.label.setProperty('class', f'{class_value} unavailable_version')
+
         self.style().unpolish(self)
         self.style().polish(self)
         self.update()
@@ -153,9 +160,9 @@ class _ModField(QFrame):
             if self.only_displayed:
                 self.is_selected = not self.is_selected
                 self._set_correct_properties()
-                DynamicModFieldHelper.display_function(self.mod_name, self.is_selected)
+                ModFieldHelper.display_function(self.mod_name, self.is_selected)
             else:
-                DynamicModFieldHelper.edit_function(self.mod_name)
+                ModFieldHelper.edit_function(self.mod_name)
         super().mousePressEvent(event)
 
 
@@ -252,11 +259,12 @@ class ScrollableGrid(QWidget):
 
         # Check if the functions match the field type
         if field_type == FieldType.INSTANCES:
-            _check_if_all_attributes_defined(DynamicInstanceFieldHelper)
+            _check_if_all_attributes_defined(InstanceFieldHelper)
         elif field_type in (FieldType.MODS_DISPLAYED, FieldType.MODS_EDITABLE):
-            _check_if_all_attributes_defined(DynamicModFieldHelper)
+            _check_if_all_attributes_defined(ModFieldHelper)
         else:
             logger.error(f'Field type "{field_type}" is not supported.')
+            return
 
         # Tag selector
         self.tags_combo_box = QComboBox()
@@ -280,7 +288,7 @@ class ScrollableGrid(QWidget):
             self.controls_widget.hide()
 
         # Add the text at the bottom of the mod display page to explain why not all mods might be displayed
-        mods_hidden_label = QLabel('If not all mods are displayed, these mods are not compatible with the current type of instance. \nCreate or change to a new instance with the correct type.')
+        mods_hidden_label = QLabel('If not all mods are displayed, these mods are not compatible with the current type of instance. \nIf a mod name is orange, it is not compatible with the current version of the instance.')
         mods_hidden_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         if field_type != FieldType.MODS_DISPLAYED:
@@ -350,7 +358,7 @@ class ScrollableGrid(QWidget):
     def set_size(self, width=200, height=100):
         self.card_width = width
         self.card_height = height
-        self._refresh_visible_fields()  # Recreate the fields
+        self.refresh_visible_fields()  # Recreate the fields
 
     def set_values(self, values: list[str | tuple[str, str] | tuple[str, str, bool]]):
         """
@@ -364,26 +372,9 @@ class ScrollableGrid(QWidget):
         if self.field_type in (FieldType.MODS_DISPLAYED, FieldType.MODS_EDITABLE):
             self._refresh_tag_selector()
 
-        self._refresh_visible_fields()
+        self.refresh_visible_fields()
 
-    def _refresh_tag_selector(self):
-        self.tags_combo_box.blockSignals(True)
-        self.tags_combo_box.clear()
-        self.tags_combo_box.addItem(DEFAULT_ALL_TAGS_NAME)
-        self.tags_combo_box.addItem(DEFAULT_NO_TAGS_NAME)
-        self.tags_combo_box.addItems(DynamicModFieldHelper.available_tags)
-        self.tags_combo_box.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
-        self.tags_combo_box.setMinimumWidth(self.tags_combo_box.sizeHint().width() + 20)
-
-        index = self.tags_combo_box.findText(self.selected_tag)
-        if index >= 0:
-            self.tags_combo_box.setCurrentIndex(index)
-        else:
-            self.selected_tag = DEFAULT_ALL_TAGS_NAME  # If the actual tag is not found, use the default one
-
-        self.tags_combo_box.blockSignals(False)
-
-    def _refresh_visible_fields(self):
+    def refresh_visible_fields(self):
         # Clear the old fields
         for field in self.fields:
             self.grid_layout.removeWidget(field)
@@ -396,8 +387,8 @@ class ScrollableGrid(QWidget):
             for name in self.values:
                 self.fields.append(_InstanceField(name, width=self.card_width, height=self.card_height))
 
-            self.fields.append(_CreateNewElementButton(DynamicInstanceFieldHelper.create_new_function, "Create new\ninstance", self.card_width, self.card_height))
-            self.fields.append(_CreateNewElementButton(DynamicInstanceFieldHelper.import_profiles_function, "Import profiles\nfrom Launcher", self.card_width, self.card_height))
+            self.fields.append(_CreateNewElementButton(InstanceFieldHelper.create_new_function, "Create new\ninstance", self.card_width, self.card_height))
+            self.fields.append(_CreateNewElementButton(InstanceFieldHelper.import_profiles_function, "Import profiles\nfrom Launcher", self.card_width, self.card_height))
 
         elif self.field_type == FieldType.MODS_DISPLAYED:
             for value in self.values:
@@ -421,13 +412,30 @@ class ScrollableGrid(QWidget):
                 except Exception as e:
                     logger.exception("Failed to create editable mod field: %s", e)
 
-            self.fields.append(_CreateNewElementButton(DynamicModFieldHelper.create_new_function, "Create new\nmod", self.card_width, self.card_height))
+            self.fields.append(_CreateNewElementButton(ModFieldHelper.create_new_function, "Create new\nmod", self.card_width, self.card_height))
 
         # Rebuild the layout of the fields
         self.rebuild_grid(force=True)
 
+    def _refresh_tag_selector(self):
+        self.tags_combo_box.blockSignals(True)
+        self.tags_combo_box.clear()
+        self.tags_combo_box.addItem(DEFAULT_ALL_TAGS_NAME)
+        self.tags_combo_box.addItem(DEFAULT_NO_TAGS_NAME)
+        self.tags_combo_box.addItems(ModFieldHelper.available_tags)
+        self.tags_combo_box.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
+        self.tags_combo_box.setMinimumWidth(self.tags_combo_box.sizeHint().width() + 20)
+
+        index = self.tags_combo_box.findText(self.selected_tag)
+        if index >= 0:
+            self.tags_combo_box.setCurrentIndex(index)
+        else:
+            self.selected_tag = DEFAULT_ALL_TAGS_NAME  # If the actual tag is not found, use the default one
+
+        self.tags_combo_box.blockSignals(False)
+
     def _mod_matches_filters(self, name: str) -> bool:
-        if self.selected_tag != DEFAULT_ALL_TAGS_NAME and not DynamicModFieldHelper.tag_check_function(name, self.selected_tag):
+        if self.selected_tag != DEFAULT_ALL_TAGS_NAME and not ModFieldHelper.tag_check_function(name, self.selected_tag):
             return False
 
         query = self.search_text.strip().casefold()
@@ -465,13 +473,13 @@ class ScrollableGrid(QWidget):
 
     def _selected_tag_changed(self, tag: str):
         self.selected_tag = tag
-        self._refresh_visible_fields()
+        self.refresh_visible_fields()
 
     # Search UI
     def _search_text_changed(self, text: str):
         self.search_text = text
         has_text = bool(text.strip())
-        self._refresh_visible_fields()
+        self.refresh_visible_fields()
 
         if not has_text:
             self.modrinth_searcher.cancel()
@@ -491,7 +499,7 @@ class ScrollableGrid(QWidget):
         self.search_line_edit.clearFocus()
         self.modrinth_searcher.cancel()
         self._hide_modrinth_overlay()
-        self._refresh_visible_fields()
+        self.refresh_visible_fields()
 
     # Modrinth overlay UI
     def _modrinth_results_ready(self, results: list):
@@ -544,7 +552,7 @@ class ScrollableGrid(QWidget):
         url = MODRINTH_BASE_MOD_URL + str(project.get("slug"))
         # Ignore the exception that these arguments don't exist. This is because they are from the mod page directly for "create_mod"
         # noinspection argument-list
-        DynamicModFieldHelper.create_new_function(mod_name=mod_name, url=url)
+        ModFieldHelper.create_new_function(mod_name=mod_name, url=url)
 
     def _show_modrinth_overlay(self):
         # Don't display the overlay when not editing mods

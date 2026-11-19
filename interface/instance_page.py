@@ -253,6 +253,13 @@ class InstancePageClass:
                 ))
         parent.INSTANCE_MODS_DISPLAY.set_values(mod_display_data)
 
+    def mod_version_check_function(self, mod_name: str) -> bool:
+        """ This function is used to check whether the given mod is compatible with the selected instance version. """
+        instance_data = self.data.instances[self.selected_instance_name]
+        mod_data = self.data.mods[mod_name]
+
+        return instance_data.version in mod_data.supported_versions
+
     def _changed_instance_name(self):
         # Get the old and the new instance name
         old_instance_name = self.selected_instance_name
@@ -384,6 +391,8 @@ class InstancePageClass:
             mod_url, filename, last_checked = self.data.instances[self.selected_instance_name].mods[mod_name]
             self.data.instances[self.selected_instance_name].mods[mod_name] = (mod_url, filename, 0)
         self.data.save()
+
+        self.parent.INSTANCE_MODS_DISPLAY.refresh_visible_fields()
 
     def _changed_instance_use_default_options_file(self, new_state: bool):
         self.data.instances[self.selected_instance_name].use_default_options_file = new_state
