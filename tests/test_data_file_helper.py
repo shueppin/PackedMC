@@ -14,7 +14,7 @@ def test_creating_data_without_a_file_creates_data_json_with_defaults():
     assert paths.DATA_FILE_PATH.exists()
     stored = read_json(paths.DATA_FILE_PATH)
     assert stored['instances'] == {} and stored['mods'] == {} and stored['tags'] == [] and stored['last_played_instance'] == ''
-    assert stored['settings'] == {'theme': 'green', 'invert_secondary': False, 'use_dark_theme': True, 'scale': 0, 'close_packedmc': True}
+    assert stored['settings'] == {'theme': 'green', 'invert_secondary': False, 'use_dark_theme': True, 'scale': 0, 'close_packedmc': True, 'show_mods_popup': True}
     assert data.settings == SettingsData()
 
 

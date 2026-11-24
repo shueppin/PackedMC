@@ -114,6 +114,7 @@ class SettingsData(_DataBase):
     use_dark_theme: bool = field(default=True)
     scale: int = field(default=0)
     close_packedmc: bool = field(default=True)
+    show_mods_popup: bool = field(default=True)
 
     def ensure_correct_data(self):
         if '.xml' in self.theme:

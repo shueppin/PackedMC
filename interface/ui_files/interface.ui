@@ -764,7 +764,7 @@
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>67</width>
+                <width>98</width>
                 <height>66</height>
                </rect>
               </property>
@@ -1225,6 +1225,19 @@
           </property>
           <property name="text">
            <string>Show PackedMC console (takes effect after restarting PackedMC)</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="0">
+         <widget class="QCheckBox" name="SHOW_MODS_POPUP">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="text">
+           <string>Show incompatible mods popup after pressing &quot;Play&quot;</string>
           </property>
          </widget>
         </item>

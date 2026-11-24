@@ -21,7 +21,6 @@ from utils.file_paths import UPDATER_FILE_PATH, ICONS_FILE_PATH
 # TODO: Add modpack support
 # TODO: Add Forge support
 # TODO: Download and enable mod dependencies after showing a popup
-# TODO: Show which mods / how many mods are not compatible with the selected version. Then add checkbox to ignore popup of incompatible mods
 
 
 logging.basicConfig(format="%(levelname)s %(name)s: %(message)s", level=logging.INFO)
