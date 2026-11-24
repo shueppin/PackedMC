@@ -123,7 +123,8 @@ class InstancePageClass:
         # Move the mods to the minecraft folder
         move_mods_from_packedmc_to_minecraft(instance_name, minecraft_directory)
 
-        self._show_mod_update_problems(instance_type, instance_version, result)
+        if self.data.settings.show_mods_popup:
+            self._show_mod_update_problems(instance_type, instance_version, result)
         self._close_packedmc_if_selected()
 
     def _show_mod_update_problems(self, instance_type: str, instance_version: str, result: ModUpdateResult):

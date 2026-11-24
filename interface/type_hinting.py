@@ -56,3 +56,4 @@ class MainWindowElements:
     SHOW_CONSOLE_BUTTON: QCheckBox
     PACKEDMC_VERSION: QLabel
     OPEN_PACKEDMC_DIRECTORY: QPushButton
+    SHOW_MODS_POPUP: QCheckBox

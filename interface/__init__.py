@@ -134,6 +134,8 @@ class MainWindow(QMainWindow, MainWindowElements):
         self.SCALE_SELECTION.valueChanged.connect(self._style_scale_changed)
         self.CLOSE_PACKEDMC_BUTTON.setChecked(self.data.settings.close_packedmc)
         self.CLOSE_PACKEDMC_BUTTON.clicked.connect(self.close_packedmc_button_clicked)
+        self.SHOW_MODS_POPUP.setChecked(self.data.settings.show_mods_popup)
+        self.SHOW_MODS_POPUP.clicked.connect(self.show_mods_popup_button_clicked)
         self.USE_DARK_THEME.setChecked(self.data.settings.use_dark_theme)
         self.USE_DARK_THEME.clicked.connect(lambda button_state: self.apply_stylesheet(use_dark_theme=button_state))
         self.RESTORE_BACKUP_BUTTON.clicked.connect(self.restore_backup)
@@ -446,4 +448,8 @@ class MainWindow(QMainWindow, MainWindowElements):
 
     def close_packedmc_button_clicked(self, button_state: bool):
         self.data.settings.close_packedmc = button_state
+        self.data.save()
+
+    def show_mods_popup_button_clicked(self, button_state: bool):
+        self.data.settings.show_mods_popup = button_state
         self.data.save()
